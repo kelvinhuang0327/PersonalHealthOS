@@ -337,6 +337,129 @@ def generate_family_recommendations(
 
 
 # ---------------------------------------------------------------------------
+# P9 — extract_family_evidence_from_bundle (pure helper)
+# ---------------------------------------------------------------------------
+
+def extract_family_evidence_from_bundle(bundle: dict[str, Any]) -> dict[str, Any]:
+    """Extract family-relevant evidence summaries from a build_evidence_bundle output.
+
+    Pure function — no DB access. Converts a raw evidence bundle into string
+    summaries suitable for the evidence dicts expected by
+    build_family_health_context() and generate_family_recommendations().
+
+    Returns:
+      lab_abnormality_summaries   list[str]  — e.g. "LDL-C 異常（high）"
+      symptom_pattern_summaries   list[str]  — e.g. "頭痛 重複發作"
+      escalation_summaries        list[str]  — device-signal escalation reasons
+      action_titles               list[str]  — active action titles (for dedup)
+    """
+    lab_abnormality_summaries: list[str] = []
+    for abn in bundle.get("lab_abnormalities", []):
+        name = abn.get("labItemName") or ""
+        severity = abn.get("severity") or "異常"
+        if name:
+            lab_abnormality_summaries.append(f"{name} 異常（{severity}）")
+
+    symptom_pattern_summaries: list[str] = []
+    for pat in bundle.get("symptom_patterns", []):
+        symptom = pat.get("symptomType") or ""
+        label = pat.get("label") or pat.get("patternType") or ""
+        if symptom and label and symptom != label:
+            symptom_pattern_summaries.append(f"{symptom} {label}")
+        elif symptom:
+            symptom_pattern_summaries.append(symptom)
+        elif label:
+            symptom_pattern_summaries.append(label)
+
+    escalation_summaries: list[str] = []
+    esc = bundle.get("device_escalation") or {}
+    level = esc.get("escalationLevel", "none")
+    if level in ("urgent", "warning"):
+        for reason in esc.get("reasons", []):
+            if reason:
+                escalation_summaries.append(str(reason))
+        if not escalation_summaries and level == "urgent":
+            escalation_summaries.append("裝置訊號顯示需緊急關注")
+
+    action_titles: list[str] = []
+    for act in bundle.get("actions", []):
+        title = act.get("summary") or act.get("title") or ""
+        if title:
+            action_titles.append(title)
+
+    return {
+        "lab_abnormality_summaries": lab_abnormality_summaries,
+        "symptom_pattern_summaries": symptom_pattern_summaries,
+        "escalation_summaries": escalation_summaries,
+        "action_titles": action_titles,
+    }
+
+
+# ---------------------------------------------------------------------------
+# P9 — load_family_evidence_data (DB helper)
+# ---------------------------------------------------------------------------
+
+def load_family_evidence_data(
+    db: Any,
+    owner_user_id: str,
+    relationships: list[RelationshipDict],
+) -> dict[str, Any]:
+    """Load per-profile evidence bundles for all related profiles.
+
+    For each unique related_profile_id in relationships, calls
+    build_evidence_bundle(db, owner_user_id, profile_id) and extracts
+    family-relevant evidence summaries.
+
+    All related profiles belong to the same owner — enforced at relationship
+    creation via POST /family-relationships.
+
+    Returns:
+      lab_abnormalities_by_profile    {pid: list[str]}
+      symptom_patterns_by_profile     {pid: list[str]}
+      escalations_by_profile          {pid: list[str]}
+      active_actions_by_profile       {pid: list[str]}
+      recommendations_by_profile      {pid: list[str]}
+    """
+    from app.services.health_assistant_service import build_evidence_bundle
+
+    lab_abnormalities_by_profile: dict[str, list[str]] = {}
+    symptom_patterns_by_profile: dict[str, list[str]] = {}
+    escalations_by_profile: dict[str, list[str]] = {}
+    active_actions_by_profile: dict[str, list[str]] = {}
+    recommendations_by_profile: dict[str, list[str]] = {}
+
+    seen_pids: set[str] = set()
+    for rel in relationships:
+        pid = str(rel.get("related_profile_id", ""))
+        if not pid or pid in seen_pids:
+            continue
+        seen_pids.add(pid)
+
+        try:
+            bundle = build_evidence_bundle(db, owner_user_id, pid)
+        except Exception:
+            # Never crash the family context endpoint due to a single
+            # profile's evidence loading error — skip and continue.
+            continue
+
+        extracted = extract_family_evidence_from_bundle(bundle)
+
+        lab_abnormalities_by_profile[pid] = extracted["lab_abnormality_summaries"]
+        symptom_patterns_by_profile[pid] = extracted["symptom_pattern_summaries"]
+        escalations_by_profile[pid] = extracted["escalation_summaries"]
+        active_actions_by_profile[pid] = extracted["action_titles"]
+        recommendations_by_profile[pid] = extracted["action_titles"]
+
+    return {
+        "lab_abnormalities_by_profile": lab_abnormalities_by_profile,
+        "symptom_patterns_by_profile": symptom_patterns_by_profile,
+        "escalations_by_profile": escalations_by_profile,
+        "active_actions_by_profile": active_actions_by_profile,
+        "recommendations_by_profile": recommendations_by_profile,
+    }
+
+
+# ---------------------------------------------------------------------------
 # DB helper — load_family_relationships
 # ---------------------------------------------------------------------------
 

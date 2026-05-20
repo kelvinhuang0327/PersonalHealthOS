@@ -504,6 +504,7 @@ from app.models.entities import FamilyRelationship  # noqa: E402
 from app.services.family_health_context_service import (  # noqa: E402
     build_family_health_context,
     generate_family_recommendations,
+    load_family_evidence_data,
     load_family_relationships,
 )
 
@@ -643,7 +644,14 @@ def get_family_health_context_endpoint(
     pid = str(target_person.id)
 
     relationships = load_family_relationships(db, uid, pid)
-    context = build_family_health_context(relationships)
+    evidence = load_family_evidence_data(db, uid, relationships)
+    context = build_family_health_context(
+        relationships,
+        recommendations_by_profile=evidence["recommendations_by_profile"],
+        lab_abnormalities_by_profile=evidence["lab_abnormalities_by_profile"],
+        symptom_patterns_by_profile=evidence["symptom_patterns_by_profile"],
+        escalations_by_profile=evidence["escalations_by_profile"],
+    )
 
     return {
         "person_id": pid,
@@ -669,8 +677,18 @@ def get_family_recommendations_endpoint(
     pid = str(target_person.id)
 
     relationships = load_family_relationships(db, uid, pid)
-    context = build_family_health_context(relationships)
-    recommendations = generate_family_recommendations(context)
+    evidence = load_family_evidence_data(db, uid, relationships)
+    context = build_family_health_context(
+        relationships,
+        recommendations_by_profile=evidence["recommendations_by_profile"],
+        lab_abnormalities_by_profile=evidence["lab_abnormalities_by_profile"],
+        symptom_patterns_by_profile=evidence["symptom_patterns_by_profile"],
+        escalations_by_profile=evidence["escalations_by_profile"],
+    )
+    recommendations = generate_family_recommendations(
+        context,
+        active_actions_by_profile=evidence["active_actions_by_profile"],
+    )
 
     return {
         "person_id": pid,
