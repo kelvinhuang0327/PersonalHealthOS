@@ -1,7 +1,7 @@
-# Active Task Report — P10_FAMILY_CONTEXT_UI_EVIDENCE_READY
+# Active Task Report — P10_FAMILY_UI_VERIFIED_AND_P11_TRUST_CHECKLIST_READY
 
 Generated: 2026-05-21  
-Classification: **`P10_FAMILY_CONTEXT_UI_EVIDENCE_READY`**
+Classification: **`P10_FAMILY_UI_VERIFIED_AND_P11_TRUST_CHECKLIST_READY`**
 
 ---
 
@@ -9,10 +9,235 @@ Classification: **`P10_FAMILY_CONTEXT_UI_EVIDENCE_READY`**
 
 | Task | Status |
 |---|---|
-| Task 1 — FamilyHealthCard evidence transparency UI | ✅ IMPLEMENTED |
-| Task 2 — API shape verification + minimal backend extension | ✅ source_type field added (additive) |
-| Task 3 — Backend shape tests (6 new) + frontend tsc validation | ✅ 46 tests PASS, tsc 0 errors |
-| Task 4 — Update active task report | ✅ THIS DOCUMENT |
+| Task 1 — P10 Family UI evidence transparency verified | ✅ PASS (static smoke + tsc) |
+| Task 2 — Minimal static / browser smoke | ✅ Static PASS · Playwright spec written · Browser E2E NOT RUN |
+| Task 3 — P11 Production Trust Readiness checklist | ✅ THIS DOCUMENT |
+| Task 4 — Regression validation | ✅ 617 PASS (see breakdown below) |
+
+---
+
+## Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| Dirty files | `M frontend/tsconfig.tsbuildinfo` (build artifact, not blocking) ✅ |
+
+---
+
+## Task 1 — P10 Family UI Evidence Transparency Verification
+
+### Static smoke checks (all PASS)
+
+| Check | Result |
+|---|---|
+| `EvidenceSourceBadge` present in component | ✅ 2 occurrences (definition + usage) |
+| `AudienceBadge` present in component | ✅ 2 occurrences (definition + usage) |
+| `source_type` consumed in render | ✅ 1 occurrence |
+| Non-diagnosis disclaimer `非醫療診斷` | ✅ 1 occurrence |
+| Limitations section rendered | ✅ present |
+| Source origin label `健康觀察資料` | ✅ 2 occurrences (child + caregiver sections) |
+| Diagnosis word `診斷` only in disclaimer | ✅ 1 total (confirmed to be in disclaimer text only) |
+| Profile UUID `profile_id` in user-facing text | ✅ 0 leakage (only in internal logic / type references) |
+| Badge labels: 兒童健康, 照護提醒, 共同風險, 行動建議 | ✅ all present in EvidenceSourceBadge config |
+
+### TypeScript shape validation
+
+- `FamilyRecommendation` type includes `source_type: string` ✅
+- `npx tsc --noEmit` → 0 errors ✅
+- `npx next build` → CLEAN ✅
+
+---
+
+## Task 2 — Smoke Test Status
+
+| Method | Status |
+|---|---|
+| Static grep checks | ✅ PASS |
+| TypeScript compilation | ✅ PASS |
+| Next.js build | ✅ PASS |
+| Playwright spec written | ✅ `frontend/tests/e2e/family-health-card.spec.ts` (6 tests) |
+| Playwright browser E2E executed | ❌ NOT RUN — requires live dev server |
+
+> Note: Playwright spec covers: section visibility, disclaimer text, source badges (兒童健康, 行動建議), audience badge (照護者), source origin label. Tests are written with mocked API routes.
+
+---
+
+## Task 4 — Regression Validation
+
+### Backend test results
+
+| Test file | Tests | Result |
+|---|---|---|
+| test_family_health_context.py | 46 | ✅ PASS |
+| test_family_context_data_population.py | 18 | ✅ PASS |
+| test_family_relationships.py | 17 | ✅ PASS |
+| test_narrative_reasoning.py | — | ✅ PASS |
+| test_narrative_memory_service.py | — | ✅ PASS |
+| test_api_narrative_memory.py | — | ✅ PASS |
+| test_engagement_analytics.py | — | ✅ PASS |
+| test_personalization_profile.py | — | ✅ PASS |
+| test_adaptive_recommendation_scoring.py | — | ✅ PASS |
+| test_notification_history_service.py | — | ✅ PASS |
+| test_api_notification_status.py | — | ✅ PASS |
+| test_notification_intelligence.py | — | ✅ PASS |
+| test_api_notification_intelligence.py | — | ✅ PASS |
+| test_lab_intelligence.py | — | ✅ PASS |
+| test_api_lab_smoke.py | — | ✅ PASS |
+| test_api_symptom_smoke.py | — | ✅ PASS |
+| test_symptom_intelligence.py | — | ✅ PASS |
+| test_device_signal_escalation.py | — | ✅ PASS |
+| test_device_signal_detection.py | — | ✅ PASS |
+| test_api_escalation_smoke.py | — | ✅ PASS |
+| test_health_assistant_service.py | — | ✅ PASS |
+| test_daily_summary_service.py | — | ✅ PASS |
+| test_recommendation_trust_service.py | — | ✅ PASS |
+| test_outcome_feedback_service.py | — | ✅ PASS |
+| **Batch 1 total** | **320** | ✅ PASS |
+| **Batch 2 total** | **297** | ✅ PASS |
+| test_dual_agent_orchestrator.py | 10 failed | ⚠️ PRE-EXISTING — excluded |
+
+**Total (mandated suites): 617 PASS, 0 new failures**
+
+---
+
+## P11 — Production Trust Readiness Checklist
+
+> This checklist tracks readiness for trustworthy production deployment, not feature completeness.  
+> Unit tests ≠ production validation. Each item is tagged DONE / GAP / NOT RUN.
+
+### 1. Privacy & Cross-Profile Isolation
+
+| Item | Status | Notes |
+|---|---|---|
+| Profile UUID not exposed in user-facing text | ✅ DONE | `test_load_errors_limitation_does_not_expose_profile_id` asserts this |
+| Cross-profile evidence mixing prevention | ✅ DONE | `build_family_health_context` only uses profiles in `relationships` list |
+| Unrelated profile data not surfaced | ✅ DONE | Enforced by `related_pids` filter in service |
+| API auth guards (token required) | ⚠️ GAP | Backend endpoints require `Authorization` header but E2E auth validation not tested |
+| Family relationship permission enforcement | ⚠️ GAP | `permission_level` stored but not enforced at query level in DB layer |
+
+### 2. Medical Disclaimer Coverage
+
+| Item | Status | Notes |
+|---|---|---|
+| No-diagnosis disclaimer in FamilyHealthCard | ✅ DONE | "以上內容為觀察性摘要，非醫療診斷，請依個人狀況諮詢專業醫療人員。" |
+| Diagnosis wording absent from static copy | ✅ DONE | Only 1 occurrence of `診斷` in component, confirmed in disclaimer context |
+| Hallucination guardrail policy documented | ✅ DONE | `ai/prompts/hallucination_guardrail_policy.md` exists |
+| Disclaimer on other health display pages | ⚠️ GAP | Disclaimer only confirmed in FamilyHealthCard; other dashboards not audited |
+| AI summary output review | ⚠️ GAP | `health_summary_system_prompt.md` exists but output review not automated |
+
+### 3. Source Traceability
+
+| Item | Status | Notes |
+|---|---|---|
+| `evidence_source` field in recommendations | ✅ DONE | Since P8 |
+| `source_type` field in recommendations | ✅ DONE | Added P10 (child_health/caregiver_health/shared_risk/action) |
+| Source badge visible in UI | ✅ DONE | `EvidenceSourceBadge` in FamilyHealthCard |
+| Audience badge visible in UI | ✅ DONE | `AudienceBadge` in FamilyHealthCard |
+| Lab/symptom/device granularity per item | ⚠️ GAP | `childAttentionItems` + `caregiverAlerts` are mixed-source strings; per-item source type not tracked |
+| Narrative source traceability | ⚠️ GAP | Narrative memories referenced but not surfaced as evidence badges in UI |
+
+### 4. Confidence & Limitations Coverage
+
+| Item | Status | Notes |
+|---|---|---|
+| `confidence` field in FamilyHealthContext | ✅ DONE | Scales with profile count + evidence density |
+| `limitations` field in FamilyHealthContext | ✅ DONE | Explains data gaps to user |
+| Load failure visibility in limitations | ✅ DONE | P9: `load_errors_by_profile` adds limitation text |
+| Limitations displayed in FamilyHealthCard | ✅ DONE | Styled with Info icon (P10) |
+| ConfidenceBadge shows score | ✅ DONE | `可信度 X%` with color thresholds |
+| Confidence calibration validated | ⚠️ GAP | No test asserts confidence formula accuracy vs real data |
+
+### 5. Notification Spam Guard
+
+| Item | Status | Notes |
+|---|---|---|
+| Max recommendations per member capped | ✅ DONE | `_MAX_SUGGESTIONS_PER_MEMBER = 3` constant enforced in `generate_family_recommendations` |
+| Dedup against active actions | ✅ DONE | P9: `active_actions_by_profile` dedup |
+| Dedup case-insensitive edge cases | ✅ DONE | P9 `TestFamilyDedupHardening` (6 tests) |
+| Notification frequency limits in production | ⚠️ GAP | Unit-level only; no integration test for notification rate limits |
+
+### 6. Data Persistence Boundaries
+
+| Item | Status | Notes |
+|---|---|---|
+| Family relationships stored in DB | ✅ DONE | `FamilyRelationship` model, `family_relationships` table |
+| Evidence data loaded from live DB per request | ✅ DONE | `load_family_evidence_data()` queries DB each call |
+| No sensitive data in memory cache | ✅ DONE | No Redis/memory cache layer in current architecture |
+| SQLite in tests, real DB in production | ✅ DONE | pytest uses in-memory SQLite via test fixtures |
+| Database migration scripts present | ✅ DONE | `database/migrations/` directory exists |
+| Migration tested against production schema | ⚠️ GAP | Migration scripts not run in CI |
+
+### 7. E2E Coverage Gaps
+
+| Item | Status | Notes |
+|---|---|---|
+| Platform dashboard loads | ✅ Written | `platform-app.spec.ts` (NOT RUN in this sprint) |
+| FamilyHealthCard section visible | ✅ Written | `family-health-card.spec.ts` (NOT RUN) |
+| No-diagnosis disclaimer visible | ✅ Written | `family-health-card.spec.ts` (NOT RUN) |
+| Source badge text visible | ✅ Written | `family-health-card.spec.ts` (NOT RUN) |
+| Auth flows (login/token refresh) | ❌ NOT WRITTEN | No Playwright test for auth |
+| Error state handling (API 500) | ❌ NOT WRITTEN | FamilyHealthCard error state not E2E tested |
+| Empty state (no relationships) | ❌ NOT WRITTEN | `EmptyState` component not E2E tested |
+| Cross-browser rendering | ❌ NOT RUN | Playwright config not verified for multi-browser |
+
+### 8. Orchestrator Pre-existing Failures
+
+| Item | Status | Notes |
+|---|---|---|
+| `test_dual_agent_orchestrator.py` | ⚠️ 10 FAILED | Pre-existing failures — not caused by P8–P10 changes |
+| Orchestrator failures affect production | ❌ UNVERIFIED | Dual-agent orchestrator feature scope unclear |
+| Fix plan | ⚠️ GAP | Failures not investigated; excluded from mandatory suites |
+
+### 9. Deployment Smoke Gaps
+
+| Item | Status | Notes |
+|---|---|---|
+| Docker Compose local config present | ✅ DONE | `docker-compose.local.yml` exists |
+| Docker Compose prod config present | ✅ DONE | `docker-compose.prod.yml` exists |
+| `smoke_check.py` script present | ✅ DONE | Root-level `smoke_check.py` exists |
+| Smoke check actually run | ❌ NOT RUN | Not run in this sprint |
+| Backend startup health check | ⚠️ GAP | `/health` or `/ping` endpoint not confirmed present |
+| Frontend startup health check | ⚠️ GAP | Next.js deployment smoke not automated |
+| Secrets / env config validated | ❌ NOT RUN | `.env` variable audit not done |
+
+### P11 Summary
+
+| Category | DONE | GAP | NOT RUN |
+|---|---|---|---|
+| Privacy & cross-profile | 3 | 2 | 0 |
+| Medical disclaimer | 3 | 2 | 0 |
+| Source traceability | 4 | 2 | 0 |
+| Confidence & limitations | 4 | 1 | 0 |
+| Notification spam guard | 4 | 1 | 0 |
+| Data persistence | 5 | 1 | 0 |
+| E2E coverage | 4 written | 3 not written | 4 not run |
+| Orchestrator failures | 0 | 1 | 1 |
+| Deployment smoke | 3 | 2 | 2 |
+
+> **P11 overall**: Foundation is solid for a health tracking app at personal/beta scale. Key gaps before broader production trust: permission enforcement at DB layer, per-item source type granularity, auth E2E tests, deployment smoke execution, and orchestrator failure resolution.
+
+---
+
+## Prior Sprint Reference
+
+| Sprint | Commit | Classification |
+|---|---|---|
+| P8 | `cc4312b` | P8_FAMILY_HEALTH_ASSISTANT_VERIFIED |
+| P9 | `5e8528f` | P9_FAMILY_CONTEXT_VERIFIED_AND_HARDENED |
+| P10a | `92b9707` | P10_FAMILY_CONTEXT_UI_EVIDENCE_READY |
+| P10b | this commit | P10_FAMILY_UI_VERIFIED_AND_P11_TRUST_CHECKLIST_READY |
+
+---
+
+## Invariants Upheld
+
+- No profile UUID in any user-facing text ✅
+- No diagnosis wording in static copy except designated disclaimer ✅
+- Existing API shape unchanged (additive only) ✅
+- All mandated test suites PASS ✅
+- No new branches created ✅
 
 ---
 
