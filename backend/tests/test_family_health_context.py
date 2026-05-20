@@ -445,3 +445,53 @@ class TestLoadErrorVisibility:
         assert len(failure_lims) == 1
         # Count 2 should appear in the limitation text
         assert "2" in failure_lims[0]
+
+
+# ---------------------------------------------------------------------------
+# P10 — TestFamilyRecommendationAPIShape
+# ---------------------------------------------------------------------------
+
+class TestFamilyRecommendationAPIShape:
+    """Verify FamilyRecommendation contains all P10 transparency fields."""
+
+    def test_all_recommendations_have_source_type(self):
+        ctx = _empty_context(
+            childAttentionItems=["小明：發燒"],
+            caregiverAlerts=["小明：血壓偏高"],
+            sharedRisks=["血糖偏高"],
+            familyActionSuggestions=["每天散步30分鐘"],
+        )
+        recs = generate_family_recommendations(ctx)
+        assert len(recs) > 0
+        assert all("source_type" in r for r in recs)
+
+    def test_child_attention_item_source_type_is_child_health(self):
+        ctx = _empty_context(childAttentionItems=["小明：發燒"])
+        recs = generate_family_recommendations(ctx)
+        assert recs[0]["evidence_source"] == "child_attention_item"
+        assert recs[0]["source_type"] == "child_health"
+
+    def test_caregiver_alert_source_type_is_caregiver_health(self):
+        ctx = _empty_context(caregiverAlerts=["小明：血壓偏高"])
+        recs = generate_family_recommendations(ctx)
+        assert recs[0]["evidence_source"] == "caregiver_alert"
+        assert recs[0]["source_type"] == "caregiver_health"
+
+    def test_shared_risk_source_type_is_shared_risk(self):
+        ctx = _empty_context(sharedRisks=["血糖偏高"])
+        recs = generate_family_recommendations(ctx)
+        assert recs[0]["evidence_source"] == "shared_risk"
+        assert recs[0]["source_type"] == "shared_risk"
+
+    def test_family_suggestion_source_type_is_action(self):
+        ctx = _empty_context(familyActionSuggestions=["每天散步30分鐘"])
+        recs = generate_family_recommendations(ctx)
+        assert recs[0]["evidence_source"] == "family_suggestion"
+        assert recs[0]["source_type"] == "action"
+
+    def test_context_has_confidence_and_limitations_fields(self):
+        ctx = build_family_health_context([_rel("pid-b")])
+        assert "confidence" in ctx
+        assert "limitations" in ctx
+        assert isinstance(ctx["confidence"], float)
+        assert isinstance(ctx["limitations"], list)

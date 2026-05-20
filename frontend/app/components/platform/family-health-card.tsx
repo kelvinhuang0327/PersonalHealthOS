@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Shield,
   UserPlus,
+  Info,
 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,34 @@ function UrgencyBadge({ urgency }: { urgency: FamilyRecommendation['urgency'] })
   return (
     <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${map[urgency] ?? 'bg-slate-100 text-slate-600'}`}>
       {labels[urgency] ?? urgency}
+    </span>
+  )
+}
+
+function EvidenceSourceBadge({ sourceType }: { sourceType: string }) {
+  const cfg: Record<string, { label: string; className: string }> = {
+    child_health:     { label: '兒童健康', className: 'bg-pink-50 text-pink-600 border border-pink-200' },
+    caregiver_health: { label: '照護提醒', className: 'bg-amber-50 text-amber-600 border border-amber-200' },
+    shared_risk:      { label: '共同風險', className: 'bg-red-50 text-red-600 border border-red-200' },
+    action:           { label: '行動建議', className: 'bg-blue-50 text-blue-600 border border-blue-200' },
+  }
+  const { label, className } = cfg[sourceType] ?? { label: sourceType, className: 'bg-slate-100 text-slate-500' }
+  return (
+    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${className}`}>
+      {label}
+    </span>
+  )
+}
+
+function AudienceBadge({ audience }: { audience: FamilyRecommendation['audience'] }) {
+  const labels: Record<string, string> = {
+    caregiver: '照護者',
+    member: '成員',
+    family: '全家',
+  }
+  return (
+    <span className="text-xs text-slate-400 shrink-0">
+      → {labels[audience] ?? audience}
     </span>
   )
 }
@@ -215,6 +244,9 @@ export default function FamilyHealthCard() {
               count={context.childAttentionItems.length}
               defaultOpen
             >
+              <p className="text-xs text-slate-400 mb-1.5 flex items-center gap-1">
+                <Info className="w-3 h-3" /> 來源：健康觀察資料（檢驗 / 症狀 / 裝置）
+              </p>
               <ul className="space-y-1">
                 {context.childAttentionItems.map((item, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
@@ -234,6 +266,9 @@ export default function FamilyHealthCard() {
               count={context.caregiverAlerts.length}
               defaultOpen
             >
+              <p className="text-xs text-slate-400 mb-1.5 flex items-center gap-1">
+                <Info className="w-3 h-3" /> 來源：健康觀察資料（檢驗 / 症狀 / 裝置）
+              </p>
               <ul className="space-y-1">
                 {context.caregiverAlerts.map((alert, i) => (
                   <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
@@ -272,11 +307,15 @@ export default function FamilyHealthCard() {
               count={recommendations.length}
               defaultOpen={false}
             >
-              <ul className="space-y-2">
+              <ul className="space-y-2.5">
                 {recommendations.map((rec, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <UrgencyBadge urgency={rec.urgency} />
-                    <span className="text-sm text-slate-700 leading-snug">{rec.text}</span>
+                  <li key={i} className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <UrgencyBadge urgency={rec.urgency} />
+                      <EvidenceSourceBadge sourceType={rec.source_type} />
+                      <AudienceBadge audience={rec.audience} />
+                    </div>
+                    <span className="text-sm text-slate-700 leading-snug pl-0.5">{rec.text}</span>
                   </li>
                 ))}
               </ul>
@@ -304,12 +343,19 @@ export default function FamilyHealthCard() {
 
           {/* Limitations */}
           {context.limitations.length > 0 && (
-            <div className="text-xs text-slate-400 space-y-0.5">
+            <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-500 space-y-0.5">
               {context.limitations.map((lim, i) => (
-                <p key={i}>• {lim}</p>
+                <p key={i} className="flex items-start gap-1.5">
+                  <Info className="w-3 h-3 mt-0.5 shrink-0 text-slate-400" />{lim}
+                </p>
               ))}
             </div>
           )}
+
+          {/* No-diagnosis disclaimer */}
+          <p className="text-xs text-slate-400 text-center">
+            以上內容為觀察性摘要，非醫療診斷，請依個人狀況諮詢專業醫療人員。
+          </p>
         </div>
       )}
     </div>

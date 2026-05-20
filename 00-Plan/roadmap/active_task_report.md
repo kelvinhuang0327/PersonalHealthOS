@@ -1,7 +1,7 @@
-# Active Task Report — P9_FAMILY_CONTEXT_VERIFIED_AND_HARDENED
+# Active Task Report — P10_FAMILY_CONTEXT_UI_EVIDENCE_READY
 
-Generated: 2026-05-20  
-Classification: **`P9_FAMILY_CONTEXT_VERIFIED_AND_HARDENED`**
+Generated: 2026-05-21  
+Classification: **`P10_FAMILY_CONTEXT_UI_EVIDENCE_READY`**
 
 ---
 
@@ -9,11 +9,78 @@ Classification: **`P9_FAMILY_CONTEXT_VERIFIED_AND_HARDENED`**
 
 | Task | Status |
 |---|---|
-| Task 1 — P9 data flow verification | ✅ CONFIRMED (18/18 population tests PASS) |
-| Task 2 — Failure visibility for silent evidence errors | ✅ IMPLEMENTED + 4 tests PASS |
-| Task 3 — Family dedup edge-case tests | ✅ 10 new tests PASS |
-| Task 4 — Frontend build validation | ✅ tsc 0 errors, next build CLEAN |
-| Task 5 — Update active task report | ✅ THIS DOCUMENT |
+| Task 1 — FamilyHealthCard evidence transparency UI | ✅ IMPLEMENTED |
+| Task 2 — API shape verification + minimal backend extension | ✅ source_type field added (additive) |
+| Task 3 — Backend shape tests (6 new) + frontend tsc validation | ✅ 46 tests PASS, tsc 0 errors |
+| Task 4 — Update active task report | ✅ THIS DOCUMENT |
+
+---
+
+## P10 Sprint Context
+
+Previous sprint: **P9_FAMILY_CONTEXT_VERIFIED_AND_HARDENED** (commit `5e8528f`)
+
+Prior sprint delivered:
+- `load_errors_by_profile` visibility in limitations
+- Family dedup edge-case hardening (6 tests)
+- Load error visibility tests (4 tests)
+- 672 backend PASS
+
+This sprint: UI evidence transparency — make Family Health UI trustworthy and transparent without major backend changes.
+
+---
+
+## Changes Delivered
+
+### Backend (`family_health_context_service.py`)
+- Added `source_type: str` field to `FamilyRecommendation` TypedDict docstring
+- `generate_family_recommendations()` now emits `source_type` alongside `evidence_source`:
+  - `child_attention_item` → `"child_health"`
+  - `caregiver_alert` → `"caregiver_health"`
+  - `shared_risk` → `"shared_risk"`
+  - `family_suggestion` → `"action"`
+- Fully additive — no existing fields changed
+
+### Frontend Types (`lib/api.ts`)
+- Added `source_type: string` to `FamilyRecommendation` type
+
+### Frontend Component (`family-health-card.tsx`)
+- New `EvidenceSourceBadge({ sourceType })` — maps source_type → label + color badge
+- New `AudienceBadge({ audience })` — shows recommendation target (照護者/成員/全家)
+- Recommendations section: shows urgency badge + evidence source badge + audience badge before text
+- `childAttentionItems` section: added source origin label "來源：健康觀察資料"
+- `caregiverAlerts` section: added source origin label "來源：健康觀察資料"
+- Limitations section: upgraded from plain bullets to `Info` icon + styled container
+- Added no-diagnosis disclaimer at card bottom: "以上內容為觀察性摘要，非醫療診斷，請依個人狀況諮詢專業醫療人員。"
+- Added `Info` icon from lucide-react
+
+### Tests (`test_family_health_context.py`)
+- New class `TestFamilyRecommendationAPIShape` (6 tests):
+  - `test_all_recommendations_have_source_type`
+  - `test_child_attention_item_source_type_is_child_health`
+  - `test_caregiver_alert_source_type_is_caregiver_health`
+  - `test_shared_risk_source_type_is_shared_risk`
+  - `test_family_suggestion_source_type_is_action`
+  - `test_context_has_confidence_and_limitations_fields`
+
+---
+
+## Validation Results
+
+```
+Backend: 678 PASS (ignoring 10 pre-existing failures in test_dual_agent_orchestrator)
+Frontend: tsc 0 errors
+Frontend: next build CLEAN
+```
+
+---
+
+## Invariants Upheld
+
+- No profile UUID in any user-facing text ✅
+- No diagnosis wording in static copy ✅  
+- Existing API shape unchanged (additive only) ✅
+- All 40 pre-existing family tests continue to pass ✅
 
 ---
 

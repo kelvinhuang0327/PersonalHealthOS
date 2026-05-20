@@ -76,7 +76,8 @@ FamilyRecommendation = dict[str, Any]
   target_profile_id: str | None
   audience: "caregiver"|"member"|"family"
   urgency: "high"|"medium"|"low"
-  evidence_source: str
+  evidence_source: str  — structural context: child_attention_item|caregiver_alert|shared_risk|family_suggestion
+  source_type: str      — data category: child_health|caregiver_health|shared_risk|action
 }
 """
 
@@ -305,6 +306,7 @@ def generate_family_recommendations(
         audience: str,
         urgency: str,
         source: str,
+        source_type: str,
         target_pid: str | None = None,
     ) -> None:
         if len(results) >= max_total:
@@ -319,23 +321,24 @@ def generate_family_recommendations(
             "audience": audience,
             "urgency": urgency,
             "evidence_source": source,
+            "source_type": source_type,
         })
 
     # Child attention items → high-urgency caregiver
     for item in family_context.get("childAttentionItems", []):
-        _add(item, "caregiver", "high", "child_attention_item")
+        _add(item, "caregiver", "high", "child_attention_item", "child_health")
 
     # Caregiver alerts → medium-urgency caregiver
     for alert in family_context.get("caregiverAlerts", []):
-        _add(alert, "caregiver", "medium", "caregiver_alert")
+        _add(alert, "caregiver", "medium", "caregiver_alert", "caregiver_health")
 
     # Shared risks → medium-urgency family
     for risk in family_context.get("sharedRisks", []):
-        _add(f"家庭共同關注：{risk}", "family", "medium", "shared_risk")
+        _add(f"家庭共同關注：{risk}", "family", "medium", "shared_risk", "shared_risk")
 
     # Family action suggestions → low-urgency family
     for sug in family_context.get("familyActionSuggestions", []):
-        _add(sug, "family", "low", "family_suggestion")
+        _add(sug, "family", "low", "family_suggestion", "action")
 
     # Sort: urgency (high→medium→low)
     _urgency_order = {"high": 0, "medium": 1, "low": 2}

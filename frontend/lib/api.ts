@@ -267,6 +267,7 @@ export type FamilyRecommendation = {
   audience: 'caregiver' | 'member' | 'family'
   urgency: 'high' | 'medium' | 'low'
   evidence_source: string
+  source_type: string
 }
 
 export type IntelligentNotifications = {
