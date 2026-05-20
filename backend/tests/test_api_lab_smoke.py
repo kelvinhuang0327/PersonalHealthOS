@@ -261,3 +261,125 @@ class TestRecommendationsLabAbnormalities:
                     "symptom_patterns", "lab_abnormalities"}
         missing = required - set(resp.json().keys())
         assert not missing, f"Recommendations response missing keys: {missing}"
+
+
+# ---------------------------------------------------------------------------
+# Active / Completed Action Deduplication
+# ---------------------------------------------------------------------------
+
+
+
+class TestCompletedActionDedup:
+    """When a HealthAction with matching rule_id is status='done',
+    the lab recommendation must be suppressed (absent from top-3 recs)."""
+
+    def _build_dedup_client(self, action_status: str, include_action: bool = True):
+        """Helper: 3 abnormal LDL reports + optional HealthAction."""
+        engine = create_engine(
+            "sqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+        Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        Base.metadata.create_all(bind=engine)
+
+        db = Session()
+        tag = action_status[:8] if action_status else "none"
+        user = User(email=f"dedup_{tag}@example.com", password_hash="h")
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+
+        person = PersonProfile(
+            owner_user_id=user.id,
+            display_name="Dedup Tester",
+            relationship="self",
+            is_default=True,
+        )
+        db.add(person)
+        db.commit()
+        db.refresh(person)
+
+        # 3 abnormal LDL reports so lab_abnormality severity reaches "high"
+        for days_back in (5, 35, 65):
+            report = LabReport(
+                user_id=user.id,
+                subject_profile_id=person.id,
+                report_date=date.today() - timedelta(days=days_back),
+                report_type="health_check",
+            )
+            db.add(report)
+            db.commit()
+            db.refresh(report)
+            db.add(LabReportItem(
+                report_id=report.id,
+                item_name="LDL",
+                value_num=4.5,
+                unit="mmol/L",
+                ref_range="< 3.37 mmol/L",
+                ref_high=3.37,
+                abnormal_flag="H",
+                parser_confidence=0.88,
+            ))
+        db.commit()
+
+        if include_action:
+            from app.models.entities import HealthAction
+            action = HealthAction(
+                user_id=user.id,
+                person_id=person.id,
+                rule_id="lab_abnormality_LDL",
+                title="LDL 追蹤",
+                action_type="lifestyle",
+                status=action_status,
+                completed_at=(
+                    datetime.now(timezone.utc) - timedelta(days=1)
+                    if action_status == "done" else None
+                ),
+            )
+            db.add(action)
+            db.commit()
+
+        def override_db():
+            try:
+                yield db
+            finally:
+                pass
+
+        app.dependency_overrides[get_db] = override_db
+        app.dependency_overrides[get_current_user] = lambda: user
+        app.dependency_overrides[get_target_person] = lambda: person
+
+        return TestClient(app)
+
+    def test_done_action_suppresses_recommendation(self):
+        """status=done + completed_at within 30d → LDL absent from top-3."""
+        client = self._build_dedup_client("done")
+        resp = client.get("/api/v1/health-assistant/recommendations")
+        assert resp.status_code == 200
+        rule_ids = [r.get("rule_id") for r in resp.json()["recommendations"]]
+        assert "lab_abnormality_LDL" not in rule_ids, (
+            f"Expected LDL suppressed (status=done), but found in: {rule_ids}"
+        )
+
+    def test_in_progress_action_does_not_suppress(self):
+        """status=in_progress → LDL must still appear in recommendations."""
+        client = self._build_dedup_client("in_progress")
+        resp = client.get("/api/v1/health-assistant/recommendations")
+        assert resp.status_code == 200
+        recs = resp.json()["recommendations"]
+        source_types = [r.get("source_type") for r in recs]
+        assert any(st in ("lab_abnormality", "lab_report_item") for st in source_types), (
+            f"in_progress must not suppress lab rec. Got: {source_types}"
+        )
+
+    def test_no_action_lab_rec_appears(self):
+        """Baseline: no HealthAction → lab abnormality enters top-3."""
+        client = self._build_dedup_client("", include_action=False)
+        resp = client.get("/api/v1/health-assistant/recommendations")
+        assert resp.status_code == 200
+        recs = resp.json()["recommendations"]
+        source_types = [r.get("source_type") for r in recs]
+        assert any(st in ("lab_abnormality", "lab_report_item") for st in source_types), (
+            f"Without completed action, lab rec should appear. Got: {source_types}"
+        )

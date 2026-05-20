@@ -33,16 +33,30 @@ from typing import Any
 # Maps a substring of item_name → abnormality type code.
 # First match wins (ordered by specificity preference).
 _ITEM_TO_ABNORMALITY_TYPE: list[tuple[str, str]] = [
+    # Fatty liver markers
+    ("脂肪肝",       "fatty_liver_marker"),
+    ("fatty_liver",  "fatty_liver_marker"),
+    ("Fatty Liver",  "fatty_liver_marker"),
+    # Kidney stone-related markers
+    ("草酸",         "kidney_stone_related_marker"),
+    ("Oxalate",      "kidney_stone_related_marker"),
+    ("oxalate",      "kidney_stone_related_marker"),
+    ("Calcium",      "kidney_stone_related_marker"),
+    ("calcium",      "kidney_stone_related_marker"),
+    ("腎結石",       "kidney_stone_related_marker"),
+    ("Phosphate",    "kidney_stone_related_marker"),
+    # Uric acid / gout (before generic lipid fallback)
+    ("尿酸",         "uric_acid"),
+    ("Uric",         "uric_acid"),
     # Lipids
-    ("LDL",         "lipid_abnormality"),
-    ("HDL",         "lipid_abnormality"),
-    ("VLDL",        "lipid_abnormality"),
-    ("膽固醇",       "lipid_abnormality"),
-    ("三酸甘油酯",   "lipid_abnormality"),
-    ("Cholesterol", "lipid_abnormality"),
-    ("TG",          "lipid_abnormality"),
-    ("脂",          "lipid_abnormality"),
-    # Glucose / HbA1c
+    ("LDL",          "lipid_abnormality"),
+    ("HDL",          "lipid_abnormality"),
+    ("VLDL",         "lipid_abnormality"),
+    ("膽固醇",        "lipid_abnormality"),
+    ("三酸甘油酯",    "lipid_abnormality"),
+    ("Cholesterol",  "lipid_abnormality"),
+    ("TG",           "lipid_abnormality"),
+    ("脂",           "lipid_abnormality"),
     ("HbA1c",       "glucose_abnormality"),
     ("A1c",         "glucose_abnormality"),
     ("糖化",        "glucose_abnormality"),
@@ -89,13 +103,12 @@ _ITEM_TO_ABNORMALITY_TYPE: list[tuple[str, str]] = [
     ("Ferritin",    "anemia_marker"),
     ("鐵",          "anemia_marker"),
     ("貧血",        "anemia_marker"),
-    # Uric acid / gout
-    ("尿酸",        "uric_acid"),
-    ("Uric",        "uric_acid"),
+    # Uric acid is listed earlier (above lipids) to prevent
+    # "uric" being caught by a broader kidney keyword.
     # Inflammatory markers
-    ("CRP",         "inflammation_marker"),
-    ("ESR",         "inflammation_marker"),
-    ("發炎",        "inflammation_marker"),
+    ("CRP",          "inflammation_marker"),
+    ("ESR",          "inflammation_marker"),
+    ("發炎",         "inflammation_marker"),
 ]
 
 
@@ -112,16 +125,18 @@ def _classify_abnormality_type(item_name: str) -> str:
 # ---------------------------------------------------------------------------
 
 _TYPE_TO_ACTION: dict[str, str] = {
-    "lipid_abnormality":    "建議與醫師討論血脂管理，並評估飲食調整與運動計畫。",
-    "glucose_abnormality":  "建議追蹤血糖或糖化數值，與醫師討論是否需要進一步評估。",
-    "blood_pressure":       "建議監測血壓趨勢，並與醫師討論生活型態調整方向。",
-    "kidney_function":      "建議增加飲水量並定期追蹤腎功能指標，必要時諮詢醫師。",
-    "liver_function":       "建議定期追蹤肝功能指標，並避免對肝臟有負擔的習慣。",
-    "thyroid_function":     "建議與醫師討論甲狀腺指標，評估是否需要安排追蹤檢查。",
-    "anemia_marker":        "建議與醫師討論血液指標，並評估是否需要進一步追蹤。",
-    "uric_acid":            "建議減少高普林食物攝取，並定期追蹤尿酸數值。",
-    "inflammation_marker":  "建議與醫師討論發炎指標，並評估是否需要進一步檢查。",
-    "lab_abnormality":      "建議與醫師討論此項目異常，並安排複查以確認趨勢。",
+    "lipid_abnormality":           "建議與醫師討論血脂管理，並評估飲食調整與運動計畫。",
+    "glucose_abnormality":         "建議追蹤血糖或糖化數值，與醫師討論是否需要進一步評估。",
+    "blood_pressure":              "建議監測血壓趨勢，並與醫師討論生活型態調整方向。",
+    "kidney_function":             "建議增加飲水量並定期追蹤腎功能指標，必要時諮詢醫師。",
+    "liver_function":              "建議定期追蹤肝功能指標，並避免對肝臟有負擔的習慣。",
+    "fatty_liver_marker":          "建議與醫師討論肝臟指標，評估是否需要超音波追蹤，並調整飲食習慣。",
+    "thyroid_function":            "建議與醫師討論甲狀腺指標，評估是否需要安排追蹤檢查。",
+    "anemia_marker":               "建議與醫師討論血液指標，並評估是否需要進一步追蹤。",
+    "uric_acid":                   "建議減少高普林食物攝取，並定期追蹤尿酸數值。",
+    "kidney_stone_related_marker": "建議增加飲水量，並與醫師討論是否需要進一步泌尿系統評估。",
+    "inflammation_marker":         "建議與醫師討論發炎指標，並評估是否需要進一步檢查。",
+    "lab_abnormality":             "建議與醫師討論此項目異常，並安排複查以確認趨勢。",
 }
 
 # ---------------------------------------------------------------------------
@@ -289,6 +304,10 @@ def detect_lab_abnormalities(
 
         why_detected = "；".join(why_parts) + "。"
 
+        # Stale data warning appended to whyDetected when most-recent is old
+        if most_recent.get("recency") == "older":
+            why_detected = why_detected.rstrip("。") + "；此資料來自較早期的報告，建議與醫師確認是否需要重新檢測。"
+
         # ── Confidence ─────────────────────────────────────────────────────
         # Average parser_confidence from all occurrences, then apply boosts.
         raw_confidences = [
@@ -302,7 +321,11 @@ def detect_lab_abnormalities(
             base_conf = min(base_conf + 0.08, 0.88)
         # Recurrence → +0.05 per additional occurrence beyond first, max +0.10
         recurrence_boost = min((recurrence_count - 1) * 0.05, 0.10)
-        confidence = min(max(base_conf + recurrence_boost, 0.30), 0.88)
+        # Stale report penalty: when the most-recent occurrence is "older",
+        # data currency is low — reduce confidence to signal this.
+        _RECENCY_PENALTY = {"today": 0.0, "this_week": 0.0, "this_month": 0.0, "older": -0.10}
+        stale_penalty = _RECENCY_PENALTY.get(most_recent.get("recency") or "unknown", -0.05)
+        confidence = min(max(base_conf + recurrence_boost + stale_penalty, 0.30), 0.88)
 
         # ── Evidence sources ───────────────────────────────────────────────
         evidence_sources: list[dict[str, Any]] = []

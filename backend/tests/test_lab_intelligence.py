@@ -353,3 +353,241 @@ class TestSorting:
         names = [r["labItemName"] for r in result if r["severity"] == "high"]
         if len(names) >= 2:
             assert names[0] == "LDL"
+
+
+# ---------------------------------------------------------------------------
+# Task 5 — Required test scenarios
+# ---------------------------------------------------------------------------
+
+class TestHighTriglycerides:
+    """high_triglycerides detection — TG / 三酸甘油酯 items."""
+
+    def test_tg_item_detected(self):
+        result = detect_lab_abnormalities([_item(item_name="TG", abnormal_flag="H")], [])
+        assert len(result) == 1
+        assert result[0]["labItemName"] == "TG"
+
+    def test_tg_classified_as_lipid(self):
+        result = detect_lab_abnormalities([_item(item_name="TG", abnormal_flag="H")], [])
+        assert result[0]["abnormalityType"] == "lipid_abnormality"
+
+    def test_triglyceride_zh_detected(self):
+        result = detect_lab_abnormalities([_item(item_name="三酸甘油酯", abnormal_flag="H")], [])
+        assert result[0]["abnormalityType"] == "lipid_abnormality"
+
+    def test_tg_high_flag_medium_severity(self):
+        result = detect_lab_abnormalities([_item(item_name="TG", abnormal_flag="H")], [])
+        assert result[0]["severity"] == "medium"
+
+    def test_tg_hh_flag_high_severity(self):
+        result = detect_lab_abnormalities([_item(item_name="TG", abnormal_flag="HH")], [])
+        assert result[0]["severity"] == "high"
+
+
+class TestLowHDL:
+    """low_hdl detection — HDL items (abnormal_flag L = low, which is bad for HDL)."""
+
+    def test_hdl_l_flag_detected(self):
+        result = detect_lab_abnormalities([_item(item_name="HDL", abnormal_flag="L")], [])
+        assert len(result) == 1
+        assert result[0]["labItemName"] == "HDL"
+
+    def test_hdl_classified_as_lipid(self):
+        result = detect_lab_abnormalities([_item(item_name="HDL", abnormal_flag="L")], [])
+        assert result[0]["abnormalityType"] == "lipid_abnormality"
+
+    def test_hdl_l_flag_medium_severity(self):
+        result = detect_lab_abnormalities([_item(item_name="HDL", abnormal_flag="L")], [])
+        assert result[0]["severity"] == "medium"
+
+    def test_hdl_action_non_empty(self):
+        result = detect_lab_abnormalities([_item(item_name="HDL", abnormal_flag="L")], [])
+        assert result[0]["suggestedAction"].strip()
+
+
+class TestHighUricAcid:
+    """high_uric_acid detection — 尿酸 / Uric Acid items."""
+
+    def test_uric_acid_zh_detected(self):
+        result = detect_lab_abnormalities([_item(item_name="尿酸", abnormal_flag="H")], [])
+        assert result[0]["abnormalityType"] == "uric_acid"
+
+    def test_uric_acid_en_detected(self):
+        result = detect_lab_abnormalities([_item(item_name="Uric Acid", abnormal_flag="H")], [])
+        assert result[0]["abnormalityType"] == "uric_acid"
+
+    def test_uric_acid_action_mentions_purine(self):
+        result = detect_lab_abnormalities([_item(item_name="尿酸", abnormal_flag="H")], [])
+        # Action should not say diagnosis but should provide lifestyle guidance
+        assert "建議" in result[0]["suggestedAction"]
+
+    def test_uric_acid_not_confused_with_kidney(self):
+        """Uric acid should map to uric_acid type, not kidney_function."""
+        result = detect_lab_abnormalities([_item(item_name="尿酸", abnormal_flag="H")], [])
+        assert result[0]["abnormalityType"] == "uric_acid"
+        assert result[0]["abnormalityType"] != "kidney_function"
+
+
+class TestFattyLiverMarker:
+    """fatty_liver_marker detection."""
+
+    def test_fatty_liver_zh_detected(self):
+        result = detect_lab_abnormalities([_item(item_name="脂肪肝", abnormal_flag="A")], [])
+        assert result[0]["abnormalityType"] == "fatty_liver_marker"
+
+    def test_fatty_liver_action_non_empty(self):
+        result = detect_lab_abnormalities([_item(item_name="脂肪肝", abnormal_flag="A")], [])
+        assert result[0]["suggestedAction"].strip()
+        assert "建議" in result[0]["suggestedAction"]
+
+
+class TestKidneyStoneMarker:
+    """kidney_stone_related_marker detection."""
+
+    def test_oxalate_detected(self):
+        result = detect_lab_abnormalities([_item(item_name="Oxalate", abnormal_flag="H")], [])
+        assert result[0]["abnormalityType"] == "kidney_stone_related_marker"
+
+    def test_calcium_detected(self):
+        result = detect_lab_abnormalities([_item(item_name="Calcium", abnormal_flag="H")], [])
+        assert result[0]["abnormalityType"] == "kidney_stone_related_marker"
+
+    def test_kidney_stone_action_mentions_water(self):
+        result = detect_lab_abnormalities([_item(item_name="Oxalate", abnormal_flag="H")], [])
+        assert "建議" in result[0]["suggestedAction"]
+
+
+class TestGenericOutOfRange:
+    """generic_out_of_range_lab — unknown item_name falls back to lab_abnormality."""
+
+    def test_unknown_item_classified_generic(self):
+        result = detect_lab_abnormalities([_item(item_name="XYZ_MARKER_999", abnormal_flag="H")], [])
+        assert result[0]["abnormalityType"] == "lab_abnormality"
+
+    def test_generic_still_has_all_required_fields(self):
+        required = {"abnormalityType", "severity", "labItemName", "whyDetected",
+                    "suggestedAction", "confidence", "evidenceSources", "rule_id"}
+        result = detect_lab_abnormalities([_item(item_name="XYZ_MARKER_999", abnormal_flag="H")], [])
+        missing = required - set(result[0].keys())
+        assert not missing
+
+    def test_generic_suggested_action_non_empty(self):
+        result = detect_lab_abnormalities([_item(item_name="UNKNOWN_MED_X", abnormal_flag="A")], [])
+        assert result[0]["suggestedAction"].strip()
+
+
+class TestNoReferenceRangeNoHallucination:
+    """When abnormal_flag is set but ref_range is None, output is still produced
+    (the flag IS the ground truth). But when NEITHER flag NOR ref_range exists,
+    the caller (build_evidence_bundle) should never pass such items in — and
+    detect_lab_abnormalities does not invent abnormalities from flagless items.
+    """
+
+    def test_no_ref_range_with_flag_produces_entry(self):
+        """An item with flag=H but no ref_range must still produce an entry
+        (flag alone is sufficient signal — anti-hallucination means we don't
+        invent the VALUE being abnormal; the flag already says so)."""
+        item = _item(item_name="LDL", abnormal_flag="H", ref_range=None)
+        result = detect_lab_abnormalities([item], [])
+        assert len(result) == 1
+        assert result[0]["referenceRange"] is None  # preserved as-is
+
+    def test_why_detected_works_without_ref_range(self):
+        item = _item(item_name="LDL", abnormal_flag="H", ref_range=None)
+        result = detect_lab_abnormalities([item], [])
+        assert "LDL" in result[0]["whyDetected"]
+        # No reference range text should appear
+        assert "參考範圍" not in result[0]["whyDetected"]
+
+    def test_two_items_no_ref_range_only_count_what_is_there(self):
+        """Service returns exactly the items passed in, no extras."""
+        items = [
+            _item(item_name="LDL", ref_range=None),
+            _item(item_name="HDL", ref_range=None),
+        ]
+        result = detect_lab_abnormalities(items, [])
+        assert len(result) == 2
+        names = {r["labItemName"] for r in result}
+        assert names == {"LDL", "HDL"}
+
+
+class TestStaleReportConfidenceDowngrade:
+    """Stale reports (recency == 'older') should lower confidence and add
+    a data-currency warning to whyDetected."""
+
+    def test_stale_recency_lowers_confidence_vs_recent(self):
+        fresh = _item(item_name="LDL", confidence=0.80, recency="this_week")
+        stale = _item(item_name="LDL", confidence=0.80, recency="older")
+        fresh_result = detect_lab_abnormalities([fresh], [])
+        stale_result = detect_lab_abnormalities([stale], [])
+        assert stale_result[0]["confidence"] < fresh_result[0]["confidence"]
+
+    def test_stale_confidence_still_bounded_above_minimum(self):
+        stale = _item(item_name="LDL", confidence=0.30, recency="older")
+        result = detect_lab_abnormalities([stale], [])
+        assert result[0]["confidence"] >= 0.30
+
+    def test_stale_why_detected_contains_warning(self):
+        stale = _item(item_name="LDL", recency="older")
+        result = detect_lab_abnormalities([stale], [])
+        # Should contain some indication of data age
+        assert "較早" in result[0]["whyDetected"] or "較舊" in result[0]["whyDetected"] or "重新" in result[0]["whyDetected"]
+
+    def test_recent_why_detected_no_stale_warning(self):
+        fresh = _item(item_name="LDL", recency="this_week")
+        result = detect_lab_abnormalities([fresh], [])
+        assert "較早期" not in result[0]["whyDetected"]
+
+
+class TestEmptyReportFallback:
+    """Service must return [] and not raise when given empty inputs."""
+
+    def test_empty_lab_items_returns_empty_list(self):
+        assert detect_lab_abnormalities([], []) == []
+
+    def test_empty_lab_items_with_alerts_returns_empty(self):
+        alerts = [_alert("LDL"), _alert("TG"), _alert("HDL")]
+        assert detect_lab_abnormalities([], alerts) == []
+
+    def test_none_like_items_filtered_gracefully(self):
+        # Items with empty item_name string should be silently skipped
+        items = [_item(item_name=""), _item(item_name="LDL")]
+        result = detect_lab_abnormalities(items, [])
+        assert len(result) == 1
+        assert result[0]["labItemName"] == "LDL"
+
+
+class TestEvidenceSourceTraceability:
+    """Each detected abnormality must trace back to its source report/item."""
+
+    def test_report_id_preserved_in_entry(self):
+        item = _item(item_name="LDL", report_id="report-abc-123")
+        result = detect_lab_abnormalities([item], [])
+        assert result[0]["reportId"] == "report-abc-123"
+
+    def test_source_id_preserved_in_evidence_sources(self):
+        item = _item(item_name="LDL", source_id="item-uuid-456")
+        result = detect_lab_abnormalities([item], [])
+        lab_srcs = [e for e in result[0]["evidenceSources"] if e["type"] == "lab_report_item"]
+        ids = [e["id"] for e in lab_srcs]
+        assert "item-uuid-456" in ids
+
+    def test_multiple_reports_all_sources_listed(self):
+        items = [
+            _item(item_name="TG", report_id="r1", source_id="s1"),
+            _item(item_name="TG", report_id="r2", source_id="s2"),
+            _item(item_name="TG", report_id="r3", source_id="s3"),
+        ]
+        result = detect_lab_abnormalities(items, [])
+        lab_srcs = [e for e in result[0]["evidenceSources"] if e["type"] == "lab_report_item"]
+        ids = {e["id"] for e in lab_srcs}
+        assert ids == {"s1", "s2", "s3"}
+
+    def test_alert_source_id_in_evidence(self):
+        item = _item(item_name="LDL")
+        alert = _alert("LDL", source_id="alert-xyz-789")
+        result = detect_lab_abnormalities([item], [alert])
+        alert_srcs = [e for e in result[0]["evidenceSources"] if e["type"] == "risk_alert"]
+        assert len(alert_srcs) >= 1
+        assert alert_srcs[0]["id"] == "alert-xyz-789"
+
