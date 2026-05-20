@@ -147,6 +147,7 @@ export type DailyHealthSummary = {
 // ── Notification Intelligence types (P5 Foundation) ─────────────────────
 export type NotificationCandidate = {
   candidate_id: string
+  notification_id?: string
   source_type: 'device_escalation' | 'lab_abnormality' | 'symptom_pattern' | 'risk_alert' | 'recommendation'
   priority: 'low' | 'medium' | 'high' | 'urgent'
   title: string
@@ -334,6 +335,17 @@ export const api = {
     request(`/health-assistant/outcome-feedback?window_days=${windowDays}`),
   getIntelligentNotifications: (): Promise<IntelligentNotifications> =>
     request('/health-assistant/notifications/intelligent'),
+  snoozeNotification: (notificationId: string, hours = 24) =>
+    request(`/health-assistant/notifications/${notificationId}/snooze`, {
+      method: 'POST',
+      body: JSON.stringify({ hours }),
+    }),
+  ignoreNotification: (notificationId: string) =>
+    request(`/health-assistant/notifications/${notificationId}/ignore`, { method: 'POST' }),
+  clickNotification: (notificationId: string) =>
+    request(`/health-assistant/notifications/${notificationId}/click`, { method: 'POST' }),
+  actedNotification: (notificationId: string) =>
+    request(`/health-assistant/notifications/${notificationId}/acted`, { method: 'POST' }),
 };
 
 export async function uploadDocument(category: string, file: File) {

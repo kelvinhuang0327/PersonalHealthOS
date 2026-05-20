@@ -5,10 +5,11 @@ to the frontend and the orchestrator product-signal layer.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Annotated, Any
+from datetime import datetime, timedelta, timezone
+from typing import Annotated, Any, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -24,6 +25,12 @@ from app.services.health_assistant_service import (
 from app.services.notification_intelligence_service import (
     apply_notification_fatigue_guard,
     build_notification_candidates,
+)
+from app.services.notification_history_service import (
+    get_notification_by_id,
+    load_notification_history,
+    persist_notification_candidates,
+    update_notification_status,
 )
 from app.services.outcome_feedback_service import compare_expected_vs_actual_outcome
 
@@ -145,26 +152,145 @@ def get_intelligent_notifications(
 ) -> dict[str, Any]:
     """Return intelligent notification candidates for the target person.
 
-    Builds the evidence bundle, generates notification candidates from all
-    available health signals, and applies the alert-fatigue guard.
+    Builds the evidence bundle, generates candidates, loads DB history to
+    apply the stateful fatigue guard, then persists results.
 
     Response keys
     -------------
-    items        — active (non-suppressed) candidates, sorted urgent→low
-    suppressed   — suppressed candidates with suppress_reason populated
+    items        — active candidates with notification_id for status updates
+    suppressed   — suppressed candidates with suppress_reason + notification_id
     generated_at — ISO-8601 timestamp
-    total_candidates — total before guard (items + suppressed)
-
-    No notification history is persisted by this endpoint; the guard runs
-    in stateless mode (no prior sent_at / snooze state assumed).
+    total_candidates — total before guard
     """
-    bundle = build_evidence_bundle(db, str(current_user.id), str(target_person.id))
+    uid = str(current_user.id)
+    pid = str(target_person.id)
+
+    bundle = build_evidence_bundle(db, uid, pid)
+    history = load_notification_history(db, uid, pid)
+    active_rule_ids: set[str] = {
+        act.get("rule_id", "") for act in bundle.get("actions", [])
+        if act.get("rule_id")
+    }
     candidates = build_notification_candidates(bundle)
-    result = apply_notification_fatigue_guard(candidates)
+    result = apply_notification_fatigue_guard(candidates, history, active_rule_ids)
+
+    # Persist and get DB notification_ids
+    id_map = persist_notification_candidates(
+        db, uid, pid, result["active"], result["suppressed"]
+    )
+
+    def _attach_id(c: dict) -> dict:
+        out = dict(c)
+        out["notification_id"] = id_map.get(c.get("candidate_id", ""))
+        return out
+
     return {
-        "person_id": str(target_person.id),
+        "person_id": pid,
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "items": result["active"],
-        "suppressed": result["suppressed"],
+        "items": [_attach_id(c) for c in result["active"]],
+        "suppressed": [_attach_id(c) for c in result["suppressed"]],
         "total_candidates": len(candidates),
     }
+
+
+# ---------------------------------------------------------------------------
+# Notification status update endpoints (P5 Learning Loop)
+# ---------------------------------------------------------------------------
+
+class _SnoozeBody(BaseModel):
+    hours: Optional[int] = 24
+    snoozed_until: Optional[str] = None  # ISO-8601; overrides hours when set
+
+
+def _get_log_or_404(
+    notification_id: str,
+    current_user: User,
+    target_person: PersonProfile,
+    db: Session,
+):
+    """Shared helper — raises 404 if notification not found for this person."""
+    record = get_notification_by_id(
+        db, notification_id, str(current_user.id), str(target_person.id)
+    )
+    if record is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return record
+
+
+@router.post('/notifications/{notification_id}/snooze')
+def snooze_notification(
+    notification_id: str,
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    body: Optional[_SnoozeBody] = None,
+) -> dict[str, Any]:
+    """Snooze a notification for a specified number of hours (default 24)."""
+    _get_log_or_404(notification_id, current_user, target_person, db)
+    body = body or _SnoozeBody()
+
+    # Resolve snoozed_until
+    if body.snoozed_until:
+        try:
+            snoozed_until_dt = datetime.fromisoformat(body.snoozed_until)
+            if snoozed_until_dt.tzinfo is None:
+                snoozed_until_dt = snoozed_until_dt.replace(tzinfo=timezone.utc)
+        except ValueError:
+            snoozed_until_dt = None
+    else:
+        hours = max(1, body.hours or 24)
+        snoozed_until_dt = datetime.now(timezone.utc) + timedelta(hours=hours)
+
+    updated = update_notification_status(
+        db, notification_id, str(current_user.id), str(target_person.id),
+        status="snoozed", snoozed_until=snoozed_until_dt,
+    )
+    return updated
+
+
+@router.post('/notifications/{notification_id}/ignore')
+def ignore_notification(
+    notification_id: str,
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Mark notification as ignored (increments ignore_count)."""
+    _get_log_or_404(notification_id, current_user, target_person, db)
+    updated = update_notification_status(
+        db, notification_id, str(current_user.id), str(target_person.id),
+        status="ignored",
+    )
+    return updated
+
+
+@router.post('/notifications/{notification_id}/click')
+def click_notification(
+    notification_id: str,
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Mark notification as clicked."""
+    _get_log_or_404(notification_id, current_user, target_person, db)
+    updated = update_notification_status(
+        db, notification_id, str(current_user.id), str(target_person.id),
+        status="clicked",
+    )
+    return updated
+
+
+@router.post('/notifications/{notification_id}/acted')
+def acted_notification(
+    notification_id: str,
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Mark notification as acted upon (strongest positive signal)."""
+    _get_log_or_404(notification_id, current_user, target_person, db)
+    updated = update_notification_status(
+        db, notification_id, str(current_user.id), str(target_person.id),
+        status="acted",
+    )
+    return updated

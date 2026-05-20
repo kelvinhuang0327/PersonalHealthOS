@@ -318,3 +318,37 @@ class ActionOutcome(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     action = relationship('HealthAction', back_populates='outcomes')
+
+
+class NotificationLog(Base):
+    """Persisted record of each notification candidate — enables stateful fatigue guard."""
+    __tablename__ = 'notification_logs'
+    __table_args__ = (
+        Index('ix_notification_log_person_key_at', 'subject_profile_id', 'cooldown_key', 'generated_at'),
+        Index('ix_notification_log_user_person_at', 'user_id', 'subject_profile_id', 'generated_at'),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    subject_profile_id = Column(UUID(as_uuid=True), ForeignKey('person_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
+    # Deterministic hash of cooldown_key (12-char hex)
+    candidate_id = Column(String(12), nullable=False, index=True)
+    cooldown_key = Column(String(120), nullable=False)
+    source_type = Column(String(30), nullable=False)
+    priority = Column(String(10), nullable=False)
+    title = Column(String(240), nullable=False)
+    message = Column(Text)
+    # generated | delivered | snoozed | ignored | clicked | acted | suppressed
+    status = Column(String(20), nullable=False, default='generated')
+    suppress_reason = Column(Text)
+    generated_at = Column(DateTime(timezone=True), nullable=False)
+    delivered_at = Column(DateTime(timezone=True))
+    snoozed_until = Column(DateTime(timezone=True))
+    clicked_at = Column(DateTime(timezone=True))
+    acted_at = Column(DateTime(timezone=True))
+    # Cumulative counters (updated in-place on the most recent record per cooldown_key)
+    snooze_count = Column(Integer, nullable=False, default=0)
+    ignore_count = Column(Integer, nullable=False, default=0)
+    evidence_json = Column(JSON)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

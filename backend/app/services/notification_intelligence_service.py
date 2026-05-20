@@ -463,8 +463,20 @@ def apply_notification_fatigue_guard(
                     suppressed.append(c)
                     continue
 
-        # Rule 4 — snooze downgrade (candidate remains active after downgrade)
+        # Rule 4 — snooze handling (suppress if still in snooze window; downgrade if expired)
         if hist and hist.get("status") == "snoozed":
+            snoozed_until_dt = _parse_dt(hist.get("snoozed_until"))
+            if snoozed_until_dt and snoozed_until_dt > now:
+                c["suppress_reason"] = (
+                    f"已暫緩提醒（至 {snoozed_until_dt.strftime('%m/%d %H:%M')}）"
+                )
+                suppressed.append(c)
+                continue
+            # Snooze expired or no deadline → downgrade and keep active
+            c["priority"] = _downgrade_priority(c["priority"])
+
+        # Rule 5 — clicked/acted: downgrade priority as a positive reward signal
+        elif hist and hist.get("status") in ("clicked", "acted"):
             c["priority"] = _downgrade_priority(c["priority"])
 
         active.append(c)

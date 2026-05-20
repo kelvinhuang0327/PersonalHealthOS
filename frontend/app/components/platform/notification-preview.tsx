@@ -1,16 +1,14 @@
 'use client'
 
 /**
- * NotificationPreview — P5 Notification Intelligence Foundation
- * =============================================================
- * Self-fetching card that shows the most urgent active notification candidate.
- * Displays priority badge, why_now explanation, suggested_action, and
- * a count of suppressed (de-duped / on cooldown) notifications.
- *
- * No diagnosis wording. Grounded in evidence only.
+ * NotificationPreview — P5 Notification Learning Loop
+ * ====================================================
+ * Self-fetching card that shows active notification candidates.
+ * Users can snooze (24h) or ignore each notification; actions are
+ * persisted to DB via the status API and reflected immediately in UI.
  */
 
-import { Bell, BellOff } from 'lucide-react'
+import { Bell, BellOff, Clock, EyeOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { api, type IntelligentNotifications, type NotificationCandidate } from '../../../lib/api'
@@ -62,8 +60,20 @@ function PriorityBadge({ priority }: { priority: NotificationCandidate['priority
   )
 }
 
-function CandidateCard({ candidate }: { candidate: NotificationCandidate }) {
+function CandidateCard({
+  candidate,
+  onSnooze,
+  onIgnore,
+  actioning,
+}: {
+  candidate: NotificationCandidate
+  onSnooze: (id: string) => void
+  onIgnore: (id: string) => void
+  actioning: boolean
+}) {
   const { borderCls } = PRIORITY_CONFIG[candidate.priority] ?? PRIORITY_CONFIG.low
+  const nid = candidate.notification_id
+
   return (
     <div className={`rounded-lg bg-white p-4 shadow-sm ${borderCls}`}>
       <div className="flex items-start gap-3">
@@ -78,6 +88,30 @@ function CandidateCard({ candidate }: { candidate: NotificationCandidate }) {
             <p className="text-xs text-slate-700 font-medium">
               建議：{candidate.suggested_action}
             </p>
+          )}
+
+          {/* Action buttons — only shown when we have a DB-persisted notification_id */}
+          {nid && (
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => onSnooze(nid)}
+                disabled={actioning}
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+                aria-label="暫緩提醒 24 小時"
+              >
+                <Clock className="h-3 w-3" aria-hidden />
+                暫緩 24h
+              </button>
+              <button
+                onClick={() => onIgnore(nid)}
+                disabled={actioning}
+                className="flex items-center gap-1 rounded px-2 py-1 text-xs text-slate-400 hover:bg-slate-100 disabled:opacity-40 transition-colors"
+                aria-label="忽略此提醒"
+              >
+                <EyeOff className="h-3 w-3" aria-hidden />
+                忽略
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -102,6 +136,9 @@ export default function NotificationPreview() {
   const [data, setData] = useState<IntelligentNotifications | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  // Set of candidate_ids that have been actioned (removed from visible list)
+  const [actionedIds, setActionedIds] = useState<Set<string>>(new Set())
+  const [actioningId, setActioningId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -121,8 +158,29 @@ export default function NotificationPreview() {
     }
   }, [])
 
-  const topCandidate: NotificationCandidate | undefined = data?.items?.[0]
-  const suppressedCount = data?.suppressed?.length ?? 0
+  function handleSnooze(notificationId: string, candidateId: string) {
+    setActioningId(notificationId)
+    api
+      .snoozeNotification(notificationId)
+      .then(() => setActionedIds((prev) => new Set([...prev, candidateId])))
+      .catch(() => {/* silent; user can retry */})
+      .finally(() => setActioningId(null))
+  }
+
+  function handleIgnore(notificationId: string, candidateId: string) {
+    setActioningId(notificationId)
+    api
+      .ignoreNotification(notificationId)
+      .then(() => setActionedIds((prev) => new Set([...prev, candidateId])))
+      .catch(() => {/* silent; user can retry */})
+      .finally(() => setActioningId(null))
+  }
+
+  const visibleItems = (data?.items ?? []).filter(
+    (c) => !actionedIds.has(c.candidate_id),
+  )
+  const topCandidate: NotificationCandidate | undefined = visibleItems[0]
+  const suppressedCount = (data?.suppressed?.length ?? 0) + actionedIds.size
 
   return (
     <section aria-label="今日提醒" className="space-y-2">
@@ -132,7 +190,7 @@ export default function NotificationPreview() {
           今日提醒
         </h3>
         {suppressedCount > 0 && (
-          <span className="text-xs text-slate-400">
+          <span className="text-xs text-slate-400" title="已靜音或暫緩">
             {suppressedCount} 則已靜音
           </span>
         )}
@@ -150,10 +208,15 @@ export default function NotificationPreview() {
 
       {!loading && !error && topCandidate && (
         <>
-          <CandidateCard candidate={topCandidate} />
-          {(data?.items?.length ?? 0) > 1 && (
+          <CandidateCard
+            candidate={topCandidate}
+            onSnooze={(nid) => handleSnooze(nid, topCandidate.candidate_id)}
+            onIgnore={(nid) => handleIgnore(nid, topCandidate.candidate_id)}
+            actioning={actioningId === topCandidate.notification_id}
+          />
+          {visibleItems.length > 1 && (
             <p className="text-xs text-slate-400 text-right">
-              +{(data!.items.length) - 1} 則其他提醒
+              +{visibleItems.length - 1} 則其他提醒
             </p>
           )}
         </>
@@ -161,3 +224,4 @@ export default function NotificationPreview() {
     </section>
   )
 }
+
