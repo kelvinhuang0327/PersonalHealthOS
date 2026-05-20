@@ -26,6 +26,10 @@ frontend/.turbo/
 runtime/snapshots/
 uploads/
 
+# Runtime state (agent orchestrator locks / db)
+runtime/agent_orchestrator/locks/
+runtime/agent_orchestrator/orchestrator.db
+
 # Editors / OS
 .DS_Store
 .idea/
