@@ -419,3 +419,46 @@ class NarrativeMemory(Base):
     confidence = Column(Numeric(4, 3), nullable=False, server_default='0.0')
     generated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class FamilyRelationship(Base):
+    """Family / multi-person relationship graph — P8 Family Health Assistant.
+
+    Maps which PersonProfiles are related to each other and with what
+    permission level.  Never stores health data — only relationship metadata.
+
+    relationship_type:  self | child | parent | spouse | caregiver
+    permission_level:   read_only | manage | full_access
+    """
+    __tablename__ = 'family_relationships'
+    __table_args__ = (
+        Index(
+            'ix_family_rel_owner_subject_related',
+            'owner_user_id', 'subject_profile_id', 'related_profile_id',
+            unique=True,
+        ),
+        Index('ix_family_rel_owner_subject', 'owner_user_id', 'subject_profile_id'),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    owner_user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('users.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+    subject_profile_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('person_profiles.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    related_profile_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey('person_profiles.id', ondelete='CASCADE'),
+        nullable=False,
+    )
+    # self | child | parent | spouse | caregiver
+    relationship_type = Column(String(20), nullable=False)
+    # read_only | manage | full_access
+    permission_level = Column(String(20), nullable=False, server_default='read_only')
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

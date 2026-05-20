@@ -494,3 +494,187 @@ def get_cross_period_reasoning(
         "reasoning": reasoning,
     }
 
+
+# ---------------------------------------------------------------------------
+# Family Health Context — P8
+# ---------------------------------------------------------------------------
+
+from pydantic import field_validator  # noqa: E402
+from app.models.entities import FamilyRelationship  # noqa: E402
+from app.services.family_health_context_service import (  # noqa: E402
+    build_family_health_context,
+    generate_family_recommendations,
+    load_family_relationships,
+)
+
+
+class _FamilyRelationshipBody(BaseModel):
+    related_profile_id: str
+    relationship_type: str
+    permission_level: str = "read_only"
+
+    @field_validator("relationship_type")
+    @classmethod
+    def _validate_rel_type(cls, v: str) -> str:
+        allowed = {"self", "child", "parent", "spouse", "caregiver"}
+        if v not in allowed:
+            raise ValueError(f"relationship_type must be one of {sorted(allowed)}")
+        return v
+
+    @field_validator("permission_level")
+    @classmethod
+    def _validate_perm(cls, v: str) -> str:
+        allowed = {"read_only", "manage", "full_access"}
+        if v not in allowed:
+            raise ValueError(f"permission_level must be one of {sorted(allowed)}")
+        return v
+
+
+@router.post('/family-relationships', status_code=201)
+def create_family_relationship(
+    body: _FamilyRelationshipBody,
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Create a family relationship between the target person and a related profile.
+
+    relationship_type: self | child | parent | spouse | caregiver
+    permission_level:  read_only | manage | full_access
+
+    Returns 201 with the created relationship dict.
+    Idempotent — returns existing record if relationship already exists.
+    """
+    import uuid as _uuid
+
+    uid = current_user.id      # UUID object for DB queries
+    pid = target_person.id     # UUID object for DB queries
+
+    # Parse body.related_profile_id to UUID for DB queries
+    try:
+        related_pid = _uuid.UUID(body.related_profile_id)
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=422, detail="related_profile_id is not a valid UUID")
+
+    # Idempotency check
+    existing = (
+        db.query(FamilyRelationship)
+        .filter(
+            FamilyRelationship.owner_user_id == uid,
+            FamilyRelationship.subject_profile_id == pid,
+            FamilyRelationship.related_profile_id == related_pid,
+        )
+        .first()
+    )
+    if existing:
+        return {
+            "id": str(existing.id),
+            "owner_user_id": str(uid),
+            "subject_profile_id": str(pid),
+            "related_profile_id": str(existing.related_profile_id),
+            "relationship_type": existing.relationship_type,
+            "permission_level": existing.permission_level,
+            "created": False,
+        }
+
+    # Verify related_profile exists and belongs to this user
+    related = db.query(PersonProfile).filter(
+        PersonProfile.id == related_pid,
+        PersonProfile.owner_user_id == uid,
+    ).first()
+    if not related:
+        raise HTTPException(status_code=404, detail="Related profile not found")
+
+    rel = FamilyRelationship(
+        id=_uuid.uuid4(),
+        owner_user_id=uid,
+        subject_profile_id=pid,
+        related_profile_id=related_pid,
+        relationship_type=body.relationship_type,
+        permission_level=body.permission_level,
+    )
+    db.add(rel)
+    db.commit()
+    db.refresh(rel)
+
+    return {
+        "id": str(rel.id),
+        "owner_user_id": str(uid),
+        "subject_profile_id": str(pid),
+        "related_profile_id": str(rel.related_profile_id),
+        "relationship_type": rel.relationship_type,
+        "permission_level": rel.permission_level,
+        "created": True,
+    }
+
+
+@router.get('/family-relationships')
+def list_family_relationships(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Return all family relationships for the target person."""
+    uid = str(current_user.id)
+    pid = str(target_person.id)
+    relationships = load_family_relationships(db, uid, pid)
+    return {
+        "person_id": pid,
+        "relationships": relationships,
+        "total": len(relationships),
+    }
+
+
+@router.get('/family-health-context')
+def get_family_health_context_endpoint(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Return the family health context for the target person.
+
+    Aggregates relationships, shared risks, caregiver alerts, child attention
+    items, and family action suggestions.
+
+    Returns an explainable empty context when no family relationships exist.
+    Never emits medical diagnoses — factual observations only.
+    """
+    uid = str(current_user.id)
+    pid = str(target_person.id)
+
+    relationships = load_family_relationships(db, uid, pid)
+    context = build_family_health_context(relationships)
+
+    return {
+        "person_id": pid,
+        "context": context,
+    }
+
+
+@router.get('/family-recommendations')
+def get_family_recommendations_endpoint(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Return family-level recommendations derived from the family health context.
+
+    Sources child attention items (urgency=high), caregiver alerts (medium),
+    shared risks (medium), and family action suggestions (low).
+
+    Deduplicates against active actions.
+    Never emits medical diagnoses — factual observations only.
+    """
+    uid = str(current_user.id)
+    pid = str(target_person.id)
+
+    relationships = load_family_relationships(db, uid, pid)
+    context = build_family_health_context(relationships)
+    recommendations = generate_family_recommendations(context)
+
+    return {
+        "person_id": pid,
+        "recommendations": recommendations,
+        "total": len(recommendations),
+    }
+

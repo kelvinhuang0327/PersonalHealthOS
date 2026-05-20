@@ -231,6 +231,44 @@ export type CrossPeriodReasoningResponse = {
   reasoning: CrossPeriodReasoning
 }
 
+// --- P8 Family Health ---
+
+export type FamilyProfile = {
+  profile_id: string
+  display_name: string
+  relationship_type: 'self' | 'child' | 'parent' | 'spouse' | 'caregiver'
+  permission_level: 'read_only' | 'manage' | 'full_access'
+}
+
+export type FamilyHealthContext = {
+  relatedProfiles: FamilyProfile[]
+  sharedRisks: string[]
+  caregiverAlerts: string[]
+  childAttentionItems: string[]
+  familyActionSuggestions: string[]
+  confidence: number
+  limitations: string[]
+}
+
+export type FamilyRelationshipRecord = {
+  id: string
+  owner_user_id: string
+  subject_profile_id: string
+  related_profile_id: string
+  relationship_type: string
+  permission_level: string
+  related_display_name: string
+  created_at: string
+}
+
+export type FamilyRecommendation = {
+  text: string
+  target_profile_id: string | null
+  audience: 'caregiver' | 'member' | 'family'
+  urgency: 'high' | 'medium' | 'low'
+  evidence_source: string
+}
+
 export type IntelligentNotifications = {
   person_id: string
   generated_at: string
@@ -435,6 +473,38 @@ export const api = {
     ),
   getCrossPeriodReasoning: (): Promise<CrossPeriodReasoningResponse> =>
     request('/health-assistant/narrative-memory/cross-period'),
+
+  // P8 Family Health
+  getFamilyRelationships: (): Promise<{
+    person_id: string
+    relationships: FamilyRelationshipRecord[]
+    total: number
+  }> =>
+    request('/health-assistant/family-relationships'),
+
+  createFamilyRelationship: (body: {
+    related_profile_id: string
+    relationship_type: string
+    permission_level?: string
+  }): Promise<FamilyRelationshipRecord & { created: boolean }> =>
+    request('/health-assistant/family-relationships', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+
+  getFamilyHealthContext: (): Promise<{
+    person_id: string
+    context: FamilyHealthContext
+  }> =>
+    request('/health-assistant/family-health-context'),
+
+  getFamilyRecommendations: (): Promise<{
+    person_id: string
+    recommendations: FamilyRecommendation[]
+    total: number
+  }> =>
+    request('/health-assistant/family-recommendations'),
 };
 
 export async function uploadDocument(category: string, file: File) {
