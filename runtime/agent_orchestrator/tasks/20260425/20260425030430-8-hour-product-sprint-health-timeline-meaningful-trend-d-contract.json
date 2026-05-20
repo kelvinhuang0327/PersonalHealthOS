@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Health Timeline meaningful trend detection and Narrative v3 support",
+  "task_draft_markdown": "8-hour product sprint: Health Timeline meaningful trend detection and Narrative v3 support\n\nUser Value: A health timeline that just shows raw data points is a spreadsheet. A timeline that highlights \"Your sleep improved 15% after starting magnesium\" is a story the user will share. This task adds trend detection to make the timeline a compelling evidence layer.\n\nProduct Maturity Impact: The timeline is the long-term value proposition (the longer you use it, the more valuable it gets). Trend detection turns raw history into motivation to continue.\n\nExpected Change: The timeline becomes a story of change, not a log of events. Users can see \"my sleep improved 15% after starting magnesium\" because trend arrows show it. This data feeds directly into Narrative v3 causal chains, making the AI smarter.\n\nObjective: Add trend detection to the timeline API and surface it in the UI. Ensure timeline data is rich enough to support Narrative v3 causal chains.\n\nPhase 1: Audit the current timeline API endpoint. What data does it return? Is it raw events or aggregated? Is there any trend comparison (this week vs last week)? What time-series data is missing that would improve the Narrative v3 causal chain?\nPhase 2: Design a simple trend detection schema: for each metric tracked, compute direction (up/down/stable) and magnitude (% change) over the last 7 and 30 days. Return as a trends[] array alongside the raw timeline.\nPhase 3: Implement the trend computation in backend/app/services/ or backend/app/api/. Update the timeline API response to include trends[]. Verify the trends data feeds into the health narrative pipeline.\nPhase 4: Run `make backend-test`. Add a test for trend direction computation (if metric goes up 20%, direction is \"up\", magnitude is \"20%\"). Update the UI timeline component to show trend arrows.\n\nScope: backend/app/api/, backend/app/services/, backend/app/models/, frontend/app/platform/, ai/prompts/\nFiles to inspect: backend/app/api/ (timeline endpoints), backend/app/services/ (trend computation)\nAcceptance Criteria: Timeline API includes trends[] with direction and magnitude; trend direction test passes; UI shows trend indicators; make backend-test passes.\nfocus_keys: timeline, trend_detection, history_value, narrative_support, insights\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "timeline",
+    "trend_detection",
+    "history_value",
+    "narrative_support",
+    "insights"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "A health timeline that just shows raw data points is a spreadsheet. A timeline that highlights \"Your sleep improved 15% after starting magnesium\" is a story the user will share. This task adds trend detection to make the timeline a compelling evidence layer.",
+  "product_maturity_impact": "The timeline is the long-term value proposition (the longer you use it, the more valuable it gets). Trend detection turns raw history into motivation to continue.",
+  "expected_change": "The timeline becomes a story of change, not a log of events. Users can see \"my sleep improved 15% after starting magnesium\" because trend arrows show it. This data feeds directly into Narrative v3 causal chains, making the AI smarter.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：timeline, trend_detection, history_value, narrative_support, insights。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #221?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

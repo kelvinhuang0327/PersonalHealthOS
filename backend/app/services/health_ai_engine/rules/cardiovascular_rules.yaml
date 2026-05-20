@@ -1,0 +1,24 @@
+rules:
+- id: cv_bp_recent_high
+  type: risk
+  category: cardiovascular
+  priority: 10
+  severity: warning
+  enabled: true
+  tags:
+  - hypertension
+  - cardiovascular
+  version: 1.0
+  confidence: 0.9
+  conditions:
+    all:
+    - field: bp_high_count
+      gte: 3
+  output:
+    risk_type: bp_high_3times
+    severity: warning
+    title: 血壓偏高
+    description: 最近三次血壓偏高
+    recommendation: 建議持續追蹤血壓並安排門診評估
+  evidence_level: A
+  guideline_source: ACC/AHA

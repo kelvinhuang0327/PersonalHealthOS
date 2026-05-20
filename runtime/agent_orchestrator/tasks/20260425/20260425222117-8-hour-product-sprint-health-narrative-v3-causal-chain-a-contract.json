@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Health Narrative v3 causal chain and human-readable rewrite",
+  "task_draft_markdown": "8-hour product sprint: Health Narrative v3 causal chain and human-readable rewrite\n\nUser Value: Current health narratives read like clinical notes — dense, passive, and jargon-heavy. Users do not read them. This task rewrites the narrative pipeline to produce stories that users actually finish reading and act on.\n\nProduct Maturity Impact: The health narrative is the product's voice. If it is compelling, users share it, return to it, and trust it. If it is clinical and boring, the product becomes a report viewer, not a health partner.\n\nExpected Change: Narrative read-through rate increases as outputs become causal and plain-language. Users start sharing narratives because they are personally relevant and legible. Hallucination incidents drop as guardrails block absolute-risk language without evidence.\n\nObjective: Upgrade the health narrative to include causal chains (X caused Y because Z), plain-language rewrites, and reduced misleading risk language.\n\nPhase 1: Read the last 5 narrative outputs from the system (or generate examples). Score each on: readability (Flesch-Kincaid), causal clarity (does it explain why?), actionability (does it lead to a next step?). Document the top 3 weaknesses.\nPhase 2: Rewrite ai/prompts/health_summary_system_prompt.md to require: (a) one causal sentence per insight (Because X, your Y is Z); (b) no passive voice in the first paragraph; (c) a concrete next-step sentence at the end of each insight block.\nPhase 3: Update ai/prompts/hallucination_guardrail_policy.md to block narratives that use absolute risk language without evidence citations (e.g. \"you will develop...\" must be rejected).\nPhase 4: Run `make backend-test` and `pytest tests/test_ai_service.py`. Add 2 new tests: one that checks causal sentence format, one that blocks absolute-risk language. Verify all existing tests pass.\n\nScope: ai/prompts/, backend/app/services/, backend/tests/\nFiles to inspect: ai/prompts/health_summary_system_prompt.md, ai/prompts/hallucination_guardrail_policy.md, backend/app/services/ai_service.py\nAcceptance Criteria: Updated prompt requires causal sentences and plain language; guardrail blocks absolute-risk language; make backend-test passes; at least 2 new narrative quality tests added.\nfocus_keys: health_narrative, causal_chain, readability, guardrail, human_readable\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "health_narrative",
+    "causal_chain",
+    "readability",
+    "guardrail",
+    "human_readable"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "Current health narratives read like clinical notes — dense, passive, and jargon-heavy. Users do not read them. This task rewrites the narrative pipeline to produce stories that users actually finish reading and act on.",
+  "product_maturity_impact": "The health narrative is the product's voice. If it is compelling, users share it, return to it, and trust it. If it is clinical and boring, the product becomes a report viewer, not a health partner.",
+  "expected_change": "Narrative read-through rate increases as outputs become causal and plain-language. Users start sharing narratives because they are personally relevant and legible. Hallucination incidents drop as guardrails block absolute-risk language without evidence.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：health_narrative, causal_chain, readability, guardrail, human_readable。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #344?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

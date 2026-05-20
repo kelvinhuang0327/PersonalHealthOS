@@ -1,0 +1,41 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Node
+frontend/node_modules/
+frontend/.next/
+frontend/.turbo/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Snapshots / uploads
+runtime/snapshots/
+uploads/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+frontend/test-results/
+frontend/playwright-report/
+htmlcov/
+.coverage

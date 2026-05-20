@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260425172110",
+  "objective": "8-hour product sprint: Health Timeline meaningful trend detection and Narrative v3 support",
+  "task_draft_markdown": "8-hour product sprint: Health Timeline meaningful trend detection and Narrative v3 support\n\nUser Value: A health timeline that just shows raw data points is a spreadsheet. A timeline that highlights \"Your sleep improved 15% after starting magnesium\" is a story the user will share. This task adds trend detection to make the timeline a compelling evidence layer.\n\nProduct Maturity Impact: The timeline is the long-term value proposition (the longer you use it, the more valuable it gets). Trend detection turns raw history into motivation to continue.\n\nExpected Change: The timeline becomes a story of change, not a log of events. Users can see \"my sleep improved 15% after starting magnesium\" because trend arrows show it. This data feeds directly into Narrative v3 causal chains, making the AI smarter.\n\nObjective: Add trend detection to the timeline API and surface it in the UI. Ensure timeline data is rich enough to support Narrative v3 causal chains.\n\nPhase 1: Audit the current timeline API endpoint. What data does it return? Is it raw events or aggregated? Is there any trend comparison (this week vs last week)? What time-series data is missing that would improve the Narrative v3 causal chain?\nPhase 2: Design a simple trend detection schema: for each metric tracked, compute direction (up/down/stable) and magnitude (% change) over the last 7 and 30 days. Return as a trends[] array alongside the raw timeline.\nPhase 3: Implement the trend computation in backend/app/services/ or backend/app/api/. Update the timeline API response to include trends[]. Verify the trends data feeds into the health narrative pipeline.\nPhase 4: Run `make backend-test`. Add a test for trend direction computation (if metric goes up 20%, direction is \"up\", magnitude is \"20%\"). Update the UI timeline component to show trend arrows.\n\nScope: backend/app/api/, backend/app/services/, backend/app/models/, frontend/app/platform/, ai/prompts/\nFiles to inspect: backend/app/api/ (timeline endpoints), backend/app/services/ (trend computation)\nAcceptance Criteria: Timeline API includes trends[] with direction and magnitude; trend direction test passes; UI shows trend indicators; make backend-test passes.\nfocus_keys: timeline, trend_detection, history_value, narrative_support, insights\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-25T17:21:10.317488+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 318,
+  "previous_task_status": "QUEUED",
+  "task_category": "timeline_history_value",
+  "duplicate_signature": "timeline_history_value_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "timeline_history_value",
+    "next_candidate_category": "behavior_loop_optimization",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 319
+}

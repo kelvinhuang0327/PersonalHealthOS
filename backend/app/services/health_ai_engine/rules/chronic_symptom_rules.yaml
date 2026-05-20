@@ -1,0 +1,24 @@
+rules:
+- id: long_term_symptom
+  type: risk
+  category: chronic
+  priority: 8
+  severity: warning
+  enabled: true
+  tags:
+  - symptom
+  - chronic
+  version: 1.0
+  confidence: 0.86
+  conditions:
+    all:
+    - field: max_estimated_duration_days
+      gt: 365
+  output:
+    risk_type: long_term_symptom
+    severity: warning
+    title: 長期症狀需追蹤
+    description: 症狀持續時間超過一年
+    recommendation: 建議安排完整檢查並持續追蹤
+  evidence_level: A
+  guideline_source: Clinical Follow-up Guidance

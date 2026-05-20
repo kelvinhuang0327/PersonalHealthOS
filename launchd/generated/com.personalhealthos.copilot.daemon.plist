@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- ── Identity ── -->
+  <key>Label</key>
+  <string>com.personalhealthos.copilot.daemon</string>
+
+  <!-- ── Program ── -->
+  <!--
+    Run as a LaunchAgent (user session) — NOT a LaunchDaemon — so the process
+    can access the macOS keychain for gh copilot auth tokens.
+    The shell -lc form sources login profile (PATH, homebrew, nvm, etc.).
+  -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/scripts/launchd/run_copilot_daemon.sh</string>
+  </array>
+
+  <!-- ── Working directory ── -->
+  <key>WorkingDirectory</key>
+  <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS</string>
+
+  <!-- ── Environment ── -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>PYTHONPATH</key>
+    <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/backend</string>
+    <!-- gh copilot reads GH_CONFIG_DIR for auth; default is ~/.config/gh -->
+    <key>GH_CONFIG_DIR</key>
+    <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/.gh_config</string>
+    <!-- Override poll interval or profile path without regenerating the plist -->
+    <key>COPILOT_DAEMON_POLL_SECONDS</key>
+    <string>10</string>
+    <key>COPILOT_DAEMON_PROFILE_PATH</key>
+    <string>runtime/agent_orchestrator/project_profile.json</string>
+  </dict>
+
+  <!-- ── Lifecycle ── -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+
+  <!-- ── Logging ── -->
+  <key>StandardOutPath</key>
+  <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/runtime/launchd/logs/copilot.daemon.stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/runtime/launchd/logs/copilot.daemon.stderr.log</string>
+</dict>
+</plist>

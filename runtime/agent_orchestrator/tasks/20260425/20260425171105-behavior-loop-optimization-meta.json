@@ -1,0 +1,27 @@
+{
+  "task_uid": "20260425171105",
+  "objective": "產品問題衝刺: 補強長期未覆蓋的產品領域: behavior_loop_optimization",
+  "task_draft_markdown": "產品問題衝刺: 補強長期未覆蓋的產品領域: behavior_loop_optimization\n\nUser Value: 2 product areas have had no sprint in 30+ days: behavior_loop_optimization, timeline_history_value. These areas have accumulated unaddressed product debt that affects user experience.\n\nProduct Maturity Impact: Unbalanced product development creates gaps in user experience quality. The neglected area \"behavior_loop_optimization\" likely has the highest opportunity for improvement relative to effort.\n\nExpected Change: The behavior_loop_optimization area receives at least one concrete improvement that measurably advances user value in that domain.\n\nObjective: Focus this sprint entirely on \"behavior_loop_optimization\". Make the highest-impact change possible in that area.\n\nPhase 1: Audit the current state of \"behavior_loop_optimization\" in the codebase. What exists? What is broken or missing? What do users encounter?\nPhase 2: Identify the single highest-impact change. Think: what is the one thing a user in this area needs most?\nPhase 3: Implement that change. Keep scope tight — one real improvement is better than five half-finished ideas.\nPhase 4: Run make backend-test and npm run build. Document what changed and why it matters to the user.\n\nScope: backend/app/, frontend/app/platform/behavior-loop-optimization/\nAcceptance Criteria: At least one concrete, tested change in the behavior_loop_optimization area; make backend-test passes; npm run build passes.\nfocus_keys: behavior_loop_optimization, timeline_history_value, product_debt\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-25T17:11:05.986218+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 317,
+  "previous_task_status": "COMPLETED",
+  "task_category": "behavior_loop_optimization",
+  "duplicate_signature": "problem_category_neglected_20260425",
+  "fallback_info": {
+    "source": "problem_signal",
+    "fallback_tried": true,
+    "fallback_category": null,
+    "next_candidate_category": null,
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ],
+    "detected_issue": "category_neglected",
+    "issue_severity": "medium"
+  },
+  "task_id": 318
+}

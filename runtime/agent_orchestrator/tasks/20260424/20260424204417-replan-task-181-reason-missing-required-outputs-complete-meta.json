@@ -1,0 +1,22 @@
+{
+  "task_uid": "20260424204417",
+  "objective": "Replan task #181: 產品問題衝刺: 全類別輪替完成 — 選擇下一個最高價值優化領域 (reason: Missing required outputs: completed_markdown)",
+  "task_draft_markdown": "Replan task #181: 產品問題衝刺: 全類別輪替完成 — 選擇下一個最高價值優化領域 (reason: Missing required outputs: completed_markdown)",
+  "quality_status": "PASS",
+  "planner_provider": "codex",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-24T20:44:17.297196+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 181,
+  "previous_task_status": "REPLAN_REQUIRED",
+  "task_category": null,
+  "duplicate_signature": null,
+  "fallback_info": {
+    "source": "replan",
+    "fallback_tried": false,
+    "fallback_category": null,
+    "next_candidate_category": null,
+    "rejection_reasons": []
+  },
+  "task_id": 182
+}

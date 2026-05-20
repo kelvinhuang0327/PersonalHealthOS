@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.personalhealthos.main</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/scripts/launchd/start_all.sh --foreground</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>PYTHONPATH</key>
+    <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/backend</string>
+    <key>ORCHESTRATOR_SCHEDULER_AUTOSTART</key>
+    <string>false</string>
+    <key>FRONTEND_PORT</key>
+    <string>3100</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/runtime/launchd/logs/main.stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/runtime/launchd/logs/main.stderr.log</string>
+</dict>
+</plist>

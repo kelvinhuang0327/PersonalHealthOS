@@ -1,0 +1,11 @@
+{
+  "task_uid": "20260423135230",
+  "objective": "驗證關鍵 API 與資料流程不回歸（含 `make backend-test`）。",
+  "planner_provider": "codex",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-23T13:52:30.721123+00:00",
+  "run_type": "manual",
+  "previous_task_id": 125,
+  "previous_task_status": "QUEUED",
+  "task_id": 126
+}

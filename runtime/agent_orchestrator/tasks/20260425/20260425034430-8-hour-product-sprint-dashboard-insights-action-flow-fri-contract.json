@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Dashboard → Insights → Action flow friction reduction",
+  "task_draft_markdown": "8-hour product sprint: Dashboard → Insights → Action flow friction reduction\n\nUser Value: New users arrive at the Dashboard and do not know what to do next. This task audits and removes every step of unnecessary friction so the \"Dashboard → read an Insight → take an Action\" journey takes under 60 seconds.\n\nProduct Maturity Impact: A frictionless core flow is the single biggest lever for first-week retention. Removing 3 friction points can double D7 retention.\n\nExpected Change: Time-to-first-action drops from 3+ clicks to under 60 seconds. Empty states become guided onboarding moments instead of dead ends. D7 retention improves as fewer users abandon before taking their first action.\n\nObjective: Audit the core user flow from Dashboard to Insights to Action completion. Identify the top 5 friction points. Fix at least 3 of them.\n\nPhase 1: Walk through the full flow as a first-time user. Document every click, load, blank state, confusing label, and missing CTA. Use frontend/app/platform/ as your map. Rate each step: Does it move the user forward or create hesitation?\nPhase 2: Inspect the Dashboard page (app/platform/dashboard/page.tsx). Is the most important health signal visible above the fold? Is there a clear next-action CTA? Are empty states helpful or discouraging?\nPhase 3: Fix the top-3 friction points. Concrete examples: add a \"Start here\" CTA to empty Dashboard; improve Insight card CTAs to link directly to the relevant Action; reduce loading states with skeleton placeholders; clarify confusing copy.\nPhase 4: Run `npm run lint` to confirm no regressions. Write a brief before/after friction audit report (what changed and why).\n\nScope: frontend/app/platform/dashboard/, frontend/app/platform/insights/, frontend/app/platform/actions/, frontend/components/\nFiles to inspect: app/platform/dashboard/page.tsx, app/platform/insights/, app/platform/actions/, components/shared/\nAcceptance Criteria: At least 3 friction points fixed with evidence; Dashboard has a visible primary CTA in empty state; npm run lint passes; before/after audit documented.\nfocus_keys: ux_flow, dashboard, insights, friction, cta, onboarding\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "ux_flow",
+    "dashboard",
+    "insights",
+    "friction",
+    "cta",
+    "onboarding"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "New users arrive at the Dashboard and do not know what to do next. This task audits and removes every step of unnecessary friction so the \"Dashboard → read an Insight → take an Action\" journey takes under 60 seconds.",
+  "product_maturity_impact": "A frictionless core flow is the single biggest lever for first-week retention. Removing 3 friction points can double D7 retention.",
+  "expected_change": "Time-to-first-action drops from 3+ clicks to under 60 seconds. Empty states become guided onboarding moments instead of dead ends. D7 retention improves as fewer users abandon before taking their first action.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：ux_flow, dashboard, insights, friction, cta, onboarding。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #225?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

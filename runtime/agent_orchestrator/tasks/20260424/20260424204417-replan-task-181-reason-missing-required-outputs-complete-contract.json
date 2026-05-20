@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "objective": "Replan task #181: 產品問題衝刺: 全類別輪替完成 — 選擇下一個最高價值優化領域 (reason: Missing required outputs: completed_markdown)",
+  "task_draft_markdown": "Replan task #181: 產品問題衝刺: 全類別輪替完成 — 選擇下一個最高價值優化領域 (reason: Missing required outputs: completed_markdown)",
+  "focus_keys": [],
+  "expected_duration_minutes": null,
+  "user_value": "",
+  "product_maturity_impact": "",
+  "expected_change": "",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #181?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": "INVALID_DELIVERY",
+    "previous_gate_reason": "Missing required outputs: completed_markdown"
+  }
+}

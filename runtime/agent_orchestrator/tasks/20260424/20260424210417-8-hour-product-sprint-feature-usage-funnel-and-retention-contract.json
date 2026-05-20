@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Feature usage funnel and retention drop-off analysis",
+  "task_draft_markdown": "8-hour product sprint: Feature usage funnel and retention drop-off analysis\n\nUser Value: Users who do not use certain features are losing value they paid for. This task finds which features are not being used and why, so we can either fix them or retire them.\n\nProduct Maturity Impact: Knowing the usage funnel (how many users reach each step) is the foundation of product-led growth. Without it, every design decision is a guess.\n\nExpected Change: The team can see exactly where users drop off. Features with <20% usage are surfaced for redesign or removal. Product decisions shift from intuition to data. The funnel endpoint becomes the primary weekly health metric for the product.\n\nObjective: Build a usage funnel analysis across the core product surfaces and identify the highest-drop-off steps.\n\nPhase 1: Define the funnel steps for the core journey: (1) Login, (2) View Dashboard, (3) View an Insight, (4) Click an Action, (5) Complete an Action, (6) Return next day. Determine which backend events currently exist to measure each step.\nPhase 2: Inspect the backend for existing event logging or analytics hooks. What user events are recorded in the database? Is there a concept of \"session\" or \"daily active user\"? Document what exists and what is missing.\nPhase 3: Implement at least 3 missing funnel event logs. Examples: log when a user views an insight (GET /insights/:id → append to insight_views); log when an action is clicked but not completed; log when a user opens the app on consecutive days.\nPhase 4: Build a simple admin API endpoint GET /analytics/funnel that returns per-step counts for the last 7 days. Run `make backend-test`. Document the current funnel drop-off percentages.\n\nScope: backend/app/api/, backend/app/models/, backend/app/services/\nFiles to inspect: backend/app/api/ (analytics/admin endpoints), backend/app/models/ (event models)\nAcceptance Criteria: 3 funnel event logs implemented; GET /analytics/funnel endpoint returns per-step counts; make backend-test passes; drop-off percentages documented.\nfocus_keys: analytics, funnel, retention, dau, feature_usage, drop_off\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "analytics",
+    "funnel",
+    "retention",
+    "dau",
+    "feature_usage",
+    "drop_off"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "Users who do not use certain features are losing value they paid for. This task finds which features are not being used and why, so we can either fix them or retire them.",
+  "product_maturity_impact": "Knowing the usage funnel (how many users reach each step) is the foundation of product-led growth. Without it, every design decision is a guess.",
+  "expected_change": "The team can see exactly where users drop off. Features with <20% usage are surfaced for redesign or removal. Product decisions shift from intuition to data. The funnel endpoint becomes the primary weekly health metric for the product.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：analytics, funnel, retention, dau, feature_usage, drop_off。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #183?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

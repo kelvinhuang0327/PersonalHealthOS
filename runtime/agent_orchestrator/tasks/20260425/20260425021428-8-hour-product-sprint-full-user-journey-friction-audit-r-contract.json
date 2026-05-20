@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Full user journey friction audit — Report upload to Action complete",
+  "task_draft_markdown": "8-hour product sprint: Full user journey friction audit — Report upload to Action complete\n\nUser Value: A new user who uploads a health report should be able to read an AI insight and complete their first recommended action in under 5 minutes. This task maps and fixes the biggest blockers in that journey.\n\nProduct Maturity Impact: The \"time to first meaningful outcome\" metric defines whether a user becomes a retained user or churns. Shortening TTFMO from 30 minutes to 5 minutes is a step-change in product maturity.\n\nExpected Change: TTFMO drops visibly after fixing the top-3 friction points. Fewer users abandon between report upload and first action. The friction audit becomes a repeatable quarterly product-quality process.\n\nObjective: End-to-end audit of the journey from Report Upload → AI Insight → Action completion. Find and fix the top-3 friction points.\n\nPhase 1: Trace the full journey in the codebase and UI. Report Upload: what happens after the file is accepted? How long before an Insight appears? What if parsing fails? Insight: is the connection from insight to action explicit? Action: how many taps to mark complete? Document each step with file references.\nPhase 2: Score each step on: latency (does the user wait?), clarity (does the user know what to do?), confidence (does the user trust the result?). Identify the 3 steps with the lowest scores.\nPhase 3: Fix the top-3 friction steps. Examples: add a progress indicator during report parsing; add an explicit \"This insight suggests → [Action]\" link; reduce action completion to a single tap from the Insight card.\nPhase 4: Run `npm run lint` and `make backend-test`. Document the before/after step count and estimated TTFMO improvement.\n\nScope: frontend/app/platform/, backend/app/api/, backend/app/services/\nFiles to inspect: app/platform/reports/, app/platform/insights/, app/platform/actions/, backend/app/api/ (report endpoints)\nAcceptance Criteria: At least 3 friction steps fixed with evidence; before/after journey step count documented; npm run lint and make backend-test pass.\nfocus_keys: user_journey, friction_audit, ttfmo, onboarding, report_to_action\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "user_journey",
+    "friction_audit",
+    "ttfmo",
+    "onboarding",
+    "report_to_action"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "A new user who uploads a health report should be able to read an AI insight and complete their first recommended action in under 5 minutes. This task maps and fixes the biggest blockers in that journey.",
+  "product_maturity_impact": "The \"time to first meaningful outcome\" metric defines whether a user becomes a retained user or churns. Shortening TTFMO from 30 minutes to 5 minutes is a step-change in product maturity.",
+  "expected_change": "TTFMO drops visibly after fixing the top-3 friction points. Fewer users abandon between report upload and first action. The friction audit becomes a repeatable quarterly product-quality process.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：user_journey, friction_audit, ttfmo, onboarding, report_to_action。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #216?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

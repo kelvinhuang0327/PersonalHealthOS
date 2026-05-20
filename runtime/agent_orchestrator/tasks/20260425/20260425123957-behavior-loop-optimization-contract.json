@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "objective": "產品問題衝刺: 補強長期未覆蓋的產品領域: behavior_loop_optimization",
+  "task_draft_markdown": "產品問題衝刺: 補強長期未覆蓋的產品領域: behavior_loop_optimization\n\nUser Value: 4 product areas have had no sprint in 30+ days: behavior_loop_optimization, decision_engine_improvement, health_narrative_deepening, user_journey_analysis. These areas have accumulated unaddressed product debt that affects user experience.\n\nProduct Maturity Impact: Unbalanced product development creates gaps in user experience quality. The neglected area \"behavior_loop_optimization\" likely has the highest opportunity for improvement relative to effort.\n\nExpected Change: The behavior_loop_optimization area receives at least one concrete improvement that measurably advances user value in that domain.\n\nObjective: Focus this sprint entirely on \"behavior_loop_optimization\". Make the highest-impact change possible in that area.\n\nPhase 1: Audit the current state of \"behavior_loop_optimization\" in the codebase. What exists? What is broken or missing? What do users encounter?\nPhase 2: Identify the single highest-impact change. Think: what is the one thing a user in this area needs most?\nPhase 3: Implement that change. Keep scope tight — one real improvement is better than five half-finished ideas.\nPhase 4: Run make backend-test and npm run build. Document what changed and why it matters to the user.\n\nScope: backend/app/, frontend/app/platform/behavior-loop-optimization/\nAcceptance Criteria: At least one concrete, tested change in the behavior_loop_optimization area; make backend-test passes; npm run build passes.\nfocus_keys: behavior_loop_optimization, decision_engine_improvement, health_narrative_deepening, user_journey_analysis, product_debt\nexpected_duration_minutes: 480",
+  "focus_keys": [],
+  "expected_duration_minutes": null,
+  "user_value": "4 product areas have had no sprint in 30+ days: behavior_loop_optimization, decision_engine_improvement, health_narrative_deepening, user_journey_analysis. These areas have accumulated unaddressed product debt that affects user experience.",
+  "product_maturity_impact": "Unbalanced product development creates gaps in user experience quality. The neglected area \"behavior_loop_optimization\" likely has the highest opportunity for improvement relative to effort.",
+  "expected_change": "The behavior_loop_optimization area receives at least one concrete improvement that measurably advances user value in that domain.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #289?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": "PASS",
+    "previous_gate_reason": ""
+  }
+}

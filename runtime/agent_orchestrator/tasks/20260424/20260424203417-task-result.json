@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "task_id": 181,
+  "status": "REPLAN_REQUIRED",
+  "gate_verdict": "INVALID_DELIVERY",
+  "gate_reason": "Missing required outputs: completed_markdown",
+  "duration_seconds": 600,
+  "changed_files": [],
+  "error_markers_hit": [],
+  "missing_required_outputs": [
+    "completed_markdown"
+  ],
+  "forbidden_change_violations": [],
+  "acceptance_results": [
+    {
+      "name": "make backend-test",
+      "passed": false,
+      "evidence": "（無證據）"
+    },
+    {
+      "name": "backend:pytest",
+      "passed": false,
+      "evidence": "（無證據）"
+    },
+    {
+      "name": "frontend:npm run build",
+      "passed": false,
+      "evidence": "（無證據）"
+    }
+  ],
+  "next_action": "Planner should replan and enforce required outputs."
+}

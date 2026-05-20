@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Cross-page consistency audit — conflicting decisions and broken signals",
+  "task_draft_markdown": "8-hour product sprint: Cross-page consistency audit — conflicting decisions and broken signals\n\nUser Value: A user who sees a \"High Risk\" label on the Dashboard but \"All Good\" on the Insights page loses trust immediately. This task hunts and fixes every inconsistency in how health signals are displayed.\n\nProduct Maturity Impact: Consistency is the bedrock of clinical trust. A single contradictory data point can destroy months of earned credibility. Consistent, coherent signals are the mark of a mature health product.\n\nExpected Change: A user can navigate from Dashboard to Insights to Actions and see the same risk score and action count everywhere. Trust in the platform's data integrity increases. Conflicting decisions — the #1 source of user confusion — are eliminated.\n\nObjective: Audit all four core surfaces (Dashboard, Insights, Actions, Notifications) for data inconsistencies, conflicting recommendations, and missing context.\n\nPhase 1: Open each surface and record every piece of health data shown: risk score, action count, notification count, insight summary. Check: do the same numbers appear consistently on every surface? Is the same action recommended on both Insights and Actions pages? Document every discrepancy found.\nPhase 2: Trace each discrepancy to its source in the backend. Is it a stale cache? A different API endpoint that uses different logic? A UI component that applies different filtering? Identify the root cause.\nPhase 3: Fix the top-3 consistency issues. Prioritize: risk score inconsistency > action count mismatch > notification badge mismatch. For each fix, document which file was changed and what the correct source of truth is.\nPhase 4: Run `npm run lint` and `make backend-test`. Add a frontend test (or API contract test) that asserts the same risk score is returned from both the Dashboard API and the Insights API.\n\nScope: frontend/app/platform/, backend/app/api/, backend/app/services/\nFiles to inspect: app/platform/dashboard/page.tsx, app/platform/insights/, app/platform/actions/, app/platform/notifications/\nAcceptance Criteria: At least 3 consistency issues fixed; source of truth documented per data type; npm run lint and make backend-test pass.\nfocus_keys: consistency, cross_page, conflicting_decisions, trust, data_integrity\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "consistency",
+    "cross_page",
+    "conflicting_decisions",
+    "trust",
+    "data_integrity"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "A user who sees a \"High Risk\" label on the Dashboard but \"All Good\" on the Insights page loses trust immediately. This task hunts and fixes every inconsistency in how health signals are displayed.",
+  "product_maturity_impact": "Consistency is the bedrock of clinical trust. A single contradictory data point can destroy months of earned credibility. Consistent, coherent signals are the mark of a mature health product.",
+  "expected_change": "A user can navigate from Dashboard to Insights to Actions and see the same risk score and action count everywhere. Trust in the platform's data integrity increases. Conflicting decisions — the #1 source of user confusion — are eliminated.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：consistency, cross_page, conflicting_decisions, trust, data_integrity。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #209?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

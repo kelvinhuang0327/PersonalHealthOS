@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Action recommendation precision and deduplication",
+  "task_draft_markdown": "8-hour product sprint: Action recommendation precision and deduplication\n\nUser Value: Users currently see duplicated or irrelevant action recommendations, which erodes trust and reduces completion rates. This task makes every recommended action feel personally relevant and achievable.\n\nProduct Maturity Impact: Precision of action recommendations is a core differentiator. A recommendation engine that learns from outcomes creates a moat that generic apps cannot copy.\n\nExpected Change: Users receive a deduplicated, personalized action list every session. Actions with positive past outcomes rise to the top. Over 4 weeks the recommendation engine becomes measurably self-improving.\n\nObjective: Audit the action recommendation pipeline. Remove duplicates. Improve relevance scoring. Correlate recommended action priority with actual completion rate.\n\nPhase 1: Audit the current action recommendation logic in backend/app/services/. Find where duplicates arise (same action recommended multiple times, same category repeatedly). Document the deduplication gap.\nPhase 2: Inspect how prioritized_actions are scored. What signals feed into the priority? Is there any personalization based on past completions or outcomes? Document missing signals.\nPhase 3: Implement deduplication: within a single recommendation batch, no action title or category should appear more than once. Add at least one personalization signal (e.g. past completion rate for that action type).\nPhase 4: Run `make backend-test`. Add tests that assert: (a) no duplicate action titles in a recommendation batch; (b) actions with higher past completion rates score higher. Document priority vs completion correlation before/after.\n\nScope: backend/app/services/, backend/app/api/, backend/tests/\nFiles to inspect: backend/app/services/ (action recommendation services), backend/app/api/ (action endpoints)\nAcceptance Criteria: make backend-test passes; no duplicate actions in a recommendation batch (asserted by test); at least one personalization signal implemented; priority vs completion correlation documented.\nfocus_keys: action_recommendation, deduplication, personalization, completion_rate, precision\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "action_recommendation",
+    "deduplication",
+    "personalization",
+    "completion_rate",
+    "precision"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "Users currently see duplicated or irrelevant action recommendations, which erodes trust and reduces completion rates. This task makes every recommended action feel personally relevant and achievable.",
+  "product_maturity_impact": "Precision of action recommendations is a core differentiator. A recommendation engine that learns from outcomes creates a moat that generic apps cannot copy.",
+  "expected_change": "Users receive a deduplicated, personalized action list every session. Actions with positive past outcomes rise to the top. Over 4 weeks the recommendation engine becomes measurably self-improving.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：action_recommendation, deduplication, personalization, completion_rate, precision。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #186?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

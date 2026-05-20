@@ -1,0 +1,97 @@
+rules:
+- id: trend_bp
+  type: insight
+  category: cardiovascular
+  priority: 8
+  severity: info
+  enabled: true
+  tags:
+  - insight
+  - trend
+  - blood_pressure
+  version: 1.0
+  confidence: 0.8
+  conditions:
+    all:
+    - field: has_three_bp
+      eq: true
+  output:
+    insight_type: trend
+    severity: info
+    title: 血壓趨勢洞察
+    summary_template: 過去90天血壓有上升趨勢
+    recommendation: 建議持續量測並配合作息管理
+  evidence_level: B
+  guideline_source: ACC/AHA
+- id: chronic_symptom
+  type: insight
+  category: chronic
+  priority: 7
+  severity: warning
+  enabled: true
+  tags:
+  - insight
+  - chronic
+  version: 1.0
+  confidence: 0.82
+  conditions:
+    all:
+    - field: chronic_count
+      gt: 0
+  output:
+    insight_type: chronic
+    severity: warning
+    title: 長期症狀洞察
+    summary_template: 偵測到長期症狀，建議持續追蹤
+    recommendation: 請整理症狀時間軸並與醫療專業人員討論
+  evidence_level: B
+  guideline_source: Clinical Follow-up Guidance
+- id: follow_up_alert
+  type: insight
+  category: follow_up
+  priority: 9
+  severity: warning
+  enabled: true
+  tags:
+  - insight
+  - follow_up
+  - alert
+  version: 1.0
+  confidence: 0.9
+  conditions:
+    all:
+    - field: alert_count
+      gt: 0
+  output:
+    insight_type: follow_up
+    severity: warning
+    title: 風險提醒追蹤洞察
+    summary_template: 目前存在風險警示，建議建立追蹤計畫
+    recommendation: 優先處理高嚴重度風險並安排複查
+  evidence_level: B
+  guideline_source: Clinical Follow-up Guidance
+- id: correlation_chronic_alert
+  type: insight
+  category: correlation
+  priority: 6
+  severity: info
+  enabled: true
+  tags:
+  - insight
+  - correlation
+  version: 1.0
+  confidence: 0.75
+  conditions:
+    all:
+    - field: chronic_count
+      gt: 0
+    - field: alert_count
+      gt: 0
+  output:
+    insight_type: correlation
+    severity: info
+    title: 症狀與警示關聯洞察
+    summary_template: 長期症狀與風險警示可能具關聯性
+    recommendation: 建議比對症狀與指標異常時間點
+  evidence_level: B
+  guideline_source: Rule Library

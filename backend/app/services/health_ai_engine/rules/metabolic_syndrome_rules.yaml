@@ -1,0 +1,26 @@
+rules:
+# Risk alert role: overlaps expected with score penalty threshold for BMI.
+- id: metabolic_bmi_warning
+  type: risk
+  role: risk_alert
+  category: metabolic
+  priority: 7
+  severity: warning
+  enabled: true
+  tags:
+  - metabolic
+  - bmi
+  version: 1.0
+  confidence: 0.84
+  conditions:
+    all:
+    - field: bmi
+      gt: 27
+  output:
+    risk_type: bmi_high
+    severity: warning
+    title: BMI 偏高
+    description: BMI 超過 27，可能增加代謝風險
+    recommendation: 建議飲食控制與運動管理
+  evidence_level: A
+  guideline_source: ADA

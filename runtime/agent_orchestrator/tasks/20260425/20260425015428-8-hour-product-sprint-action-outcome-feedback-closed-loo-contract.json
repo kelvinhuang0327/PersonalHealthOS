@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Action → Outcome → Feedback closed-loop optimization",
+  "task_draft_markdown": "8-hour product sprint: Action → Outcome → Feedback closed-loop optimization\n\nUser Value: Users who complete a health action today get no meaningful feedback on whether it worked. This task closes that loop — making every action feel worth doing again.\n\nProduct Maturity Impact: Transforms the platform from a task-tracker into a genuine behavior-change engine. Completion rate and 7-day retention are the north-star metrics.\n\nExpected Change: Action completion rate rises as users see that their actions produce measurable outcomes. AI recommendation quality improves progressively as outcome data accumulates — the engine becomes self-improving.\n\nObjective: Design and implement the full behavior loop: Action completion triggers an Outcome check-in prompt; the check-in result feeds back into the AI narrative and the next Action recommendation. Track completion rate before and after.\n\nPhase 1: Map the current behavior loop gap. Find where action completion data exists in the backend (backend/app/api/, backend/app/models/) and where it does NOT feed back into insights or the next recommendation cycle. Document the exact missing links.\nPhase 2: Design the Outcome check-in model. Sketch the data schema (action_id, outcome_rating, outcome_note, checked_at). Implement the API endpoint POST /actions/{id}/outcome with proper validation and idempotency.\nPhase 3: Wire the outcome into the AI recommendation pipeline. When generating the next prioritized_actions list, weight actions whose previous outcomes were positive higher. Update ai/prompts/health_summary_system_prompt.md to reference recent outcomes.\nPhase 4: Add the outcome check-in UI prompt to the frontend action completion flow. Show a simple 1-5 star or thumbs-up/down after marking an action done. Run `npm run lint` and `make backend-test` to confirm no regressions.\n\nScope: backend/app/api/, backend/app/models/, backend/app/services/, ai/prompts/, frontend/app/platform/, frontend/components/\nAcceptance Criteria: POST /actions/{id}/outcome endpoint exists and returns 200; outcome data influences the next AI recommendation cycle; frontend shows outcome prompt after action completion; make backend-test passes; npm run lint passes.\nfocus_keys: behavior_loop, outcome_tracking, feedback, action_completion, retention\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "behavior_loop",
+    "outcome_tracking",
+    "feedback",
+    "action_completion",
+    "retention"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "Users who complete a health action today get no meaningful feedback on whether it worked. This task closes that loop — making every action feel worth doing again.",
+  "product_maturity_impact": "Transforms the platform from a task-tracker into a genuine behavior-change engine. Completion rate and 7-day retention are the north-star metrics.",
+  "expected_change": "Action completion rate rises as users see that their actions produce measurable outcomes. AI recommendation quality improves progressively as outcome data accumulates — the engine becomes self-improving.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：behavior_loop, outcome_tracking, feedback, action_completion, retention。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #214?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

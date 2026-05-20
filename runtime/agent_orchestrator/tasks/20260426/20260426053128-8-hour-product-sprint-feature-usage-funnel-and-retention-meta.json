@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260426053128",
+  "objective": "8-hour product sprint: Feature usage funnel and retention drop-off analysis",
+  "task_draft_markdown": "8-hour product sprint: Feature usage funnel and retention drop-off analysis\n\nUser Value: Users who do not use certain features are losing value they paid for. This task finds which features are not being used and why, so we can either fix them or retire them.\n\nProduct Maturity Impact: Knowing the usage funnel (how many users reach each step) is the foundation of product-led growth. Without it, every design decision is a guess.\n\nExpected Change: The team can see exactly where users drop off. Features with <20% usage are surfaced for redesign or removal. Product decisions shift from intuition to data. The funnel endpoint becomes the primary weekly health metric for the product.\n\nObjective: Build a usage funnel analysis across the core product surfaces and identify the highest-drop-off steps.\n\nPhase 1: Define the funnel steps for the core journey: (1) Login, (2) View Dashboard, (3) View an Insight, (4) Click an Action, (5) Complete an Action, (6) Return next day. Determine which backend events currently exist to measure each step.\nPhase 2: Inspect the backend for existing event logging or analytics hooks. What user events are recorded in the database? Is there a concept of \"session\" or \"daily active user\"? Document what exists and what is missing.\nPhase 3: Implement at least 3 missing funnel event logs. Examples: log when a user views an insight (GET /insights/:id → append to insight_views); log when an action is clicked but not completed; log when a user opens the app on consecutive days.\nPhase 4: Build a simple admin API endpoint GET /analytics/funnel that returns per-step counts for the last 7 days. Run `make backend-test`. Document the current funnel drop-off percentages.\n\nScope: backend/app/api/, backend/app/models/, backend/app/services/\nFiles to inspect: backend/app/api/ (analytics/admin endpoints), backend/app/models/ (event models)\nAcceptance Criteria: 3 funnel event logs implemented; GET /analytics/funnel endpoint returns per-step counts; make backend-test passes; drop-off percentages documented.\nfocus_keys: analytics, funnel, retention, dau, feature_usage, drop_off\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-26T05:31:28.578134+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 384,
+  "previous_task_status": "QUEUED",
+  "task_category": "growth_analytics",
+  "duplicate_signature": "growth_analytics_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "growth_analytics",
+    "next_candidate_category": "cross_page_consistency",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 385
+}

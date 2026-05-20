@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260424191415",
+  "objective": "8-hour product sprint: Daily habit loop design and streak feedback optimization",
+  "task_draft_markdown": "8-hour product sprint: Daily habit loop design and streak feedback optimization\n\nUser Value: Users who do not return daily forget the product exists. This task designs a daily hook that makes returning to the platform a habit, not a chore — using streaks, feedback loops, and return triggers.\n\nProduct Maturity Impact: D30 retention is the vanity-free measure of product-market fit. A well-designed habit loop (cue → routine → reward) is the primary driver of D30 retention.\n\nExpected Change: D7 and D30 retention improve as streak milestones create emotional investment. Users who reach day-7 streak are 3× more likely to reach day 30. Milestone celebrations make progress visible and reinforce the daily return habit.\n\nObjective: Design and implement a daily habit loop: daily check-in cue, streak tracking, and completion reward signal.\n\nPhase 1: Audit the current streak implementation in backend/app/services/ and backend/tests/test_action_streak.py. Does the streak reset correctly at midnight? Is it surfaced prominently in the UI? Is there any reward signal when a streak milestone is hit?\nPhase 2: Design the daily cue: what triggers a user to open the app each day? Sketch: a daily summary notification (Today's health snapshot), a streak reminder (Day 4 streak — don't break it!), or a fresh action recommendation (Your #1 action for today is...).\nPhase 3: Implement the streak milestone reward signal in the frontend. When a user hits day 3, 7, 14, or 30, show a celebratory moment (a banner, animation, or summary card). Update the backend streak endpoint to return milestone_reached: bool alongside the count.\nPhase 4: Run `make backend-test` and `npm run lint`. Add a test for streak milestone detection. Document the habit loop design with the cue/routine/reward labels.\n\nScope: backend/app/services/, backend/app/api/, frontend/app/platform/, frontend/components/\nFiles to inspect: backend/tests/test_action_streak.py, backend/app/services/ (streak-related), frontend/app/platform/\nAcceptance Criteria: Streak milestone field returned by API; frontend shows milestone celebration at day 3/7/14/30; make backend-test passes; habit loop documented.\nfocus_keys: retention, habit_loop, streak, daily_hook, milestone, d30\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "codex",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-24T19:14:15.149901+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 173,
+  "previous_task_status": "QUEUED",
+  "task_category": "retention_habit_loop",
+  "duplicate_signature": "retention_habit_loop_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "retention_habit_loop",
+    "next_candidate_category": "notifications_lifecycle",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 174
+}

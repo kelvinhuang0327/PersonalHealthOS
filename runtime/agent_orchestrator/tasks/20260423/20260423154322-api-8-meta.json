@@ -1,0 +1,13 @@
+{
+  "task_uid": "20260423154322",
+  "objective": "建立關鍵 API 與資料流程的 8 小時回歸研究任務，驗證核心健康事件管線在真實資料分布下的穩定性",
+  "task_draft_markdown": "建立關鍵 API 與資料流程的 8 小時回歸研究任務，驗證核心健康事件管線在真實資料分布下的穩定性\nPhase 1: 盤點至少 3 組候選驗證策略，分別覆蓋 API contract regression、資料庫寫入一致性、健康事件聚合邏輯，並明確列出每組策略的驗證假設與失敗模式。\nPhase 2: 對每組候選策略執行 150 / 500 / 1500 筆樣本回測，量化 edge、sharpe、drawdown，並記錄對 API latency、資料完整性、錯誤率的影響。\nPhase 3: 對每組候選策略執行至少 1000 次 Monte Carlo 模擬，評估在缺資料、延遲、異常輸入與邊界值情境下的穩健度與崩潰風險。\nPhase 4: 進行多策略比較、結構分析與參數優化，對照現有回歸驗證流程，找出最能提升 coverage 與降低 false pass 的策略組合。\nPhase 5: 產出至少 3 組策略結果，每組都必須包含 edge / sharpe / drawdown、與現有策略比較、驗證成本、風險說明與最終推薦方案。\nDeliverables: 至少 3 組可執行驗證策略、每組量化指標、現有流程比較表、最終推薦方案、需納入的 backend test 清單。",
+  "quality_status": "PASS",
+  "planner_provider": "codex",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-23T15:43:22.316530+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 139,
+  "previous_task_status": "QUEUED",
+  "task_id": 140
+}

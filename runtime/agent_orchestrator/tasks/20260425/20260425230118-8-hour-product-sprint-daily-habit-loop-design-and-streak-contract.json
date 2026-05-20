@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Daily habit loop design and streak feedback optimization",
+  "task_draft_markdown": "8-hour product sprint: Daily habit loop design and streak feedback optimization\n\nUser Value: Users who do not return daily forget the product exists. This task designs a daily hook that makes returning to the platform a habit, not a chore — using streaks, feedback loops, and return triggers.\n\nProduct Maturity Impact: D30 retention is the vanity-free measure of product-market fit. A well-designed habit loop (cue → routine → reward) is the primary driver of D30 retention.\n\nExpected Change: D7 and D30 retention improve as streak milestones create emotional investment. Users who reach day-7 streak are 3× more likely to reach day 30. Milestone celebrations make progress visible and reinforce the daily return habit.\n\nObjective: Design and implement a daily habit loop: daily check-in cue, streak tracking, and completion reward signal.\n\nPhase 1: Audit the current streak implementation in backend/app/services/ and backend/tests/test_action_streak.py. Does the streak reset correctly at midnight? Is it surfaced prominently in the UI? Is there any reward signal when a streak milestone is hit?\nPhase 2: Design the daily cue: what triggers a user to open the app each day? Sketch: a daily summary notification (Today's health snapshot), a streak reminder (Day 4 streak — don't break it!), or a fresh action recommendation (Your #1 action for today is...).\nPhase 3: Implement the streak milestone reward signal in the frontend. When a user hits day 3, 7, 14, or 30, show a celebratory moment (a banner, animation, or summary card). Update the backend streak endpoint to return milestone_reached: bool alongside the count.\nPhase 4: Run `make backend-test` and `npm run lint`. Add a test for streak milestone detection. Document the habit loop design with the cue/routine/reward labels.\n\nScope: backend/app/services/, backend/app/api/, frontend/app/platform/, frontend/components/\nFiles to inspect: backend/tests/test_action_streak.py, backend/app/services/ (streak-related), frontend/app/platform/\nAcceptance Criteria: Streak milestone field returned by API; frontend shows milestone celebration at day 3/7/14/30; make backend-test passes; habit loop documented.\nfocus_keys: retention, habit_loop, streak, daily_hook, milestone, d30\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "retention",
+    "habit_loop",
+    "streak",
+    "daily_hook",
+    "milestone",
+    "d30"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "Users who do not return daily forget the product exists. This task designs a daily hook that makes returning to the platform a habit, not a chore — using streaks, feedback loops, and return triggers.",
+  "product_maturity_impact": "D30 retention is the vanity-free measure of product-market fit. A well-designed habit loop (cue → routine → reward) is the primary driver of D30 retention.",
+  "expected_change": "D7 and D30 retention improve as streak milestones create emotional investment. Users who reach day-7 streak are 3× more likely to reach day 30. Milestone celebrations make progress visible and reinforce the daily return habit.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：retention, habit_loop, streak, daily_hook, milestone, d30。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #348?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260424215419",
+  "objective": "8-hour product sprint: Action → Outcome → Feedback closed-loop optimization",
+  "task_draft_markdown": "8-hour product sprint: Action → Outcome → Feedback closed-loop optimization\n\nUser Value: Users who complete a health action today get no meaningful feedback on whether it worked. This task closes that loop — making every action feel worth doing again.\n\nProduct Maturity Impact: Transforms the platform from a task-tracker into a genuine behavior-change engine. Completion rate and 7-day retention are the north-star metrics.\n\nExpected Change: Action completion rate rises as users see that their actions produce measurable outcomes. AI recommendation quality improves progressively as outcome data accumulates — the engine becomes self-improving.\n\nObjective: Design and implement the full behavior loop: Action completion triggers an Outcome check-in prompt; the check-in result feeds back into the AI narrative and the next Action recommendation. Track completion rate before and after.\n\nPhase 1: Map the current behavior loop gap. Find where action completion data exists in the backend (backend/app/api/, backend/app/models/) and where it does NOT feed back into insights or the next recommendation cycle. Document the exact missing links.\nPhase 2: Design the Outcome check-in model. Sketch the data schema (action_id, outcome_rating, outcome_note, checked_at). Implement the API endpoint POST /actions/{id}/outcome with proper validation and idempotency.\nPhase 3: Wire the outcome into the AI recommendation pipeline. When generating the next prioritized_actions list, weight actions whose previous outcomes were positive higher. Update ai/prompts/health_summary_system_prompt.md to reference recent outcomes.\nPhase 4: Add the outcome check-in UI prompt to the frontend action completion flow. Show a simple 1-5 star or thumbs-up/down after marking an action done. Run `npm run lint` and `make backend-test` to confirm no regressions.\n\nScope: backend/app/api/, backend/app/models/, backend/app/services/, ai/prompts/, frontend/app/platform/, frontend/components/\nAcceptance Criteria: POST /actions/{id}/outcome endpoint exists and returns 200; outcome data influences the next AI recommendation cycle; frontend shows outcome prompt after action completion; make backend-test passes; npm run lint passes.\nfocus_keys: behavior_loop, outcome_tracking, feedback, action_completion, retention\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "codex",
+  "created_at": "2026-04-24T21:54:19.402598+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 188,
+  "previous_task_status": "QUEUED",
+  "task_category": "behavior_loop_optimization",
+  "duplicate_signature": "behavior_loop_optimization_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "behavior_loop_optimization",
+    "next_candidate_category": "health_narrative_deepening",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 189
+}

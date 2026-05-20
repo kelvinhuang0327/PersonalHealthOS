@@ -1,0 +1,14 @@
+{
+  "Glucose": {"low": 70, "high": 99, "unit": "mg/dL"},
+  "ALT": {"low": 0, "high": 40, "unit": "U/L"},
+  "AST": {"low": 0, "high": 40, "unit": "U/L"},
+  "Uric Acid": {"low": 3.5, "high": 7.0, "unit": "mg/dL"},
+  "Total Cholesterol": {"low": 0, "high": 200, "unit": "mg/dL"},
+  "LDL": {"low": 0, "high": 130, "unit": "mg/dL"},
+  "HDL": {"low": 40, "high": 999, "unit": "mg/dL"},
+  "Triglycerides": {"low": 0, "high": 150, "unit": "mg/dL"},
+  "Hemoglobin": {
+    "male": {"low": 13.5, "high": 17.5, "unit": "g/dL"},
+    "female": {"low": 12.0, "high": 16.0, "unit": "g/dL"}
+  }
+}

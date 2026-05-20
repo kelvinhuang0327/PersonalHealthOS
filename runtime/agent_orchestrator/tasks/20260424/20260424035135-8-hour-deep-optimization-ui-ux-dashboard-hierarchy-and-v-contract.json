@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "objective": "8-hour deep optimization: UI/UX Dashboard hierarchy and visual-feedback consistency",
+  "task_draft_markdown": "8-hour deep optimization: UI/UX Dashboard hierarchy and visual-feedback consistency\n\nObjective: Audit and fix layout hierarchy, spacing inconsistencies, visual-feedback states, and component style drift across all platform pages.\n\nPhase 1: Audit frontend/app/platform/ pages. List the top 8 hierarchy / spacing / colour issues found (with file + line references).\nPhase 2: Inspect frontend/components/ for shared components that render differently across pages. Document each inconsistency.\nPhase 3: Fix identified issues. Run `npm run lint` to verify no regressions. Record a before/after summary for each fix.\nPhase 4: Smoke-test key user flows (dashboard → insights → actions → reports) and confirm visual hierarchy is correct.\n\nScope: frontend/app/platform/, frontend/components/, frontend/styles/\nFiles to inspect: tailwind.config.ts, app/platform/dashboard/page.tsx, components/dashboard/, components/shared/\nRecommended commands: npm run lint, npm run build\nAcceptance Criteria: npm run lint passes with 0 errors; at least 5 visual issues resolved with evidence; no new TypeScript errors introduced.\nfocus_keys: ui_ux, dashboard, visual_feedback, component_consistency\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "ui_ux",
+    "dashboard",
+    "visual_feedback",
+    "component_consistency"
+  ],
+  "expected_duration_minutes": 480,
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：ui_ux, dashboard, visual_feedback, component_consistency。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #140?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": "PASS",
+    "previous_gate_reason": ""
+  }
+}

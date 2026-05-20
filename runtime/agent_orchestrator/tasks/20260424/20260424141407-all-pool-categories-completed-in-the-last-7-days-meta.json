@@ -1,0 +1,27 @@
+{
+  "task_uid": "20260424141407",
+  "objective": "產品問題衝刺: All pool categories completed in the last 7 days",
+  "task_draft_markdown": "產品問題衝刺: All pool categories completed in the last 7 days\n\nUser Value: Every pool template was completed within the last 7 days. The planner should generate a problem-specific task based on actual product signals rather than cycling through static templates again.\n\nProduct Maturity Impact: Addressing this systemic issue unblocks forward product progress and prevents the orchestrator from cycling through exhausted work.\n\nExpected Change: The detected issue is resolved and the orchestrator generates meaningful new work in subsequent cycles.\n\nObjective: Investigate and resolve: Every pool template was completed within the last 7 days. The planner should generate a problem-specific task based on actual product signals rather than cycling through static templates again.\n\nPhase 1: Analyse the signal data: {'on_cooldown_count': 12}.\nPhase 2: Determine root cause and design a targeted fix.\nPhase 3: Implement the fix with the smallest safe change set.\nPhase 4: Verify with make backend-test.\n\nScope: backend/app/orchestrator/\nAcceptance Criteria: Issue resolved; make backend-test passes.\nfocus_keys: orchestrator, product_health, signal_detection\nexpected_duration_minutes: 240",
+  "quality_status": "PASS",
+  "planner_provider": "codex",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-24T14:14:07.094066+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 163,
+  "previous_task_status": "COMPLETED",
+  "task_category": "problem_signal",
+  "duplicate_signature": "problem_all_signatures_on_cooldown_20260424",
+  "fallback_info": {
+    "source": "problem_signal",
+    "fallback_tried": true,
+    "fallback_category": null,
+    "next_candidate_category": null,
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ],
+    "detected_issue": "all_signatures_on_cooldown",
+    "issue_severity": "low"
+  },
+  "task_id": 164
+}

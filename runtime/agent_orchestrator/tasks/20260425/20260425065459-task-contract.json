@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "objective": "產品問題衝刺: 全類別輪替完成 — 選擇下一個最高價值優化領域",
+  "task_draft_markdown": "產品問題衝刺: 全類別輪替完成 — 選擇下一個最高價值優化領域\n\nUser Value: 12 個任務池類別已在近期全數完成，系統需要基於真實產品信號選擇下一個最具用戶價值的改善重點，而非重複已完成的靜態模板。\n\nProduct Maturity Impact: 任務池全輪替後，選擇最能提升用戶留存與日常使用體驗的領域進行深度改善，是產品成熟度的關鍵指標。\n\nExpected Change: 本次衝刺聚焦一個高用戶價值領域，交付可量測的產品改善，為後續任務輪替建立新的優先方向。\n\nObjective: 審視 backend/app/、frontend/app/platform/ 各模組近況，找出最具用戶影響力的未完成改善點，並實作一個具體可測試的功能改善。\n\nPhase 1: 閱讀最近 5 個 completed.md，找出交付深度不足或用戶影響力最高的領域。記錄每個領域的現況與缺口。\nPhase 2: 選定最高優先領域（以用戶每日使用頻率與留存影響為標準），設計一個具體、可在 8 小時內完成的改善方案。\nPhase 3: 實作改善方案。修改至少 2 個真實檔案，確保改動可被測試驗證。\nPhase 4: 執行 make backend-test 與 npm run build，確認所有測試通過。在完成報告中記錄改動的檔案、行數與對用戶的實際影響。\n\nScope: backend/app/, frontend/app/platform/\nAcceptance Criteria: 至少 2 個真實檔案被修改；make backend-test 通過；npm run build 通過；completed.md 包含具體的 changed_files 與測試證據。\nfocus_keys: product_value, user_retention, delivery_depth, real_changes\nexpected_duration_minutes: 480",
+  "focus_keys": [],
+  "expected_duration_minutes": null,
+  "user_value": "12 個任務池類別已在近期全數完成，系統需要基於真實產品信號選擇下一個最具用戶價值的改善重點，而非重複已完成的靜態模板。",
+  "product_maturity_impact": "任務池全輪替後，選擇最能提升用戶留存與日常使用體驗的領域進行深度改善，是產品成熟度的關鍵指標。",
+  "expected_change": "本次衝刺聚焦一個高用戶價值領域，交付可量測的產品改善，為後續任務輪替建立新的優先方向。",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #256?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": "PASS",
+    "previous_gate_reason": ""
+  }
+}

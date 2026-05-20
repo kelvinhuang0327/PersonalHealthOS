@@ -1,0 +1,22 @@
+{
+  "task_uid": "20260424074655",
+  "objective": "Replan task #160: 8-hour product sprint: Action recommendation precision and deduplication (reason: Delivery has placeholder or insufficient content in: \"User Value Delivered\", \"Product Maturity Impact Achieved\", \"Expected Change Evidence\". Each dimension section must contain ≥80 chars of real evidence, not template scaffolding. Worker must describe specific, observable outcomes.)",
+  "task_draft_markdown": "Replan task #160: 8-hour product sprint: Action recommendation precision and deduplication (reason: Delivery has placeholder or insufficient content in: \"User Value Delivered\", \"Product Maturity Impact Achieved\", \"Expected Change Evidence\". Each dimension section must contain ≥80 chars of real evidence, not template scaffolding. Worker must describe specific, observable outcomes.)",
+  "quality_status": "PASS",
+  "planner_provider": "codex",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-24T07:46:55.083918+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 160,
+  "previous_task_status": "REPLAN_REQUIRED",
+  "task_category": null,
+  "duplicate_signature": null,
+  "fallback_info": {
+    "source": "replan",
+    "fallback_tried": false,
+    "fallback_category": null,
+    "next_candidate_category": null,
+    "rejection_reasons": []
+  },
+  "task_id": 161
+}

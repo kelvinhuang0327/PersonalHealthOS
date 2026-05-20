@@ -1,0 +1,109 @@
+rules:
+- id: penalty_bp_high
+  type: score_penalty
+  role: score_penalty
+  category: cardiovascular
+  priority: 10
+  severity: warning
+  enabled: true
+  tags:
+  - score
+  - blood_pressure
+  version: 1.0
+  confidence: 0.9
+  conditions:
+    all:
+    - field: avg_systolic
+      gt: 140
+  output:
+    target: cardiovascular
+    penalty: 12
+  evidence_level: A
+  guideline_source: ACC/AHA
+# Score penalty role: same BMI threshold as risk alerts, but used only for score deduction.
+- id: penalty_bmi_high
+  type: score_penalty
+  role: score_penalty
+  category: metabolic
+  priority: 8
+  severity: warning
+  enabled: true
+  tags:
+  - score
+  - bmi
+  version: 1.0
+  confidence: 0.85
+  conditions:
+    all:
+    - field: bmi
+      gt: 27
+  output:
+    target: activity
+    penalty: 10
+  evidence_level: A
+  guideline_source: ADA
+# Score penalty role: same ALT threshold as risk alerts, but used only for score deduction.
+- id: penalty_alt_high
+  type: score_penalty
+  role: score_penalty
+  category: liver
+  priority: 8
+  severity: warning
+  enabled: true
+  tags:
+  - score
+  - alt
+  version: 1.0
+  confidence: 0.88
+  conditions:
+    all:
+    - field: alt_above_ref
+      eq: true
+  output:
+    target: metabolic
+    penalty: 12
+  evidence_level: A
+  guideline_source: ACG
+- id: penalty_long_term_symptom
+  type: score_penalty
+  role: score_penalty
+  category: chronic
+  priority: 7
+  severity: warning
+  enabled: true
+  tags:
+  - score
+  - chronic
+  version: 1.0
+  confidence: 0.84
+  conditions:
+    all:
+    - field: long_term_symptom_count
+      gt: 0
+  output:
+    target: overall
+    penalty: 8
+  evidence_level: A
+  guideline_source: Clinical Follow-up Guidance
+- id: penalty_risk_alerts
+  type: score_penalty
+  role: score_penalty
+  category: risk
+  priority: 9
+  severity: warning
+  enabled: true
+  tags:
+  - score
+  - alerts
+  version: 1.0
+  confidence: 0.92
+  conditions:
+    all:
+    - field: active_alert_count
+      gt: 0
+  output:
+    target: overall
+    penalty_per_alert: 3
+    max_penalty: 15
+  evidence_level: A
+  guideline_source: Clinical Follow-up Guidance

@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "objective": "產品問題衝刺: 提升交付深度 — 15 個任務在 44 分鐘內完成，可能過於表面",
+  "task_draft_markdown": "產品問題衝刺: 提升交付深度 — 15 個任務在 44 分鐘內完成，可能過於表面\n\nUser Value: When 15 sprints complete in 44 minutes, the worker is likely generating boilerplate rather than real product improvements. Users deserve code that actually runs and changes their experience.\n\nProduct Maturity Impact: Sprint velocity metrics are meaningless if the delivery is scaffolding. This sprint must produce at least one file change that can be verified by running the test suite.\n\nExpected Change: The completed delivery includes a verified changed_files list with at least 2 real modified files and passing test evidence.\n\nObjective: Pick the highest-priority area from the product backlog and make a real, verifiable code change. No scaffolding, no placeholder text.\n\nPhase 1: Read the 5 most recent completed.md files. Identify what actually changed vs. what was scaffolding.\nPhase 2: Pick the area with the most scaffolding and no real change. Make the actual code change that was promised.\nPhase 3: Run make backend-test to confirm the change works.\nPhase 4: Update completed.md with exact file names changed, line counts, and test output as evidence.\n\nScope: backend/app/, frontend/app/platform/\nAcceptance Criteria: changed_files list contains ≥2 real modified files; make backend-test passes; completed.md cites specific line numbers changed.\nfocus_keys: delivery_depth, code_quality, test_coverage, real_changes\nexpected_duration_minutes: 480",
+  "focus_keys": [],
+  "expected_duration_minutes": null,
+  "user_value": "When 15 sprints complete in 44 minutes, the worker is likely generating boilerplate rather than real product improvements. Users deserve code that actually runs and changes their experience.",
+  "product_maturity_impact": "Sprint velocity metrics are meaningless if the delivery is scaffolding. This sprint must produce at least one file change that can be verified by running the test suite.",
+  "expected_change": "The completed delivery includes a verified changed_files list with at least 2 real modified files and passing test evidence.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #241?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": "PASS",
+    "previous_gate_reason": ""
+  }
+}

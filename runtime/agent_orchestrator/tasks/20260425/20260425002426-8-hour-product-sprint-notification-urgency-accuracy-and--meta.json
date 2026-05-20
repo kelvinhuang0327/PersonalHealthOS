@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260425002426",
+  "objective": "8-hour product sprint: Notification urgency accuracy and fatigue prevention",
+  "task_draft_markdown": "8-hour product sprint: Notification urgency accuracy and fatigue prevention\n\nUser Value: Overnotified users disable notifications entirely. Undernotified users miss important health signals. This task makes every notification feel timely, relevant, and worth reading.\n\nProduct Maturity Impact: Notification open rate is a direct proxy for how much users trust the platform's judgment. A high open rate means the product has earned the right to speak. Notification fatigue kills engagement silently.\n\nExpected Change: Notification open rate rises as urgency accuracy improves. Users stop disabling notifications because each one feels relevant and timely. The daily cap prevents fatigue; snooze resurfacing prevents important signals from vanishing.\n\nObjective: Audit notification urgency accuracy, snooze/resurfacing behavior, and implement basic fatigue prevention.\n\nPhase 1: Audit the notification pipeline end-to-end. What triggers a notification? Is urgency (LOW/MEDIUM/HIGH) assigned correctly? Is there a daily notification cap? What happens when a user snoozes — does the notification resurface or disappear forever?\nPhase 2: Audit the snooze → resurfacing flow. Implement: a snoozed notification must resurface within 24 hours unless the underlying health event is resolved. Add a resurfaced_at timestamp to the notification model.\nPhase 3: Implement a daily notification cap (max 3 notifications per day per user). Prioritize HIGH urgency notifications when the cap is reached. Add the cap enforcement in backend/app/services/.\nPhase 4: Run `make backend-test`. Add tests for: (a) daily cap enforcement; (b) snooze resurfacing within 24h. Verify notification-related tests pass.\n\nScope: backend/app/services/, backend/app/api/, backend/app/models/, backend/tests/\nFiles to inspect: backend/app/services/ (notification services), backend/app/api/ (notification endpoints)\nAcceptance Criteria: Daily notification cap enforced; snooze resurfacing implemented; make backend-test passes; urgency assignment documented.\nfocus_keys: notifications, urgency, fatigue_prevention, snooze, resurfacing, cap\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "codex",
+  "created_at": "2026-04-25T00:24:26.012048+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 205,
+  "previous_task_status": "QUEUED",
+  "task_category": "notifications_lifecycle",
+  "duplicate_signature": "notifications_lifecycle_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "notifications_lifecycle",
+    "next_candidate_category": "reports_product_value",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 206
+}

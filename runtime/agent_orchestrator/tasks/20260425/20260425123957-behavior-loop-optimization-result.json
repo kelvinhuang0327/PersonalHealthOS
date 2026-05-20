@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "task_id": 290,
+  "status": "FAILED_RATE_LIMIT",
+  "gate_verdict": "RATE_LIMIT",
+  "gate_reason": "copilot-daemon rate limit detected: [2026-04-25T12:39:57.425577+00:00] Worker 已接取任務，開始執行。 [2026-04-25T12:39:57.429219+00:00] completed.md 已產生。 [2026-04-25T12:39:57.432398+00:00] task_result.json 已產生。",
+  "duration_seconds": 65,
+  "changed_files": [],
+  "error_markers_hit": [
+    "provider_rate_limit"
+  ],
+  "missing_required_outputs": [],
+  "forbidden_change_violations": [],
+  "acceptance_results": [],
+  "next_action": "Planner may proceed to other tasks while this one waits for provider quota reset.",
+  "failure_reason": "PROVIDER_RATE_LIMIT",
+  "final_message": "Detected copilot-daemon rate limit output and terminalized the task to avoid planner deadlock.",
+  "reset_hint": "Wait for the provider quota window to reset or switch worker provider before retrying.",
+  "provider": "copilot-daemon",
+  "matched_excerpt": "[2026-04-25T12:39:57.425577+00:00] Worker 已接取任務，開始執行。 [2026-04-25T12:39:57.429219+00:00] completed.md 已產生。 [2026-04-25T12:39:57.432398+00:00] task_result.json 已產生。"
+}

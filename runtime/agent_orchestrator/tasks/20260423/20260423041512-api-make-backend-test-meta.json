@@ -1,0 +1,11 @@
+{
+  "task_uid": "20260423041512",
+  "objective": "驗證關鍵 API 與資料流程不回歸（含 `make backend-test`）。",
+  "planner_provider": "codex",
+  "worker_provider": "codex",
+  "created_at": "2026-04-23T04:15:12.138946+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 79,
+  "previous_task_status": "QUEUED",
+  "task_id": 80
+}

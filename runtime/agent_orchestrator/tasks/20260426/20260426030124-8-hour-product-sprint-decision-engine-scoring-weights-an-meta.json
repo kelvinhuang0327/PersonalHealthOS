@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260426030124",
+  "objective": "8-hour product sprint: Decision Engine scoring weights and explainability",
+  "task_draft_markdown": "8-hour product sprint: Decision Engine scoring weights and explainability\n\nUser Value: Users see health scores and decisions but cannot understand why. \"Your cardiovascular score is 62\" is meaningless without a cause-and-effect explanation. This task makes every decision legible and trustworthy.\n\nProduct Maturity Impact: Decision explainability is the #1 factor in clinical trust. A platform that explains its reasoning converts passive viewers into active participants.\n\nExpected Change: Users who previously saw a score and gave up now read the explanation and understand what to change. The top_factors field turns every score into a coaching moment, converting passive data viewers into active health participants.\n\nObjective: Audit scoring weight logic and add explainability to the top-3 decision outputs.\n\nPhase 1: Inspect backend/app/core/ (confidence engine, clinical score engine). Document every hardcoded weight and threshold. Which inputs have the most influence? Are weights validated against any evidence base?\nPhase 2: Audit the decision output format. Does the API response include a human-readable explanation of why the score is what it is? If not, design the explanation schema: top_factors (list of {factor, contribution, direction}) alongside the score.\nPhase 3: Implement explanation generation for the top-3 decision types (risk score, action priority, narrative summary). Update ai/prompts/ to include factor attribution in output.\nPhase 4: Run `make backend-test`. Add a test that asserts the decision response includes top_factors with at least 2 entries. Verify no regression in existing clinical score tests.\n\nScope: backend/app/core/, backend/app/services/, ai/prompts/, backend/tests/\nFiles to inspect: backend/app/core/ (confidence_engine, clinical_score_engine), ai/prompts/health_risk_prediction_prompt.md\nAcceptance Criteria: make backend-test passes; decision API response includes top_factors explanation field; at least 2 explanation-assertion tests added; scoring weights documented with rationale.\nfocus_keys: decision_engine, explainability, scoring_weights, confidence, clinical_trust\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-26T03:01:24.662806+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 370,
+  "previous_task_status": "QUEUED",
+  "task_category": "decision_engine_improvement",
+  "duplicate_signature": "decision_engine_improvement_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "decision_engine_improvement",
+    "next_candidate_category": "health_narrative_deepening",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 371
+}

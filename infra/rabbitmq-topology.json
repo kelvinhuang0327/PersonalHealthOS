@@ -1,0 +1,21 @@
+{
+  "exchanges": [
+    { "name": "health.events", "type": "topic", "durable": true },
+    { "name": "notification.events", "type": "topic", "durable": true },
+    { "name": "report.events", "type": "topic", "durable": true }
+  ],
+  "queues": [
+    { "name": "ai-risk-prediction.q", "durable": true },
+    { "name": "notification-dispatch.q", "durable": true },
+    { "name": "timeline-projection.q", "durable": true },
+    { "name": "device-normalization.q", "durable": true },
+    { "name": "pdf-generation.q", "durable": true }
+  ],
+  "bindings": [
+    { "exchange": "health.events", "queue": "ai-risk-prediction.q", "routing_key": "health.#" },
+    { "exchange": "health.events", "queue": "timeline-projection.q", "routing_key": "health.#" },
+    { "exchange": "notification.events", "queue": "notification-dispatch.q", "routing_key": "notification.#" },
+    { "exchange": "health.events", "queue": "device-normalization.q", "routing_key": "device.data.ingested" },
+    { "exchange": "report.events", "queue": "pdf-generation.q", "routing_key": "report.pdf.requested" }
+  ]
+}

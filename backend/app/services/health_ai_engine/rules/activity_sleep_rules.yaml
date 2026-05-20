@@ -1,0 +1,42 @@
+rules:
+- id: lifestyle_sleep_short
+  type: score_penalty
+  category: lifestyle
+  priority: 6
+  severity: warning
+  enabled: true
+  tags:
+  - sleep
+  - lifestyle
+  version: 1.0
+  confidence: 0.8
+  conditions:
+    all:
+    - field: avg_sleep_hours
+      lt: 6.5
+  output:
+    target: activity
+    penalty: 8
+  evidence_level: A
+  guideline_source: Rule Library
+- id: lifestyle_steps_low
+  type: score_penalty
+  category: lifestyle
+  priority: 6
+  severity: warning
+  enabled: true
+  tags:
+  - activity
+  - steps
+  - lifestyle
+  version: 1.0
+  confidence: 0.8
+  conditions:
+    all:
+    - field: avg_steps
+      lt: 5000
+  output:
+    target: activity
+    penalty: 6
+  evidence_level: A
+  guideline_source: Rule Library

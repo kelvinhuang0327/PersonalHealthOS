@@ -1,0 +1,27 @@
+{
+  "task_uid": "20260425214116",
+  "objective": "產品問題衝刺: 補強長期未覆蓋的產品領域: action_system_enhancement",
+  "task_draft_markdown": "產品問題衝刺: 補強長期未覆蓋的產品領域: action_system_enhancement\n\nUser Value: 1 product areas have had no sprint in 30+ days: action_system_enhancement. These areas have accumulated unaddressed product debt that affects user experience.\n\nProduct Maturity Impact: Unbalanced product development creates gaps in user experience quality. The neglected area \"action_system_enhancement\" likely has the highest opportunity for improvement relative to effort.\n\nExpected Change: The action_system_enhancement area receives at least one concrete improvement that measurably advances user value in that domain.\n\nObjective: Focus this sprint entirely on \"action_system_enhancement\". Make the highest-impact change possible in that area.\n\nPhase 1: Audit the current state of \"action_system_enhancement\" in the codebase. What exists? What is broken or missing? What do users encounter?\nPhase 2: Identify the single highest-impact change. Think: what is the one thing a user in this area needs most?\nPhase 3: Implement that change. Keep scope tight — one real improvement is better than five half-finished ideas.\nPhase 4: Run make backend-test and npm run build. Document what changed and why it matters to the user.\n\nScope: backend/app/, frontend/app/platform/action-system-enhancement/\nAcceptance Criteria: At least one concrete, tested change in the action_system_enhancement area; make backend-test passes; npm run build passes.\nfocus_keys: action_system_enhancement, product_debt\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-25T21:41:16.503846+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 340,
+  "previous_task_status": "QUEUED",
+  "task_category": "action_system_enhancement",
+  "duplicate_signature": "problem_category_neglected_20260425",
+  "fallback_info": {
+    "source": "problem_signal",
+    "fallback_tried": true,
+    "fallback_category": null,
+    "next_candidate_category": null,
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ],
+    "detected_issue": "category_neglected",
+    "issue_severity": "medium"
+  },
+  "task_id": 341
+}

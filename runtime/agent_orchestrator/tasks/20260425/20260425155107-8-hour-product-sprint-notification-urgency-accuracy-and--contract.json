@@ -1,0 +1,58 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Notification urgency accuracy and fatigue prevention",
+  "task_draft_markdown": "8-hour product sprint: Notification urgency accuracy and fatigue prevention\n\nUser Value: Overnotified users disable notifications entirely. Undernotified users miss important health signals. This task makes every notification feel timely, relevant, and worth reading.\n\nProduct Maturity Impact: Notification open rate is a direct proxy for how much users trust the platform's judgment. A high open rate means the product has earned the right to speak. Notification fatigue kills engagement silently.\n\nExpected Change: Notification open rate rises as urgency accuracy improves. Users stop disabling notifications because each one feels relevant and timely. The daily cap prevents fatigue; snooze resurfacing prevents important signals from vanishing.\n\nObjective: Audit notification urgency accuracy, snooze/resurfacing behavior, and implement basic fatigue prevention.\n\nPhase 1: Audit the notification pipeline end-to-end. What triggers a notification? Is urgency (LOW/MEDIUM/HIGH) assigned correctly? Is there a daily notification cap? What happens when a user snoozes — does the notification resurface or disappear forever?\nPhase 2: Audit the snooze → resurfacing flow. Implement: a snoozed notification must resurface within 24 hours unless the underlying health event is resolved. Add a resurfaced_at timestamp to the notification model.\nPhase 3: Implement a daily notification cap (max 3 notifications per day per user). Prioritize HIGH urgency notifications when the cap is reached. Add the cap enforcement in backend/app/services/.\nPhase 4: Run `make backend-test`. Add tests for: (a) daily cap enforcement; (b) snooze resurfacing within 24h. Verify notification-related tests pass.\n\nScope: backend/app/services/, backend/app/api/, backend/app/models/, backend/tests/\nFiles to inspect: backend/app/services/ (notification services), backend/app/api/ (notification endpoints)\nAcceptance Criteria: Daily notification cap enforced; snooze resurfacing implemented; make backend-test passes; urgency assignment documented.\nfocus_keys: notifications, urgency, fatigue_prevention, snooze, resurfacing, cap\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "notifications",
+    "urgency",
+    "fatigue_prevention",
+    "snooze",
+    "resurfacing",
+    "cap"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "Overnotified users disable notifications entirely. Undernotified users miss important health signals. This task makes every notification feel timely, relevant, and worth reading.",
+  "product_maturity_impact": "Notification open rate is a direct proxy for how much users trust the platform's judgment. A high open rate means the product has earned the right to speak. Notification fatigue kills engagement silently.",
+  "expected_change": "Notification open rate rises as urgency accuracy improves. Users stop disabling notifications because each one feels relevant and timely. The daily cap prevents fatigue; snooze resurfacing prevents important signals from vanishing.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：notifications, urgency, fatigue_prevention, snooze, resurfacing, cap。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #311?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

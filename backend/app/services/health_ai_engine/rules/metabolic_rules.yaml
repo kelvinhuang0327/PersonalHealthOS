@@ -1,0 +1,26 @@
+rules:
+# Risk alert role: overlaps expected with score penalty threshold for ALT.
+- id: alt_high
+  type: risk
+  role: risk_alert
+  category: liver
+  priority: 8
+  severity: warning
+  enabled: true
+  tags:
+  - alt
+  - liver_function
+  version: 1.0
+  confidence: 0.88
+  conditions:
+    all:
+    - field: alt_above_ref
+      eq: true
+  output:
+    risk_type: alt_high
+    severity: warning
+    title: 肝功能指標偏高
+    description: ALT 超過正常範圍
+    recommendation: 建議門診追蹤肝功能
+  evidence_level: A
+  guideline_source: ACG

@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260425224118",
+  "objective": "8-hour product sprint: Full user journey friction audit — Report upload to Action complete",
+  "task_draft_markdown": "8-hour product sprint: Full user journey friction audit — Report upload to Action complete\n\nUser Value: A new user who uploads a health report should be able to read an AI insight and complete their first recommended action in under 5 minutes. This task maps and fixes the biggest blockers in that journey.\n\nProduct Maturity Impact: The \"time to first meaningful outcome\" metric defines whether a user becomes a retained user or churns. Shortening TTFMO from 30 minutes to 5 minutes is a step-change in product maturity.\n\nExpected Change: TTFMO drops visibly after fixing the top-3 friction points. Fewer users abandon between report upload and first action. The friction audit becomes a repeatable quarterly product-quality process.\n\nObjective: End-to-end audit of the journey from Report Upload → AI Insight → Action completion. Find and fix the top-3 friction points.\n\nPhase 1: Trace the full journey in the codebase and UI. Report Upload: what happens after the file is accepted? How long before an Insight appears? What if parsing fails? Insight: is the connection from insight to action explicit? Action: how many taps to mark complete? Document each step with file references.\nPhase 2: Score each step on: latency (does the user wait?), clarity (does the user know what to do?), confidence (does the user trust the result?). Identify the 3 steps with the lowest scores.\nPhase 3: Fix the top-3 friction steps. Examples: add a progress indicator during report parsing; add an explicit \"This insight suggests → [Action]\" link; reduce action completion to a single tap from the Insight card.\nPhase 4: Run `npm run lint` and `make backend-test`. Document the before/after step count and estimated TTFMO improvement.\n\nScope: frontend/app/platform/, backend/app/api/, backend/app/services/\nFiles to inspect: app/platform/reports/, app/platform/insights/, app/platform/actions/, backend/app/api/ (report endpoints)\nAcceptance Criteria: At least 3 friction steps fixed with evidence; before/after journey step count documented; npm run lint and make backend-test pass.\nfocus_keys: user_journey, friction_audit, ttfmo, onboarding, report_to_action\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-25T22:41:18.290163+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 346,
+  "previous_task_status": "QUEUED",
+  "task_category": "user_journey_analysis",
+  "duplicate_signature": "user_journey_analysis_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "user_journey_analysis",
+    "next_candidate_category": "retention_habit_loop",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 347
+}

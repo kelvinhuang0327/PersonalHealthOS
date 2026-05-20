@@ -1,0 +1,24 @@
+rules:
+- id: uric_acid_high
+  type: risk
+  category: gout
+  priority: 6
+  severity: warning
+  enabled: true
+  tags:
+  - uric_acid
+  - gout
+  version: 1.0
+  confidence: 0.78
+  conditions:
+    all:
+    - field: uric_acid_above_ref
+      eq: true
+  output:
+    risk_type: uric_acid_high
+    severity: warning
+    title: 尿酸偏高風險
+    description: 尿酸值高於正常範圍
+    recommendation: 建議檢視飲食型態並追蹤尿酸
+  evidence_level: A
+  guideline_source: Hyperuricemia Standard

@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "objective": "8-hour product sprint: Decision Engine scoring weights and explainability",
+  "task_draft_markdown": "8-hour product sprint: Decision Engine scoring weights and explainability\n\nUser Value: Users see health scores and decisions but cannot understand why. \"Your cardiovascular score is 62\" is meaningless without a cause-and-effect explanation. This task makes every decision legible and trustworthy.\n\nProduct Maturity Impact: Decision explainability is the #1 factor in clinical trust. A platform that explains its reasoning converts passive viewers into active participants.\n\nExpected Change: Users who previously saw a score and gave up now read the explanation and understand what to change. The top_factors field turns every score into a coaching moment, converting passive data viewers into active health participants.\n\nObjective: Audit scoring weight logic and add explainability to the top-3 decision outputs.\n\nPhase 1: Inspect backend/app/core/ (confidence engine, clinical score engine). Document every hardcoded weight and threshold. Which inputs have the most influence? Are weights validated against any evidence base?\nPhase 2: Audit the decision output format. Does the API response include a human-readable explanation of why the score is what it is? If not, design the explanation schema: top_factors (list of {factor, contribution, direction}) alongside the score.\nPhase 3: Implement explanation generation for the top-3 decision types (risk score, action priority, narrative summary). Update ai/prompts/ to include factor attribution in output.\nPhase 4: Run `make backend-test`. Add a test that asserts the decision response includes top_factors with at least 2 entries. Verify no regression in existing clinical score tests.\n\nScope: backend/app/core/, backend/app/services/, ai/prompts/, backend/tests/\nFiles to inspect: backend/app/core/ (confidence_engine, clinical_score_engine), ai/prompts/health_risk_prediction_prompt.md\nAcceptance Criteria: make backend-test passes; decision API response includes top_factors explanation field; at least 2 explanation-assertion tests added; scoring weights documented with rationale.\nfocus_keys: decision_engine, explainability, scoring_weights, confidence, clinical_trust\nexpected_duration_minutes: 480",
+  "focus_keys": [
+    "decision_engine",
+    "explainability",
+    "scoring_weights",
+    "confidence",
+    "clinical_trust"
+  ],
+  "expected_duration_minutes": 480,
+  "user_value": "Users see health scores and decisions but cannot understand why. \"Your cardiovascular score is 62\" is meaningless without a cause-and-effect explanation. This task makes every decision legible and trustworthy.",
+  "product_maturity_impact": "Decision explainability is the #1 factor in clinical trust. A platform that explains its reasoning converts passive viewers into active participants.",
+  "expected_change": "Users who previously saw a score and gave up now read the explanation and understand what to change. The top_factors field turns every score into a coaching moment, converting passive data viewers into active health participants.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。",
+    "本次 Focus 方向：decision_engine, explainability, scoring_weights, confidence, clinical_trust。每個方向需獨立輸出量化結果。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #187?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": null,
+    "previous_gate_reason": ""
+  }
+}

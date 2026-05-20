@@ -1,0 +1,9 @@
+{
+  "pid": 2312,
+  "status": "idle",
+  "started_at": "2026-05-20T01:20:56.569873+00:00",
+  "heartbeat_at": "2026-05-20T04:55:17.452820+00:00",
+  "current_task_id": null,
+  "worker_pid": null,
+  "worker_provider": "copilot-daemon"
+}

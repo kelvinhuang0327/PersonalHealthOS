@@ -1,0 +1,26 @@
+{
+  "bmi": {
+    "underweight": { "lt": 18.5, "severity": "medium", "title": "BMI 偏低", "message": "BMI 低於 18.5，請留意營養與體重管理。" },
+    "overweight": { "gte": 24.0, "lt": 27.0, "severity": "medium", "title": "BMI 過重", "message": "BMI 達到過重區間，建議調整飲食與運動習慣。" },
+    "obese": { "gte": 27.0, "severity": "high", "title": "BMI 肥胖", "message": "BMI 達到肥胖區間，建議盡快與專業醫療人員討論改善計畫。" }
+  },
+  "blood_pressure": {
+    "elevated": { "systolic_gte": 130, "or_diastolic_gte": 80, "severity": "high", "title": "血壓偏高", "message": "血壓偏高，建議持續監測並評估就醫。" }
+  },
+  "blood_glucose": {
+    "elevated": { "gte": 126, "severity": "high", "title": "血糖偏高", "message": "血糖偏高，建議追蹤檢查與飲食控制。" }
+  },
+  "liver_function": {
+    "alt_high": { "item_name": "ALT", "gte": 40, "severity": "medium", "title": "ALT 偏高", "message": "肝功能指標 ALT 偏高，建議諮詢醫師。" },
+    "ast_high": { "item_name": "AST", "gte": 40, "severity": "medium", "title": "AST 偏高", "message": "肝功能指標 AST 偏高，建議諮詢醫師。" }
+  },
+  "uric_acid": {
+    "high": { "item_name": "Uric Acid", "gte": 7.0, "severity": "medium", "title": "尿酸偏高", "message": "尿酸偏高，建議調整飲食並持續追蹤。" }
+  },
+  "lipids": {
+    "cholesterol_high": { "item_name": "Total Cholesterol", "gte": 200, "severity": "medium", "title": "總膽固醇偏高", "message": "總膽固醇偏高，建議控制飲食與追蹤。" },
+    "ldl_high": { "item_name": "LDL", "gte": 130, "severity": "medium", "title": "LDL 偏高", "message": "低密度膽固醇偏高，建議諮詢醫療專業。" },
+    "hdl_low": { "item_name": "HDL", "lt": 40, "severity": "medium", "title": "HDL 偏低", "message": "高密度膽固醇偏低，建議增加運動與飲食調整。" },
+    "tg_high": { "item_name": "Triglycerides", "gte": 150, "severity": "medium", "title": "三酸甘油脂偏高", "message": "三酸甘油脂偏高，建議減少精緻糖與酒精攝取。" }
+  }
+}

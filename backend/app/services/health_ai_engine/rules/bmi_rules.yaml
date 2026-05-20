@@ -1,0 +1,50 @@
+rules:
+# Risk alert role: same threshold as score penalty, but this rule drives alerts not score.
+- id: bmi_warning
+  type: risk
+  role: risk_alert
+  category: metabolic
+  priority: 7
+  severity: warning
+  enabled: true
+  tags:
+  - bmi
+  - obesity
+  version: 1.0
+  confidence: 0.85
+  conditions:
+    all:
+    - field: bmi
+      gt: 27
+  output:
+    risk_type: bmi_high
+    severity: warning
+    title: BMI 偏高
+    description: BMI 超過 27
+    recommendation: 建議體重管理與規律運動
+  evidence_level: A
+  guideline_source: ADA
+- id: bmi_high
+  type: risk
+  role: risk_alert
+  category: metabolic
+  priority: 9
+  severity: high
+  enabled: true
+  tags:
+  - bmi
+  - obesity
+  version: 1.0
+  confidence: 0.9
+  conditions:
+    all:
+    - field: bmi
+      gt: 30
+  output:
+    risk_type: bmi_very_high
+    severity: high
+    title: BMI 高風險
+    description: BMI 超過 30
+    recommendation: 建議盡速與醫療專業人員討論體重與代謝管理
+  evidence_level: A
+  guideline_source: ADA

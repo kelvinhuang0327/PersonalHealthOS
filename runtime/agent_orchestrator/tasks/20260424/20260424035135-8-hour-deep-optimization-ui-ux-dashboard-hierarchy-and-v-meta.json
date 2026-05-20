@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260424035135",
+  "objective": "8-hour deep optimization: UI/UX Dashboard hierarchy and visual-feedback consistency",
+  "task_draft_markdown": "8-hour deep optimization: UI/UX Dashboard hierarchy and visual-feedback consistency\n\nObjective: Audit and fix layout hierarchy, spacing inconsistencies, visual-feedback states, and component style drift across all platform pages.\n\nPhase 1: Audit frontend/app/platform/ pages. List the top 8 hierarchy / spacing / colour issues found (with file + line references).\nPhase 2: Inspect frontend/components/ for shared components that render differently across pages. Document each inconsistency.\nPhase 3: Fix identified issues. Run `npm run lint` to verify no regressions. Record a before/after summary for each fix.\nPhase 4: Smoke-test key user flows (dashboard → insights → actions → reports) and confirm visual hierarchy is correct.\n\nScope: frontend/app/platform/, frontend/components/, frontend/styles/\nFiles to inspect: tailwind.config.ts, app/platform/dashboard/page.tsx, components/dashboard/, components/shared/\nRecommended commands: npm run lint, npm run build\nAcceptance Criteria: npm run lint passes with 0 errors; at least 5 visual issues resolved with evidence; no new TypeScript errors introduced.\nfocus_keys: ui_ux, dashboard, visual_feedback, component_consistency\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "codex",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-24T03:51:35.082621+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 140,
+  "previous_task_status": "COMPLETED",
+  "task_category": "ui_ux_optimization",
+  "duplicate_signature": "ui_ux_optimization_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "ui_ux_optimization",
+    "next_candidate_category": "health_narrative_engine",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 141
+}

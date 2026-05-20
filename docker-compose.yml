@@ -1,0 +1,76 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: personal_health
+    ports:
+      - '5432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d personal_health']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+
+  backend:
+    build:
+      context: /Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/backend
+    environment:
+      APP_NAME: Personal Health Platform API
+      APP_ENV: dev
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8000
+      APP_AUTO_CREATE_TABLES: 'true'
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/personal_health
+      JWT_SECRET_KEY: replace_me_in_prod
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 120
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: personal-health-docs
+      S3_REGION: us-east-1
+      MAX_UPLOAD_MB: 10
+      ALLOWED_MIME_TYPES: application/pdf,image/png,image/jpeg
+      AI_PROVIDER: openai
+      OPENAI_API_KEY: ''
+      OPENAI_MODEL: gpt-4.1-mini
+      OCR_LANGUAGE: eng
+    ports:
+      - '8000:8000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+  frontend:
+    build:
+      context: /Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS/frontend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api/v1
+    ports:
+      - '3000:3000'
+    depends_on:
+      - backend
+
+volumes:
+  pg_data:
+  minio_data:

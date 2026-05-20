@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260425012425",
+  "objective": "8-hour product sprint: Dashboard → Insights → Action flow friction reduction",
+  "task_draft_markdown": "8-hour product sprint: Dashboard → Insights → Action flow friction reduction\n\nUser Value: New users arrive at the Dashboard and do not know what to do next. This task audits and removes every step of unnecessary friction so the \"Dashboard → read an Insight → take an Action\" journey takes under 60 seconds.\n\nProduct Maturity Impact: A frictionless core flow is the single biggest lever for first-week retention. Removing 3 friction points can double D7 retention.\n\nExpected Change: Time-to-first-action drops from 3+ clicks to under 60 seconds. Empty states become guided onboarding moments instead of dead ends. D7 retention improves as fewer users abandon before taking their first action.\n\nObjective: Audit the core user flow from Dashboard to Insights to Action completion. Identify the top 5 friction points. Fix at least 3 of them.\n\nPhase 1: Walk through the full flow as a first-time user. Document every click, load, blank state, confusing label, and missing CTA. Use frontend/app/platform/ as your map. Rate each step: Does it move the user forward or create hesitation?\nPhase 2: Inspect the Dashboard page (app/platform/dashboard/page.tsx). Is the most important health signal visible above the fold? Is there a clear next-action CTA? Are empty states helpful or discouraging?\nPhase 3: Fix the top-3 friction points. Concrete examples: add a \"Start here\" CTA to empty Dashboard; improve Insight card CTAs to link directly to the relevant Action; reduce loading states with skeleton placeholders; clarify confusing copy.\nPhase 4: Run `npm run lint` to confirm no regressions. Write a brief before/after friction audit report (what changed and why).\n\nScope: frontend/app/platform/dashboard/, frontend/app/platform/insights/, frontend/app/platform/actions/, frontend/components/\nFiles to inspect: app/platform/dashboard/page.tsx, app/platform/insights/, app/platform/actions/, components/shared/\nAcceptance Criteria: At least 3 friction points fixed with evidence; Dashboard has a visible primary CTA in empty state; npm run lint passes; before/after audit documented.\nfocus_keys: ux_flow, dashboard, insights, friction, cta, onboarding\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "codex",
+  "created_at": "2026-04-25T01:24:25.533561+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 211,
+  "previous_task_status": "QUEUED",
+  "task_category": "ux_flow_redesign",
+  "duplicate_signature": "ux_flow_redesign_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "ux_flow_redesign",
+    "next_candidate_category": "action_system_enhancement",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 212
+}

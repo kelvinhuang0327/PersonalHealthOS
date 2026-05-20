@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260425120101",
+  "objective": "8-hour product sprint: Action recommendation precision and deduplication",
+  "task_draft_markdown": "8-hour product sprint: Action recommendation precision and deduplication\n\nUser Value: Users currently see duplicated or irrelevant action recommendations, which erodes trust and reduces completion rates. This task makes every recommended action feel personally relevant and achievable.\n\nProduct Maturity Impact: Precision of action recommendations is a core differentiator. A recommendation engine that learns from outcomes creates a moat that generic apps cannot copy.\n\nExpected Change: Users receive a deduplicated, personalized action list every session. Actions with positive past outcomes rise to the top. Over 4 weeks the recommendation engine becomes measurably self-improving.\n\nObjective: Audit the action recommendation pipeline. Remove duplicates. Improve relevance scoring. Correlate recommended action priority with actual completion rate.\n\nPhase 1: Audit the current action recommendation logic in backend/app/services/. Find where duplicates arise (same action recommended multiple times, same category repeatedly). Document the deduplication gap.\nPhase 2: Inspect how prioritized_actions are scored. What signals feed into the priority? Is there any personalization based on past completions or outcomes? Document missing signals.\nPhase 3: Implement deduplication: within a single recommendation batch, no action title or category should appear more than once. Add at least one personalization signal (e.g. past completion rate for that action type).\nPhase 4: Run `make backend-test`. Add tests that assert: (a) no duplicate action titles in a recommendation batch; (b) actions with higher past completion rates score higher. Document priority vs completion correlation before/after.\n\nScope: backend/app/services/, backend/app/api/, backend/tests/\nFiles to inspect: backend/app/services/ (action recommendation services), backend/app/api/ (action endpoints)\nAcceptance Criteria: make backend-test passes; no duplicate actions in a recommendation batch (asserted by test); at least one personalization signal implemented; priority vs completion correlation documented.\nfocus_keys: action_recommendation, deduplication, personalization, completion_rate, precision\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-25T12:01:01.948979+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 283,
+  "previous_task_status": "QUEUED",
+  "task_category": "action_system_enhancement",
+  "duplicate_signature": "action_system_enhancement_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "action_system_enhancement",
+    "next_candidate_category": "behavior_loop_optimization",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 284
+}

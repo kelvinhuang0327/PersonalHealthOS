@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260424055639",
+  "objective": "8-hour product sprint: Report upload to Insight value delivery audit",
+  "task_draft_markdown": "8-hour product sprint: Report upload to Insight value delivery audit\n\nUser Value: A user who uploads a blood test report expects to understand what it means for their health within minutes, not days. This task audits whether that value is actually delivered and fixes the gaps.\n\nProduct Maturity Impact: The report upload flow is the moment of highest intent. If the user gets a clear, actionable insight immediately, they become a power user. If the result is generic or delayed, they churn.\n\nExpected Change: Users who upload a report immediately see a specific insight referencing their own values, not a generic health summary. The CTA from report to first action reduces post-upload abandonment. Report upload becomes the product's highest-value moment.\n\nObjective: Audit the report upload → parsing → insight → action pipeline for value leakage. Fix the top-3 value-delivery failures.\n\nPhase 1: Upload a sample report (or trace the code with a mocked file). Record: How long does parsing take? Does the user see a progress indicator? Is the resulting insight specific to the report content or generic? Does the insight lead directly to a recommended action?\nPhase 2: Inspect backend/app/services/ for report parsing logic. What data is extracted? What is discarded? Is there a validation step that tells the user \"your report was parsed successfully, here is what we found\"?\nPhase 3: Fix the top-3 value gaps. Examples: add a parsing success confirmation with key extracted values; ensure insights reference specific report values (e.g. \"Your LDL of 145 mg/dL...\"); add a \"Report processed — here is your #1 action\" CTA.\nPhase 4: Run `make backend-test`. Add a test that asserts the insight generated from a report references at least one extracted metric value. Document value delivery before/after.\n\nScope: backend/app/services/, backend/app/api/, frontend/app/platform/reports/, uploads/, ai/prompts/\nFiles to inspect: backend/app/services/ (parsing services), ai/prompts/health_check_interpreter_prompt.md, frontend/app/platform/reports/\nAcceptance Criteria: Insight references specific report metric; parsing success confirmation shown to user; CTA from report to first action exists; make backend-test passes.\nfocus_keys: reports, parsing, insight_value, cta, report_to_action, specific_metrics\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "codex",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-24T05:56:39.295439+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 150,
+  "previous_task_status": "COMPLETED",
+  "task_category": "reports_product_value",
+  "duplicate_signature": "reports_product_value_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "reports_product_value",
+    "next_candidate_category": "timeline_history_value",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 151
+}

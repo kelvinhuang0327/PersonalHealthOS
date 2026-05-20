@@ -1,0 +1,25 @@
+{
+  "task_uid": "20260424220419",
+  "objective": "8-hour product sprint: Health Narrative v3 causal chain and human-readable rewrite",
+  "task_draft_markdown": "8-hour product sprint: Health Narrative v3 causal chain and human-readable rewrite\n\nUser Value: Current health narratives read like clinical notes — dense, passive, and jargon-heavy. Users do not read them. This task rewrites the narrative pipeline to produce stories that users actually finish reading and act on.\n\nProduct Maturity Impact: The health narrative is the product's voice. If it is compelling, users share it, return to it, and trust it. If it is clinical and boring, the product becomes a report viewer, not a health partner.\n\nExpected Change: Narrative read-through rate increases as outputs become causal and plain-language. Users start sharing narratives because they are personally relevant and legible. Hallucination incidents drop as guardrails block absolute-risk language without evidence.\n\nObjective: Upgrade the health narrative to include causal chains (X caused Y because Z), plain-language rewrites, and reduced misleading risk language.\n\nPhase 1: Read the last 5 narrative outputs from the system (or generate examples). Score each on: readability (Flesch-Kincaid), causal clarity (does it explain why?), actionability (does it lead to a next step?). Document the top 3 weaknesses.\nPhase 2: Rewrite ai/prompts/health_summary_system_prompt.md to require: (a) one causal sentence per insight (Because X, your Y is Z); (b) no passive voice in the first paragraph; (c) a concrete next-step sentence at the end of each insight block.\nPhase 3: Update ai/prompts/hallucination_guardrail_policy.md to block narratives that use absolute risk language without evidence citations (e.g. \"you will develop...\" must be rejected).\nPhase 4: Run `make backend-test` and `pytest tests/test_ai_service.py`. Add 2 new tests: one that checks causal sentence format, one that blocks absolute-risk language. Verify all existing tests pass.\n\nScope: ai/prompts/, backend/app/services/, backend/tests/\nFiles to inspect: ai/prompts/health_summary_system_prompt.md, ai/prompts/hallucination_guardrail_policy.md, backend/app/services/ai_service.py\nAcceptance Criteria: Updated prompt requires causal sentences and plain language; guardrail blocks absolute-risk language; make backend-test passes; at least 2 new narrative quality tests added.\nfocus_keys: health_narrative, causal_chain, readability, guardrail, human_readable\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "codex",
+  "created_at": "2026-04-24T22:04:19.686841+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 189,
+  "previous_task_status": "QUEUED",
+  "task_category": "health_narrative_deepening",
+  "duplicate_signature": "health_narrative_deepening_v1",
+  "fallback_info": {
+    "source": "task_pool",
+    "fallback_tried": true,
+    "fallback_category": "health_narrative_deepening",
+    "next_candidate_category": "user_journey_analysis",
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ]
+  },
+  "task_id": 190
+}

@@ -1,0 +1,27 @@
+{
+  "task_uid": "20260425051737",
+  "objective": "產品問題衝刺: 全類別輪替完成 — 選擇下一個最高價值優化領域",
+  "task_draft_markdown": "產品問題衝刺: 全類別輪替完成 — 選擇下一個最高價值優化領域\n\nUser Value: 12 個任務池類別已在近期全數完成，系統需要基於真實產品信號選擇下一個最具用戶價值的改善重點，而非重複已完成的靜態模板。\n\nProduct Maturity Impact: 任務池全輪替後，選擇最能提升用戶留存與日常使用體驗的領域進行深度改善，是產品成熟度的關鍵指標。\n\nExpected Change: 本次衝刺聚焦一個高用戶價值領域，交付可量測的產品改善，為後續任務輪替建立新的優先方向。\n\nObjective: 審視 backend/app/、frontend/app/platform/ 各模組近況，找出最具用戶影響力的未完成改善點，並實作一個具體可測試的功能改善。\n\nPhase 1: 閱讀最近 5 個 completed.md，找出交付深度不足或用戶影響力最高的領域。記錄每個領域的現況與缺口。\nPhase 2: 選定最高優先領域（以用戶每日使用頻率與留存影響為標準），設計一個具體、可在 8 小時內完成的改善方案。\nPhase 3: 實作改善方案。修改至少 2 個真實檔案，確保改動可被測試驗證。\nPhase 4: 執行 make backend-test 與 npm run build，確認所有測試通過。在完成報告中記錄改動的檔案、行數與對用戶的實際影響。\n\nScope: backend/app/, frontend/app/platform/\nAcceptance Criteria: 至少 2 個真實檔案被修改；make backend-test 通過；npm run build 通過；completed.md 包含具體的 changed_files 與測試證據。\nfocus_keys: product_value, user_retention, delivery_depth, real_changes\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "codex",
+  "created_at": "2026-04-25T05:17:37.870949+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 236,
+  "previous_task_status": "COMPLETED",
+  "task_category": "problem_signal",
+  "duplicate_signature": "problem_all_signatures_on_cooldown_20260425",
+  "fallback_info": {
+    "source": "problem_signal",
+    "fallback_tried": true,
+    "fallback_category": null,
+    "next_candidate_category": null,
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ],
+    "detected_issue": "all_signatures_on_cooldown",
+    "issue_severity": "low"
+  },
+  "task_id": 237
+}

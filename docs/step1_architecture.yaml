@@ -1,0 +1,51 @@
+project: personal-health-platform
+stage: mvp
+frontend:
+  framework: nextjs
+  modules:
+    - auth
+    - dashboard
+    - profile
+    - records
+    - symptoms
+    - documents
+    - ai-summary
+backend:
+  framework: fastapi
+  modules:
+    - auth
+    - users
+    - health_metrics
+    - symptoms
+    - documents
+    - report_parsing
+    - risk_engine
+    - ai_summary
+    - dashboard
+    - core
+database:
+  engine: postgresql
+  tables:
+    - users
+    - user_profiles
+    - health_metrics
+    - symptom_logs
+    - medical_documents
+    - lab_reports
+    - lab_report_items
+    - risk_alerts
+    - ai_summaries
+storage:
+  type: s3_compatible
+ai:
+  llm_api: true
+ocr:
+  engine: tesseract
+security:
+  auth: jwt
+  password_hash: bcrypt
+  user_data_isolation: true
+  upload_whitelist: true
+medical_guardrails:
+  no_diagnosis: true
+  disclaimer_required: true

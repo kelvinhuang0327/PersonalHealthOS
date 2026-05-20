@@ -1,0 +1,50 @@
+{
+  "version": "1.0",
+  "objective": "產品問題衝刺: All pool categories completed in the last 7 days",
+  "task_draft_markdown": "產品問題衝刺: All pool categories completed in the last 7 days\n\nUser Value: Every pool template was completed within the last 7 days. The planner should generate a problem-specific task based on actual product signals rather than cycling through static templates again.\n\nProduct Maturity Impact: Addressing this systemic issue unblocks forward product progress and prevents the orchestrator from cycling through exhausted work.\n\nExpected Change: The detected issue is resolved and the orchestrator generates meaningful new work in subsequent cycles.\n\nObjective: Investigate and resolve: Every pool template was completed within the last 7 days. The planner should generate a problem-specific task based on actual product signals rather than cycling through static templates again.\n\nPhase 1: Analyse the signal data: {'on_cooldown_count': 12}.\nPhase 2: Determine root cause and design a targeted fix.\nPhase 3: Implement the fix with the smallest safe change set.\nPhase 4: Verify with make backend-test.\n\nScope: backend/app/orchestrator/\nAcceptance Criteria: Issue resolved; make backend-test passes.\nfocus_keys: orchestrator, product_health, signal_detection\nexpected_duration_minutes: 240",
+  "focus_keys": [],
+  "expected_duration_minutes": null,
+  "user_value": "Every pool template was completed within the last 7 days. The planner should generate a problem-specific task based on actual product signals rather than cycling through static templates again.",
+  "product_maturity_impact": "Addressing this systemic issue unblocks forward product progress and prevents the orchestrator from cycling through exhausted work.",
+  "expected_change": "The detected issue is resolved and the orchestrator generates meaningful new work in subsequent cycles.",
+  "scope": [
+    "Complete the smallest meaningful increment toward the objective.",
+    "Leave machine-readable artifacts for orchestrator validation."
+  ],
+  "constraints": [
+    "Do not touch forbidden paths.",
+    "Do not claim acceptance without evidence.",
+    "禁止在任何輸出中包含以下詞句：\"SIGNAL_EXHAUSTED\", \"NO_SIGNAL\", \"停止建議\", \"目前沒有方向\"。每個 Focus 必須有獨立的量化結論。"
+  ],
+  "acceptance_tests": [
+    "make backend-test",
+    "backend:pytest",
+    "frontend:npm run build",
+    "forbidden_paths_unchanged"
+  ],
+  "required_outputs": [
+    "completed_markdown",
+    "task_result_json",
+    "changed_files_list"
+  ],
+  "optional_outputs": [
+    "backlog_additions"
+  ],
+  "forbidden_changes": [
+    ".env",
+    "backend/.env",
+    "backend/.env.local",
+    "infra/secrets/",
+    "uploads/reports/",
+    "database/schema.sql"
+  ],
+  "handoff_questions": [
+    "What is the next highest-priority backlog item after this task?",
+    "Did the worker leave any unresolved risk that needs a replan?",
+    "How should planner handle follow-up for task #163?"
+  ],
+  "planner_context": {
+    "previous_gate_verdict": "PASS",
+    "previous_gate_reason": ""
+  }
+}

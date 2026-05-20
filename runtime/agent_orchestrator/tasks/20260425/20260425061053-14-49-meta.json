@@ -1,0 +1,27 @@
+{
+  "task_uid": "20260425061053",
+  "objective": "產品問題衝刺: 提升交付深度 — 14 個任務在 49 分鐘內完成，可能過於表面",
+  "task_draft_markdown": "產品問題衝刺: 提升交付深度 — 14 個任務在 49 分鐘內完成，可能過於表面\n\nUser Value: When 14 sprints complete in 49 minutes, the worker is likely generating boilerplate rather than real product improvements. Users deserve code that actually runs and changes their experience.\n\nProduct Maturity Impact: Sprint velocity metrics are meaningless if the delivery is scaffolding. This sprint must produce at least one file change that can be verified by running the test suite.\n\nExpected Change: The completed delivery includes a verified changed_files list with at least 2 real modified files and passing test evidence.\n\nObjective: Pick the highest-priority area from the product backlog and make a real, verifiable code change. No scaffolding, no placeholder text.\n\nPhase 1: Read the 5 most recent completed.md files. Identify what actually changed vs. what was scaffolding.\nPhase 2: Pick the area with the most scaffolding and no real change. Make the actual code change that was promised.\nPhase 3: Run make backend-test to confirm the change works.\nPhase 4: Update completed.md with exact file names changed, line counts, and test output as evidence.\n\nScope: backend/app/, frontend/app/platform/\nAcceptance Criteria: changed_files list contains ≥2 real modified files; make backend-test passes; completed.md cites specific line numbers changed.\nfocus_keys: delivery_depth, code_quality, test_coverage, real_changes\nexpected_duration_minutes: 480",
+  "quality_status": "PASS",
+  "planner_provider": "claude",
+  "worker_provider": "copilot-daemon",
+  "created_at": "2026-04-25T06:10:53.366811+00:00",
+  "run_type": "scheduler",
+  "previous_task_id": 247,
+  "previous_task_status": "COMPLETED",
+  "task_category": "problem_signal",
+  "duplicate_signature": "problem_shallow_sprint_velocity_20260425",
+  "fallback_info": {
+    "source": "problem_signal",
+    "fallback_tried": true,
+    "fallback_category": null,
+    "next_candidate_category": null,
+    "rejection_reasons": [
+      "CONTENT_TOO_SHALLOW: draft has 86 chars and 0 content lines (need ≥200 chars and ≥3 phases/scope/acceptance lines). A genuine 8-hour task requires detailed objective, phased steps, scope, and acceptance criteria.",
+      "MISSING_ACCEPTANCE_CRITERIA: task must include acceptance criteria (e.g., \"Acceptance Criteria:\", \"驗收條件:\", or checkable completion conditions)."
+    ],
+    "detected_issue": "shallow_sprint_velocity",
+    "issue_severity": "medium"
+  },
+  "task_id": 248
+}
