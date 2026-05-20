@@ -1,4 +1,53 @@
-# Active Task Report — P2-DEVICE-ESCALATION-VERIFIED-AND-SAFEGUARDED
+# Active Task Report — P3-SYMPTOM-INTELLIGENCE-READY
+
+Generated: 2026-05-21  
+Classification: **`P3_SYMPTOM_INTELLIGENCE_READY`**
+
+---
+
+## Summary
+
+P3 Symptom Intelligence layer is complete and production-merged on `main`.
+
+### What was built
+
+| Component | File | Status |
+|---|---|---|
+| `build_symptom_timeline()` | `backend/app/services/symptom_intelligence_service.py` | ✅ |
+| `detect_symptom_patterns()` | same | ✅ |
+| Wire into recommendation pipeline | `backend/app/services/health_assistant_service.py` | ✅ |
+| `SymptomInsightCard` | `frontend/app/components/platform/symptom-insight-card.tsx` | ✅ |
+| `SymptomPattern` type | `frontend/lib/api.ts` | ✅ |
+| `health-assistant-panel.tsx` update | `frontend/app/components/platform/health-assistant-panel.tsx` | ✅ |
+| 24 pure-function tests | `backend/tests/test_symptom_intelligence.py` | ✅ 24/24 |
+
+### Validation results
+
+| Suite | Result |
+|---|---|
+| `test_symptom_intelligence.py` | **24/24 PASS** |
+| Full backend (excl. dual_agent) | **246/246 PASS** |
+| `npx tsc --noEmit` | **CLEAN** |
+
+### Architecture
+
+- **`build_symptom_timeline`** — groups SymptomLog dicts by symptom name, computes firstSeenAt/lastSeenAt/recurrenceCount, severityTrend (oldest-half avg vs newest-half avg, ±1.5 threshold), relatedDeviceSignals and relatedLabItems via predefined keyword correlation maps (no hallucination guarantee — only returns items actually present in inputs).
+- **`detect_symptom_patterns`** — emits up to 5 pattern types per symptom: `recurring_symptom` (≥3 occurrences), `worsening_symptom` (trend==worsening), `symptom_with_device_signal`, `symptom_with_lab_risk`, `unresolved_high_severity_symptom` (severity ≥ 8). Confidence bounded [0.20, 0.90]. No pattern without supporting data.
+- **Recommendation bridge** — high-severity patterns enter the `get_action_recommendations()` candidate pool at priority score 65 (between `device_signal=70` and `insight=60`). Rule IDs: `symptom_pattern_{patternType}_{symptomType}`.
+- **`SymptomInsightCard`** — shows severity-coded pattern cards with confidence bar, related signal/lab tag chips, suggested action, and medical disclaimer.
+
+### Known limitations
+- Symptom timeline computed from current 90-day evidence bundle only (no separate historical DB table).
+- E2E / Playwright tests not run.
+- `test_dual_agent_orchestrator.py`: 10 pre-existing failures, excluded.
+
+### Git
+- Branch: `main`
+- Commit: `42fc0f9` — `feat: P3_SYMPTOM_INTELLIGENCE_READY`
+
+---
+
+# Previous Report — P2-DEVICE-ESCALATION-VERIFIED-AND-SAFEGUARDED
 
 Generated: 2026-05-20  
 Classification: **`P2_DEVICE_ESCALATION_VERIFIED_AND_SAFEGUARDED`**
