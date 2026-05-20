@@ -184,6 +184,36 @@ export type EngagementAnalytics = {
   notificationOpenRate: number
 }
 
+export type NarrativeMemoryData = {
+  id?: string
+  periodType: 'daily' | 'weekly' | 'monthly'
+  periodStart: string
+  periodEnd: string
+  summaryText: string
+  topThemes: string[]
+  improvingItems: string[]
+  worseningItems: string[]
+  repeatedRisks: string[]
+  effectiveActions: string[]
+  ignoredItems: string[]
+  limitations: string[]
+  confidence: number
+  generatedAt?: string | null
+}
+
+export type NarrativeMemoryResponse = {
+  person_id: string
+  found: boolean
+  memory: NarrativeMemoryData | null
+  message?: string
+}
+
+export type GenerateNarrativeMemoryResponse = {
+  person_id: string
+  generated: boolean
+  memory: NarrativeMemoryData
+}
+
 export type IntelligentNotifications = {
   person_id: string
   generated_at: string
@@ -376,6 +406,16 @@ export const api = {
     request(`/health-assistant/personalization-profile/sync?days=${days}`, { method: 'POST' }),
   getEngagementAnalytics: (days = 30): Promise<EngagementAnalytics> =>
     request(`/health-assistant/engagement-analytics?days=${days}`),
+  getNarrativeMemory: (periodType: 'daily' | 'weekly' | 'monthly' = 'weekly'): Promise<NarrativeMemoryResponse> =>
+    request(`/health-assistant/narrative-memory?period_type=${periodType}`),
+  generateNarrativeMemory: (
+    periodType: 'daily' | 'weekly' | 'monthly' = 'weekly',
+    days = 30,
+  ): Promise<GenerateNarrativeMemoryResponse> =>
+    request(
+      `/health-assistant/narrative-memory/generate?period_type=${periodType}&days=${days}`,
+      { method: 'POST' },
+    ),
 };
 
 export async function uploadDocument(category: string, file: File) {

@@ -389,3 +389,71 @@ def sync_personalization_profile(
     profile = sync_profile_from_history(db, uid, pid, history)
     return profile_to_dict(profile)
 
+
+# ---------------------------------------------------------------------------
+# Narrative Memory — P7
+# ---------------------------------------------------------------------------
+
+from app.services.narrative_memory_service import (  # noqa: E402
+    generate_and_persist_narrative_memory,
+    load_narrative_memory,
+    compare_narrative_periods,
+)
+
+
+@router.get('/narrative-memory')
+def get_narrative_memory(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    period_type: Annotated[str, Query(pattern='^(daily|weekly|monthly)$')] = 'weekly',
+    days: Annotated[int, Query(ge=7, le=90)] = 30,
+) -> dict[str, Any]:
+    """Return the most recent stored narrative memory for the target person.
+
+    If no memory has been generated yet, returns an explainable empty result.
+    Never returns medical diagnoses — factual observations only.
+    """
+    uid = str(current_user.id)
+    pid = str(target_person.id)
+
+    memories = load_narrative_memory(db, uid, pid, period_type=period_type, limit=1)
+    if memories:
+        return {
+            "person_id": pid,
+            "found": True,
+            "memory": memories[0],
+        }
+    return {
+        "person_id": pid,
+        "found": False,
+        "memory": None,
+        "message": "尚未生成記憶，請呼叫 POST /narrative-memory/generate 以建立記憶。",
+    }
+
+
+@router.post('/narrative-memory/generate')
+def generate_narrative_memory(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    period_type: Annotated[str, Query(pattern='^(daily|weekly|monthly)$')] = 'weekly',
+    days: Annotated[int, Query(ge=7, le=90)] = 30,
+) -> dict[str, Any]:
+    """Generate and persist a narrative memory for the target person.
+
+    Reads notification history, risk alerts, completed actions, and
+    action outcomes for the specified period; builds and stores the memory.
+
+    Returns the generated NarrativeMemoryResult dict.
+    """
+    uid = str(current_user.id)
+    pid = str(target_person.id)
+    history = load_notification_history(db, uid, pid, days=days)
+    memory = generate_and_persist_narrative_memory(db, uid, pid, period_type, history)
+    return {
+        "person_id": pid,
+        "generated": True,
+        "memory": memory,
+    }
+

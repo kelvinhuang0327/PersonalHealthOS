@@ -382,3 +382,40 @@ class PersonalizationProfile(Base):
     avg_response_delay_minutes = Column(Numeric(8, 2))
     last_updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class NarrativeMemory(Base):
+    """Long-term health narrative memory — stores period summaries per person.
+
+    Captures what the health assistant has learned about a person's health
+    story over daily / weekly / monthly windows.  Never stores medical
+    conclusions — only evidence-grounded observations.
+    """
+    __tablename__ = 'narrative_memories'
+    __table_args__ = (
+        Index(
+            'ix_narrative_memory_user_person_type_start',
+            'user_id', 'subject_profile_id', 'period_type', 'period_start',
+        ),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    subject_profile_id = Column(UUID(as_uuid=True), ForeignKey('person_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
+    # 'daily' | 'weekly' | 'monthly'
+    period_type = Column(String(10), nullable=False)
+    period_start = Column(Date, nullable=False)
+    period_end = Column(Date, nullable=False)
+    # Structured evidence arrays (JSON)
+    top_themes_json = Column(JSON, nullable=False, server_default='[]')
+    improving_items_json = Column(JSON, nullable=False, server_default='[]')
+    worsening_items_json = Column(JSON, nullable=False, server_default='[]')
+    repeated_risks_json = Column(JSON, nullable=False, server_default='[]')
+    effective_actions_json = Column(JSON, nullable=False, server_default='[]')
+    ignored_items_json = Column(JSON, nullable=False, server_default='[]')
+    limitations_json = Column(JSON, nullable=False, server_default='[]')
+    # Free-text summary (never AI-generated diagnosis — factual observations only)
+    summary_text = Column(Text, nullable=False, default='')
+    confidence = Column(Numeric(4, 3), nullable=False, server_default='0.0')
+    generated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
