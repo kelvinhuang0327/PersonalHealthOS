@@ -1,3 +1,121 @@
+# Active Task Report — P2-DEVICE-ESCALATION-VERIFIED-AND-SAFEGUARDED
+
+Generated: 2026-05-20  
+Classification: **`P2_DEVICE_ESCALATION_VERIFIED_AND_SAFEGUARDED`**
+
+---
+
+## Summary
+
+This sprint verified and safeguarded the P2 Device Escalation Layer completed in
+the prior session.  No new features were added.  Focus was on git safety, data
+flow verification, automated smoke testing, and honest limitation documentation.
+
+---
+
+## Task 1 — Git Safety
+
+| Item | Result |
+|---|---|
+| `git status` before init | `fatal: not a git repository` |
+| `.gitignore` created | ✅ Excludes `.venv/`, `node_modules/`, `.next/`, `.env`, `runtime/snapshots/`, runtime locks |
+| `git init` | ✅ |
+| `git add .` — excluded files verified | ✅ No `.env`, `.venv`, `node_modules`, `.next`, `snapshots` committed |
+| Initial commit | ✅ `ab977a6 chore: initial commit — P2_DEVICE_ESCALATION_LAYER_READY` |
+| Runtime orchestrator locks untracked | ✅ `git rm --cached` + .gitignore update |
+| Final `git status` | ✅ `nothing to commit, working tree clean` |
+| `git log --oneline` | `0df1cb5 chore: untrack runtime lock files from index` → `2c5d36e` → `ab977a6` |
+
+---
+
+## Task 2 — Device Escalation Data Flow Verification
+
+Verified end-to-end by code inspection + automated smoke tests:
+
+```
+external_metrics (HealthMetric rows, source != 'manual')
+  → detect_device_signals()            ← device_signals in bundle ✅
+  → build_device_signal_history()      ← device_signal_history in bundle ✅
+  → evaluate_signal_escalation()       ← device_escalation in bundle ✅
+  → build_evidence_bundle()
+  → get_action_recommendations()       ← device_escalation in return ✅
+  → generate_daily_health_summary()    ← escalation key injected when level != none ✅
+  → frontend DeviceSignalCard          ← escalation prop consumed ✅
+```
+
+| Check | Result |
+|---|---|
+| `bundle["device_signals"]` present | ✅ |
+| `bundle["device_signal_history"]` present | ✅ computed, NOT persisted to DB |
+| `bundle["device_escalation"]` present | ✅ |
+| `get_action_recommendations()` returns `device_escalation` | ✅ |
+| `generate_daily_health_summary()` uses escalation for topRisk / todayAction | ✅ |
+| `EscalationDecision` type in `frontend/lib/api.ts` | ✅ |
+| `DeviceSignalCard` receives and renders `escalation` prop | ✅ |
+| Medical disclaimer shown when signals or escalation present | ✅ |
+| Stale-all cap at "watch" | ✅ |
+
+---
+
+## Task 3 — API Smoke Tests
+
+**New file:** `backend/tests/test_api_escalation_smoke.py` — 12 tests
+
+| Class | Tests | Result |
+|---|---|---|
+| `TestDeviceSignalsEndpoint` | schema keys, empty=no signals, elevated HR→signal, signal key shapes | **4/4 PASS** |
+| `TestEvidenceBundleEndpoint` | device_escalation key, schema, no-signal=none, elevated HR raises level, device_signal_history present | **5/5 PASS** |
+| `TestDailySummaryEndpoint` | base keys, no-signal=no escalation key, elevated HR may inject escalation | **3/3 PASS** |
+
+Note: Tests use in-memory SQLite with real FastAPI TestClient.  An `autouse`
+fixture clears `app.dependency_overrides` after each test to prevent cross-test
+contamination.
+
+---
+
+## Required Validation — Full Results
+
+| Test file | Count | Result |
+|---|---|---|
+| `test_device_signal_escalation.py` | 24 | **24 PASS** |
+| `test_device_signal_detection.py` | 21 | **21 PASS** |
+| `test_health_assistant_service.py` | ~40 | **PASS** |
+| `test_daily_summary_service.py` | ~20 | **PASS** |
+| `test_recommendation_trust_service.py` | ~20 | **PASS** |
+| `test_outcome_feedback_service.py` | ~20 | **PASS** |
+| **Full backend (excl. orchestrator)** | **222** | **222 PASS** |
+| `test_dual_agent_orchestrator.py` | 10 | **PRE-EXISTING FAILURES — excluded** |
+| `npx tsc --noEmit` | — | **PASS** |
+| `npx next build` | — | **PASS** |
+| E2E / Playwright browser smoke | — | **NOT RUN** |
+
+---
+
+## Files Changed This Sprint
+
+| File | Change |
+|---|---|
+| `.gitignore` | Created — excludes secrets, venv, node_modules, runtime locks |
+| `backend/tests/test_api_escalation_smoke.py` | Created — 12 API smoke tests |
+
+(All P2 escalation service + UI files were created in the prior session.)
+
+---
+
+## Known Limitations
+
+| Limitation | Detail |
+|---|---|
+| **DB persistence NOT implemented** | `device_signal_history` is computed deterministically from `HealthMetric` rows at request time.  There is NO separate history table, no trend DB, no long-term memory store.  "Trend memory" means recurrence is inferred across time-bucketed rows from the same table. |
+| **E2E not run** | No Playwright / browser smoke tests executed.  Frontend verified by `tsc --noEmit` + `next build` only. |
+| **Orchestrator failures pre-existing** | `test_dual_agent_orchestrator.py` — 10 PLANNER_SKIP_SAFE_RUN failures exist before this sprint and are not caused by escalation changes. |
+| **No remote git** | Repo is local only.  No remote configured, no CI/CD triggered. |
+| **Escalation is session-scoped** | Each API call recomputes escalation from available metrics.  There is no cross-session escalation state. |
+
+---
+
+## Previous Report — P2-DEVICE-SIGNAL-INTELLIGENCE
+
 # Active Task Report — P2-DEVICE-SIGNAL-INTELLIGENCE
 
 Generated: 2026-05-20  
