@@ -144,6 +144,29 @@ export type DailyHealthSummary = {
   encouragement?: string
   escalation?: EscalationDecision
 }
+// ── Notification Intelligence types (P5 Foundation) ─────────────────────
+export type NotificationCandidate = {
+  candidate_id: string
+  source_type: 'device_escalation' | 'lab_abnormality' | 'symptom_pattern' | 'risk_alert' | 'recommendation'
+  priority: 'low' | 'medium' | 'high' | 'urgent'
+  title: string
+  message: string
+  why_now: string
+  suggested_action: string | null
+  confidence: number
+  evidence_sources: Array<{ type: string; id: string | null; summary: string }>
+  cooldown_key: string
+  suppress_reason: string | null
+}
+
+export type IntelligentNotifications = {
+  person_id: string
+  generated_at: string
+  items: NotificationCandidate[]
+  suppressed: NotificationCandidate[]
+  total_candidates: number
+}
+
 const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1');
 
 function normalizeApiBaseUrl(url: string) {
@@ -309,6 +332,8 @@ export const api = {
   getDailySummary: () => request('/health-assistant/daily-summary'),
   getOutcomeFeedback: (windowDays: 7 | 14 | 30 = 7) =>
     request(`/health-assistant/outcome-feedback?window_days=${windowDays}`),
+  getIntelligentNotifications: (): Promise<IntelligentNotifications> =>
+    request('/health-assistant/notifications/intelligent'),
 };
 
 export async function uploadDocument(category: string, file: File) {

@@ -5,6 +5,7 @@ to the frontend and the orchestrator product-signal layer.
 """
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query
@@ -19,6 +20,10 @@ from app.services.health_assistant_service import (
     build_product_signals,
     generate_daily_health_summary,
     get_action_recommendations,
+)
+from app.services.notification_intelligence_service import (
+    apply_notification_fatigue_guard,
+    build_notification_candidates,
 )
 from app.services.outcome_feedback_service import compare_expected_vs_actual_outcome
 
@@ -130,3 +135,36 @@ def get_daily_summary(
     deterministic and grounded in the evidence bundle.
     """
     return generate_daily_health_summary(db, str(current_user.id), str(target_person.id))
+
+
+@router.get('/notifications/intelligent')
+def get_intelligent_notifications(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Return intelligent notification candidates for the target person.
+
+    Builds the evidence bundle, generates notification candidates from all
+    available health signals, and applies the alert-fatigue guard.
+
+    Response keys
+    -------------
+    items        — active (non-suppressed) candidates, sorted urgent→low
+    suppressed   — suppressed candidates with suppress_reason populated
+    generated_at — ISO-8601 timestamp
+    total_candidates — total before guard (items + suppressed)
+
+    No notification history is persisted by this endpoint; the guard runs
+    in stateless mode (no prior sent_at / snooze state assumed).
+    """
+    bundle = build_evidence_bundle(db, str(current_user.id), str(target_person.id))
+    candidates = build_notification_candidates(bundle)
+    result = apply_notification_fatigue_guard(candidates)
+    return {
+        "person_id": str(target_person.id),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "items": result["active"],
+        "suppressed": result["suppressed"],
+        "total_candidates": len(candidates),
+    }

@@ -7,6 +7,7 @@ import { RecommendationTrustBlock } from './recommendation-trust-block';
 import DeviceSignalCard from './device-signal-card';
 import SymptomInsightCard from './symptom-insight-card';
 import LabInsightCard from './lab-insight-card';
+import NotificationPreview from './notification-preview';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -269,6 +270,13 @@ export default function HealthAssistantPanel({
         <div className="space-y-3">
           <SkeletonCard />
           <SkeletonCard />
+        </div>
+      )}
+
+      {/* Notification Intelligence preview (P5) */}
+      {!loading && (
+        <div className="mb-4">
+          <NotificationPreview />
         </div>
       )}
 
