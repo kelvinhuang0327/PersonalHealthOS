@@ -399,6 +399,9 @@ from app.services.narrative_memory_service import (  # noqa: E402
     load_narrative_memory,
     compare_narrative_periods,
 )
+from app.services.narrative_intelligence_service import (  # noqa: E402
+    build_cross_period_health_reasoning,
+)
 
 
 @router.get('/narrative-memory')
@@ -455,5 +458,39 @@ def generate_narrative_memory(
         "person_id": pid,
         "generated": True,
         "memory": memory,
+    }
+
+
+@router.get('/narrative-memory/cross-period')
+def get_cross_period_reasoning(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Return cross-period health reasoning aggregated from all stored narrative memories.
+
+    Loads the most recent daily, weekly, and monthly narrative memories and
+    computes trend direction, sustained improvements, long-term risks, and
+    carry-over recommendations.
+
+    Never returns medical diagnoses — factual observations only.
+    Returns limitations when evidence is insufficient.
+    """
+    uid = str(current_user.id)
+    pid = str(target_person.id)
+
+    daily = load_narrative_memory(db, uid, pid, period_type="daily", limit=7)
+    weekly = load_narrative_memory(db, uid, pid, period_type="weekly", limit=4)
+    monthly = load_narrative_memory(db, uid, pid, period_type="monthly", limit=3)
+
+    reasoning = build_cross_period_health_reasoning(
+        daily_memories=daily,
+        weekly_memories=weekly,
+        monthly_memories=monthly,
+    )
+
+    return {
+        "person_id": pid,
+        "reasoning": reasoning,
     }
 

@@ -214,6 +214,23 @@ export type GenerateNarrativeMemoryResponse = {
   memory: NarrativeMemoryData
 }
 
+export type CrossPeriodReasoning = {
+  overallTrend: 'improving' | 'stable' | 'mixed' | 'worsening'
+  longTermRisks: string[]
+  sustainedImprovements: string[]
+  unstableAreas: string[]
+  repeatedIgnoredRisks: string[]
+  effectiveLongTermActions: string[]
+  carryOverRecommendations: string[]
+  confidence: number
+  limitations: string[]
+}
+
+export type CrossPeriodReasoningResponse = {
+  person_id: string
+  reasoning: CrossPeriodReasoning
+}
+
 export type IntelligentNotifications = {
   person_id: string
   generated_at: string
@@ -416,6 +433,8 @@ export const api = {
       `/health-assistant/narrative-memory/generate?period_type=${periodType}&days=${days}`,
       { method: 'POST' },
     ),
+  getCrossPeriodReasoning: (): Promise<CrossPeriodReasoningResponse> =>
+    request('/health-assistant/narrative-memory/cross-period'),
 };
 
 export async function uploadDocument(category: string, file: File) {
