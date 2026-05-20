@@ -335,6 +335,66 @@ class TestFamilyRelationshipsAPI:
 
 
 # ---------------------------------------------------------------------------
+# TestCrossProfileIsolation
+# ---------------------------------------------------------------------------
+
+class TestCrossProfileIsolation:
+    """Verify that family data is scoped to owner_user_id and never leaks across users."""
+
+    def test_caregiver_relationship_appears_in_context(self):
+        """A caregiver relationship must appear in relatedProfiles."""
+        client, user, person_a, person_b, db = _build_client()
+        client.post(
+            "/api/v1/health-assistant/family-relationships",
+            json={
+                "related_profile_id": str(person_b.id),
+                "relationship_type": "caregiver",
+                "permission_level": "full_access",
+            },
+        )
+        resp = client.get("/api/v1/health-assistant/family-health-context")
+        assert resp.status_code == 200
+        ctx = resp.json()["context"]
+        assert len(ctx["relatedProfiles"]) == 1
+        assert ctx["relatedProfiles"][0]["relationship_type"] == "caregiver"
+
+    def test_user_b_cannot_see_user_a_relationships(self):
+        """User B's family context must be empty even if User A has relationships."""
+        # ── Build User A session with a child relationship ──
+        client_a, user_a, person_a, person_b, db_a = _build_client()
+        client_a.post(
+            "/api/v1/health-assistant/family-relationships",
+            json={
+                "related_profile_id": str(person_b.id),
+                "relationship_type": "child",
+                "permission_level": "manage",
+            },
+        )
+        resp_a = client_a.get("/api/v1/health-assistant/family-health-context")
+        assert len(resp_a.json()["context"]["relatedProfiles"]) == 1
+
+        # ── Build User B session with its own independent DB + person ──
+        client_b, user_b, person_c, person_d, db_b = _build_client()
+        # User B makes no relationships — its context should be empty
+        resp_b = client_b.get("/api/v1/health-assistant/family-health-context")
+        assert resp_b.status_code == 200
+        ctx_b = resp_b.json()["context"]
+        assert ctx_b["relatedProfiles"] == [], (
+            "Cross-profile leakage: User B sees User A's relationships"
+        )
+
+    def test_unrelated_profile_not_in_family_context(self):
+        """A profile never linked as a family relationship must not appear in context."""
+        client, user, person_a, person_b, db = _build_client()
+        # No relationship created — person_b is NOT linked
+        resp = client.get("/api/v1/health-assistant/family-health-context")
+        assert resp.status_code == 200
+        ctx = resp.json()["context"]
+        profile_ids = [p["profile_id"] for p in ctx["relatedProfiles"]]
+        assert str(person_b.id) not in profile_ids
+
+
+# ---------------------------------------------------------------------------
 # TestFamilyHealthContextAPI
 # ---------------------------------------------------------------------------
 

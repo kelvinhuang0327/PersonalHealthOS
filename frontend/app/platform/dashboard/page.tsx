@@ -23,6 +23,7 @@ import { DailyAssistantEntry } from '../../components/platform/daily-assistant-e
 import HealthAssistantPanel from '../../components/platform/health-assistant-panel'
 import OutcomeFeedbackCard from '../../components/platform/outcome-feedback-card'
 import NarrativeMemoryCard from '../../components/platform/narrative-memory-card'
+import FamilyHealthCard from '../../components/platform/family-health-card'
 import { Card } from '../../components/ui/card'
 import { ErrorBoundary } from '../../components/ui/error-boundary'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -210,6 +211,7 @@ export default function DashboardPage() {
       />
       <OutcomeFeedbackCard />
       <NarrativeMemoryCard />
+      <FamilyHealthCard />
       <DailyHealthCard
         score={typeof data?.health_score?.overall_score === 'number' ? data.health_score.overall_score : null}
         riskText={dailyRiskText}

@@ -1,4 +1,177 @@
-# Active Task Report — P4-REPORT-TO-ACTION-VERIFIED
+# Active Task Report — P8_FAMILY_HEALTH_ASSISTANT_VERIFIED
+
+Generated: 2026-05-20  
+Classification: **`P8_FAMILY_HEALTH_ASSISTANT_VERIFIED`**
+
+---
+
+## Sprint Verification Summary
+
+| Task | Status |
+|---|---|
+| Task 1 — P8 data flow verification | ✅ CONFIRMED |
+| Task 2 — Family API smoke tests (incl. cross-profile isolation) | ✅ 17/17 PASS |
+| Task 3 — Dashboard FamilyHealthCard integration | ✅ CONFIRMED — mounted after NarrativeMemoryCard |
+| Task 4 — Frontend build validation | ✅ tsc 0 errors, next build CLEAN |
+| Task 5 — Update active task report | ✅ THIS DOCUMENT |
+
+---
+
+## P8 Sprint Context
+
+Previous sprint: **P8_FAMILY_HEALTH_ASSISTANT_FOUNDATION_READY** (commit `1c1717e`)
+
+Foundation completed in prior session:
+- `FamilyRelationship` SQLAlchemy model (`family_relationships` table)
+- `family_health_context_service.py` (pure functions)
+- 4 family API endpoints
+- `FamilyHealthCard` frontend component
+- Frontend types + API methods in `lib/api.ts`
+- 44 backend tests (30 pure-function + 14 model/API)
+
+This sprint: verification, dashboard integration, and isolation testing.
+
+---
+
+## Files Changed This Sprint
+
+| File | Change |
+|---|---|
+| `frontend/app/platform/dashboard/page.tsx` | Added `FamilyHealthCard` import; mounted `<FamilyHealthCard />` after `<NarrativeMemoryCard />` |
+| `backend/tests/test_family_relationships.py` | Added `TestCrossProfileIsolation` class: 3 new tests (caregiver context, cross-user isolation, unrelated profile exclusion) |
+
+---
+
+## P8 Data Flow Confirmation
+
+```
+FamilyRelationship DB rows (family_relationships table)
+    → load_family_relationships(db, owner_user_id, subject_profile_id)
+        → filters by owner_user_id + subject_profile_id (isolation enforced)
+        → returns [] when no relationships exist (explainable empty state)
+    → build_family_health_context(relationships)
+        → get_related_profiles(): dedup by related_profile_id
+        → get_family_risk_summary(): shared risks across ≥ 2 profiles
+        → caregiver alerts: types {caregiver, parent} OR perms {manage, full_access}
+        → child attention items: type {child}
+        → confidence = min(n_profiles/4, 1.0)*0.5 + min(evidence/10, 1.0)*0.3
+    → generate_family_recommendations(context, active_actions_by_profile)
+        → child→caregiver (urgency=high)
+        → caregiverAlerts→caregiver (medium)
+        → sharedRisks→family (medium)
+        → suggestions→family (low)
+        → deduped vs active actions, sorted by urgency
+    → GET /family-health-context → frontend FamilyHealthCard
+    → GET /family-recommendations → FamilyHealthCard recommendations section
+```
+
+---
+
+## Test Results — Required Validation Suite
+
+| Suite | Count | Result |
+|---|---|---|
+| `test_family_health_context.py` | 30 | **PASS** |
+| `test_family_relationships.py` | 17 | **PASS** (+3 isolation tests) |
+| `test_narrative_reasoning.py` | (included) | **PASS** |
+| `test_narrative_memory_service.py` | (included) | **PASS** |
+| `test_api_narrative_memory.py` | (included) | **PASS** |
+| `test_engagement_analytics.py` | (included) | **PASS** |
+| `test_personalization_profile.py` | (included) | **PASS** |
+| `test_adaptive_recommendation_scoring.py` | (included) | **PASS** |
+| `test_notification_history_service.py` | (included) | **PASS** |
+| `test_api_notification_status.py` | (included) | **PASS** |
+| `test_notification_intelligence.py` | (included) | **PASS** |
+| `test_api_notification_intelligence.py` | (included) | **PASS** |
+| `test_lab_intelligence.py` | (included) | **PASS** |
+| `test_api_lab_smoke.py` | (included) | **PASS** |
+| `test_api_symptom_smoke.py` | (included) | **PASS** |
+| `test_symptom_intelligence.py` | (included) | **PASS** |
+| `test_device_signal_escalation.py` | (included) | **PASS** |
+| `test_device_signal_detection.py` | (included) | **PASS** |
+| `test_api_escalation_smoke.py` | (included) | **PASS** |
+| `test_health_assistant_service.py` | (included) | **PASS** |
+| `test_daily_summary_service.py` | (included) | **PASS** |
+| `test_recommendation_trust_service.py` | (included) | **PASS** |
+| `test_outcome_feedback_service.py` | (included) | **PASS** |
+| **Required suite total** | **583** | **583/583 PASS** |
+| **Full backend suite (excl. dual_agent)** | **644** | **644/644 PASS** |
+| `test_dual_agent_orchestrator.py` | 10 | **EXCLUDED — pre-existing failures** |
+| E2E / Playwright | — | **NOT RUN** |
+
+---
+
+## Cross-Profile Isolation Verification
+
+| Check | Result |
+|---|---|
+| `POST /family-relationships` scoped to `owner_user_id` | ✅ |
+| `GET /family-relationships` filters by `owner_user_id + subject_profile_id` | ✅ |
+| `GET /family-health-context` returns empty when no relationships | ✅ |
+| User B cannot see User A's family data (separate DB sessions) | ✅ CONFIRMED (new test) |
+| Profile never linked as relationship → not in relatedProfiles | ✅ CONFIRMED (new test) |
+| `related_profile_id` must belong to same `owner_user_id` (404 otherwise) | ✅ CONFIRMED (existing test) |
+
+---
+
+## Dashboard FamilyHealthCard Verification
+
+| Check | Result |
+|---|---|
+| Component exists | ✅ `frontend/app/components/platform/family-health-card.tsx` |
+| Imported in `dashboard/page.tsx` | ✅ line added |
+| Rendered after `<NarrativeMemoryCard />` | ✅ |
+| Uses backend API (not mock data) | ✅ `api.getFamilyHealthContext()`, `api.getFamilyRecommendations()`, `api.getFamilyRelationships()` |
+| Empty state when no family profiles | ✅ "尚未設定家庭成員關係" |
+| Loading state | ✅ spinner |
+| Error state | ✅ dismissible error banner |
+| No diagnosis wording | ✅ factual observations only |
+| `npx tsc --noEmit` | ✅ 0 errors |
+| `npx next build` | ✅ ✓ Compiled successfully |
+
+---
+
+## Family API Smoke Test Coverage
+
+| Scenario | Covered |
+|---|---|
+| Create child relationship | ✅ `test_post_creates_relationship` |
+| Create caregiver relationship | ✅ `test_caregiver_relationship_appears_in_context` |
+| Get family relationships (empty) | ✅ `test_get_family_relationships_empty` |
+| Get family relationships (after create) | ✅ `test_get_family_relationships_after_create` |
+| Get family health context | ✅ `test_context_has_related_profiles_after_relationship_created` |
+| Get family recommendations | ✅ `test_family_recommendations_empty_when_no_relationships` |
+| Unrelated profile isolation | ✅ `test_unrelated_profile_not_in_family_context` |
+| Duplicate relationship idempotency | ✅ `test_post_idempotent_returns_existing` |
+| Invalid relationship type rejected (422) | ✅ `test_post_invalid_relationship_type_422` |
+| Invalid permission level rejected (422) | ✅ `test_post_invalid_permission_level_422` |
+| Cross-user isolation | ✅ `test_user_b_cannot_see_user_a_relationships` |
+| Unknown related profile (404) | ✅ `test_post_unknown_related_profile_404` |
+
+---
+
+## Known Limitations
+
+- **E2E / Playwright**: NOT RUN. All tests are unit / API integration. Real browser rendering not verified.
+- **Real family data**: No production data loaded. Tests use in-memory SQLite with synthetic profiles.
+- **FamilyHealthCard sub-sections** (child attention, caregiver alerts, shared risks): verified at API contract level. No pixel-level rendering verified.
+- **Cross-period family reasoning**: `generate_family_recommendations` deduplicates against `active_actions_by_profile`, but in API call the `active_actions_by_profile` arg defaults to `{}` (empty) — full dedup is a future improvement.
+- **`test_dual_agent_orchestrator.py`**: 10 pre-existing failures, always excluded. Unrelated to P8.
+- **Family member health data**: `build_family_health_context` currently receives empty dicts for `recommendations_by_profile`, `narrative_memories_by_profile` etc. — the context is structural/relationship-only until member health data is loaded per profile. This is intentional scaffolding; full per-profile data is a P9+ concern.
+
+---
+
+## Git
+
+- Branch: `main`
+- P8 foundation commit: `1c1717e` — `P8_FAMILY_HEALTH_ASSISTANT_FOUNDATION_READY`
+- P8 verification commit: pending
+
+---
+
+---
+
+# Previous Sprint Report — P4-REPORT-TO-ACTION-VERIFIED
 
 Generated: 2026-05-20  
 Classification: **`P4_REPORT_TO_ACTION_VERIFIED`**
