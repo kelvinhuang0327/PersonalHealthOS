@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { AlertCircle, ArrowRight, CheckCircle2, Clock, FileText, Activity, Pill } from 'lucide-react';
-import type { EvidenceSource, RecommendationTrust, DeviceSignal, EscalationDecision, SymptomPattern } from '../../../lib/api';
+import type { EvidenceSource, RecommendationTrust, DeviceSignal, EscalationDecision, SymptomPattern, LabAbnormality } from '../../../lib/api';
 import { RecommendationTrustBlock } from './recommendation-trust-block';
 import DeviceSignalCard from './device-signal-card';
 import SymptomInsightCard from './symptom-insight-card';
+import LabInsightCard from './lab-insight-card';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,6 +35,7 @@ export interface HealthAssistantData {
   device_signals?: DeviceSignal[];
   device_escalation?: EscalationDecision;
   symptom_patterns?: SymptomPattern[];
+  lab_abnormalities?: LabAbnormality[];
   evidence_bundle_summary?: {
     symptom_count: number;
     metric_count: number;
@@ -295,6 +297,13 @@ export default function HealthAssistantPanel({
       {!loading && data && (
         <div className="mt-4">
           <SymptomInsightCard patterns={data.symptom_patterns ?? []} />
+        </div>
+      )}
+
+      {/* Lab insight section (P4 Report-to-Action Bridge) */}
+      {!loading && data && (
+        <div className="mt-4">
+          <LabInsightCard abnormalities={data.lab_abnormalities ?? []} />
         </div>
       )}
 

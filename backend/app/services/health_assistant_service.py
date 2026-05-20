@@ -37,6 +37,7 @@ from app.services.symptom_intelligence_service import (
     build_symptom_timeline,
     detect_symptom_patterns,
 )
+from app.services.lab_intelligence_service import detect_lab_abnormalities
 from app.services.recommendation_trust_service import recommendation_confidence_score
 
 # ---------------------------------------------------------------------------
@@ -505,6 +506,11 @@ def build_evidence_bundle(
         symptom_timeline, symptoms, long_term_symptoms, device_signals, lab_report_items
     )
 
+    # ── lab abnormalities (P4 Report-to-Action Bridge) ─────────────────────
+    lab_abnormalities: list[dict[str, Any]] = detect_lab_abnormalities(
+        lab_report_items, risk_alerts
+    )
+
     # ── bundle ─────────────────────────────────────────────────────────────
     return {
         "person_id": person_id,
@@ -519,6 +525,7 @@ def build_evidence_bundle(
         "device_escalation": device_escalation,
         "symptom_timeline": symptom_timeline,
         "symptom_patterns": symptom_patterns,
+        "lab_abnormalities": lab_abnormalities,
         "lab_report_items": lab_report_items,
         "risk_alerts": risk_alerts,
         "insights": insights,
@@ -531,6 +538,7 @@ def build_evidence_bundle(
             "symptom_count": len(symptoms) + len(long_term_symptoms),
             "metric_count": len(metric_rows),
             "abnormal_lab_count": len(lab_report_items),
+            "lab_abnormality_count": len(lab_abnormalities),
             "active_alert_count": len(risk_alerts),
             "insight_count": len(insights),
             "active_action_count": len(actions),
@@ -549,6 +557,7 @@ def build_evidence_bundle(
 _SOURCE_PRIORITY: dict[str, int] = {
     "risk_alert": 100,
     "lab_report_item": 80,
+    "lab_abnormality": 75,   # P4 bridge: richer view than raw lab_report_item
     "device_signal": 70,
     "symptom_pattern": 65,
     "insight": 60,
@@ -609,8 +618,23 @@ def get_action_recommendations(
             "rule_id": alert.get("rule_code"),
         })
 
-    # From lab abnormalities
+    # From lab abnormalities (P4 bridge — rich, deduplicated view per marker)
+    covered_lab_item_names: set[str] = set()
+    for abn in bundle.get("lab_abnormalities", []):
+        severity = abn.get("severity", "medium")
+        score = _SOURCE_PRIORITY["lab_abnormality"] + _SEVERITY_SCORE.get(severity, 10)
+        covered_lab_item_names.add(abn.get("labItemName", ""))
+        candidates.append({
+            "_score": score,
+            "_source": abn,
+            "_source_type": "lab_abnormality",
+            "rule_id": abn.get("rule_id"),
+        })
+
+    # From raw lab_report_items (only when not already covered by lab_abnormalities)
     for lab in bundle["lab_report_items"]:
+        if lab.get("item_name") in covered_lab_item_names:
+            continue  # lab_abnormality already provides a richer view
         score = _SOURCE_PRIORITY["lab_report_item"]
         if lab.get("recency") in ("today", "this_week"):
             score += 20
@@ -743,6 +767,7 @@ def get_action_recommendations(
         "device_signals": bundle.get("device_signals", []),
         "device_escalation": bundle.get("device_escalation", {}),
         "symptom_patterns": bundle.get("symptom_patterns", []),
+        "lab_abnormalities": bundle.get("lab_abnormalities", []),
         "evidence_bundle_summary": bundle["summary"],
         "missing_data": bundle["missing_data"],
     }
@@ -765,6 +790,17 @@ def _build_recommendation_from_candidate(
         next_action = src.get("recommendation") or "請查看完整風險說明"
         priority = _map_severity_to_priority(src.get("severity", "medium"))
         evidence = [{"type": "risk_alert", "id": src.get("source_id"), "summary": src.get("summary", title)}]
+
+    elif src_type == "lab_abnormality":
+        item_name = src.get("labItemName", "")
+        title = f"檢驗異常需追蹤：{item_name}"
+        why_now = src.get("whyDetected", f"健檢報告顯示 {item_name} 數值標記為異常")
+        impact = "及早追蹤異常指標，有助於掌握健康趨勢並防止問題累積"
+        next_action = src.get("suggestedAction") or f"與醫師討論 {item_name} 異常並安排複查"
+        priority = _map_severity_to_priority(src.get("severity", "medium"))
+        evidence = src.get("evidenceSources", [
+            {"type": "lab_report_item", "id": src.get("reportId"), "summary": title}
+        ])
 
     elif src_type == "lab_report_item":
         title = f"異常檢驗項目需追蹤：{src.get('item_name', '')}"

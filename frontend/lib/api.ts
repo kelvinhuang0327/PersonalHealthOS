@@ -94,6 +94,41 @@ export type SymptomPattern = {
   relatedLabItems: string[]
 }
 
+// ── Lab Intelligence types (P4 Report-to-Action Bridge) ──────────────────────
+export type LabEvidenceSource = {
+  type: 'lab_report_item' | 'risk_alert'
+  id: string | null
+  reportId?: string | null
+  summary: string
+  recency?: string | null
+}
+
+export type LabAbnormality = {
+  abnormalityType:
+    | 'lipid_abnormality'
+    | 'glucose_abnormality'
+    | 'blood_pressure'
+    | 'kidney_function'
+    | 'liver_function'
+    | 'thyroid_function'
+    | 'anemia_marker'
+    | 'uric_acid'
+    | 'inflammation_marker'
+    | 'lab_abnormality'
+  severity: 'low' | 'medium' | 'high'
+  labItemName: string
+  currentValue: number | string | null
+  referenceRange: string | null
+  reportId: string | null
+  detectedAt: string | null
+  whyDetected: string
+  suggestedAction: string
+  confidence: number
+  evidenceSources: LabEvidenceSource[]
+  recurrenceCount: number
+  rule_id: string
+}
+
 // ── Daily Health Summary type (Task 5 — P1) ──────────────────────────────────
 export type DailyHealthSummary = {
   person_id: string
