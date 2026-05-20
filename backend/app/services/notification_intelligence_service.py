@@ -482,3 +482,85 @@ def apply_notification_fatigue_guard(
         active.append(c)
 
     return {"active": active, "suppressed": suppressed}
+
+
+# ---------------------------------------------------------------------------
+# P6 — Personalization ranking
+# ---------------------------------------------------------------------------
+
+def apply_personalization_ranking(
+    candidates: list[dict[str, Any]],
+    profile: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Adjust candidate priorities based on the personalization profile.
+
+    Rules (applied in order; first rule that modifies a field wins for that field):
+    A. BYPASS — priority=="urgent" or source_type=="device_escalation"
+       → returned unchanged; add personalization_reasons=["緊急：不受個人化影響"]
+    B. High-response category (act_count >= 2 OR in high_response_categories)
+       → confidence +0.10, add reason
+    C. Frequently ignored category (ignore_count >= 2)
+       → confidence −ignore_count×0.05 (floor 0.20), downgrade priority one level
+    D. Low engagement (engagement_score < 0.30) AND priority > "medium"
+       → cap priority at "medium", add reason
+
+    Parameters
+    ----------
+    candidates:
+        Output of build_notification_candidates() or after fatigue guard.
+    profile:
+        Serialized PersonalizationProfile dict (from profile_to_dict()).
+        If None the candidates are returned unchanged (safe fallback).
+
+    Returns
+    -------
+    list[dict] — same length, same order, priorities/confidence adjusted.
+    """
+    if not profile:
+        return list(candidates)
+
+    acted_cats: dict[str, int] = profile.get("acted_categories") or {}
+    ignored_cats: dict[str, int] = profile.get("ignored_categories") or {}
+    high_response: set[str] = set(profile.get("high_response_categories") or [])
+    engagement: float = float(profile.get("engagement_score") or 0.5)
+
+    result: list[dict[str, Any]] = []
+
+    for raw_c in candidates:
+        c = dict(raw_c)
+        src = c.get("source_type", "")
+        reasons: list[str] = list(c.get("personalization_reasons") or [])
+
+        # A — bypass
+        if c.get("priority") == "urgent" or src == "device_escalation":
+            c["personalization_reasons"] = reasons + ["緊急提醒：不受個人化排序影響"]
+            result.append(c)
+            continue
+
+        orig_conf = float(c.get("confidence", 0.5))
+        adj_conf = orig_conf
+
+        # B — high-response boost
+        act_count = acted_cats.get(src, 0)
+        if act_count >= 2 or src in high_response:
+            adj_conf = min(adj_conf + 0.10, 0.95)
+            reasons.append("您常回應此類提醒，已優先排序")
+
+        # C — ignored penalty
+        ignore_count = ignored_cats.get(src, 0)
+        if ignore_count >= 2:
+            penalty = min(ignore_count * 0.05, 0.25)
+            adj_conf = max(adj_conf - penalty, 0.20)
+            c["priority"] = _downgrade_priority(c["priority"])
+            reasons.append(f"此類提醒常被略過（{ignore_count} 次），已降低優先度")
+
+        # D — low engagement cap
+        if engagement < 0.30 and _PRIORITY_RANK.get(c["priority"], 0) > _PRIORITY_RANK["medium"]:
+            c["priority"] = "medium"
+            reasons.append("目前互動較少，已調整提醒強度")
+
+        c["confidence"] = min(max(adj_conf, 0.20), 0.95)
+        c["personalization_reasons"] = reasons
+        result.append(c)
+
+    return result

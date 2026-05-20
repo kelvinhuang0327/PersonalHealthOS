@@ -158,6 +158,21 @@ export type NotificationCandidate = {
   evidence_sources: Array<{ type: string; id: string | null; summary: string }>
   cooldown_key: string
   suppress_reason: string | null
+  personalization_reasons?: string[]
+}
+
+// ── Personalization types (P6 Adaptive Health Assistant) ─────────────────────
+export type PersonalizationProfile = {
+  id: string
+  engagement_score: number
+  response_style: 'proactive' | 'balanced' | 'minimal'
+  preferred_notification_timing: Record<string, number>
+  preferred_notification_types: string[]
+  ignored_categories: Record<string, number>
+  acted_categories: Record<string, number>
+  high_response_categories: string[]
+  avg_response_delay_minutes: number | null
+  last_updated_at: string | null
 }
 
 export type IntelligentNotifications = {
@@ -346,6 +361,10 @@ export const api = {
     request(`/health-assistant/notifications/${notificationId}/click`, { method: 'POST' }),
   actedNotification: (notificationId: string) =>
     request(`/health-assistant/notifications/${notificationId}/acted`, { method: 'POST' }),
+  getPersonalizationProfile: (): Promise<PersonalizationProfile> =>
+    request('/health-assistant/personalization-profile'),
+  syncPersonalizationProfile: (days = 30): Promise<PersonalizationProfile> =>
+    request(`/health-assistant/personalization-profile/sync?days=${days}`, { method: 'POST' }),
 };
 
 export async function uploadDocument(category: string, file: File) {

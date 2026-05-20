@@ -352,3 +352,33 @@ class NotificationLog(Base):
     evidence_json = Column(JSON)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class PersonalizationProfile(Base):
+    """Per-person adaptive personalization profile — learns from engagement history."""
+    __tablename__ = 'personalization_profiles'
+    __table_args__ = (
+        Index('ix_pers_profile_user_person', 'user_id', 'subject_profile_id', unique=True),
+    )
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    subject_profile_id = Column(UUID(as_uuid=True), ForeignKey('person_profiles.id', ondelete='CASCADE'), nullable=False, index=True)
+    # 0.0 (disengaged) – 1.0 (highly engaged); default 0.5 (neutral)
+    engagement_score = Column(Numeric(4, 3), nullable=False, server_default='0.5')
+    # 'proactive' | 'balanced' | 'minimal'
+    response_style = Column(String(20), nullable=False, server_default="'balanced'")
+    # {hour_of_day: weight} — learned from click/act timestamps
+    preferred_notification_timing = Column(JSON, nullable=False, server_default='{}')
+    # ['lab_abnormality', 'device_escalation', ...] — top engaged types
+    preferred_notification_types = Column(JSON, nullable=False, server_default='[]')
+    # {source_type: ignore_count} — accumulated ignore signals
+    ignored_categories = Column(JSON, nullable=False, server_default='{}')
+    # {source_type: act_count} — accumulated act signals
+    acted_categories = Column(JSON, nullable=False, server_default='{}')
+    # source_types with consistently high response (act_count >= 2)
+    high_response_categories = Column(JSON, nullable=False, server_default='[]')
+    # Median minutes from notification delivered → user click/act
+    avg_response_delay_minutes = Column(Numeric(8, 2))
+    last_updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

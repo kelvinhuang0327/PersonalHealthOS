@@ -22,8 +22,10 @@ from app.services.health_assistant_service import (
     generate_daily_health_summary,
     get_action_recommendations,
 )
+from app.services.adaptive_recommendation_service import adaptive_recommendation_score
 from app.services.notification_intelligence_service import (
     apply_notification_fatigue_guard,
+    apply_personalization_ranking,
     build_notification_candidates,
 )
 from app.services.notification_history_service import (
@@ -33,6 +35,11 @@ from app.services.notification_history_service import (
     update_notification_status,
 )
 from app.services.outcome_feedback_service import compare_expected_vs_actual_outcome
+from app.services.personalization_service import (
+    get_or_create_profile,
+    profile_to_dict,
+    sync_profile_from_history,
+)
 
 router = APIRouter(prefix='/health-assistant', tags=['health-assistant'])
 
@@ -174,9 +181,14 @@ def get_intelligent_notifications(
     candidates = build_notification_candidates(bundle)
     result = apply_notification_fatigue_guard(candidates, history, active_rule_ids)
 
+    # P6 — apply personalization ranking to active candidates
+    profile = get_or_create_profile(db, uid, pid)
+    profile_dict = profile_to_dict(profile)
+    ranked_active = apply_personalization_ranking(result["active"], profile_dict)
+
     # Persist and get DB notification_ids
     id_map = persist_notification_candidates(
-        db, uid, pid, result["active"], result["suppressed"]
+        db, uid, pid, ranked_active, result["suppressed"]
     )
 
     def _attach_id(c: dict) -> dict:
@@ -187,7 +199,7 @@ def get_intelligent_notifications(
     return {
         "person_id": pid,
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "items": [_attach_id(c) for c in result["active"]],
+        "items": [_attach_id(c) for c in ranked_active],
         "suppressed": [_attach_id(c) for c in result["suppressed"]],
         "total_candidates": len(candidates),
     }
@@ -294,3 +306,44 @@ def acted_notification(
         status="acted",
     )
     return updated
+
+
+# ---------------------------------------------------------------------------
+# P6 — Personalization profile endpoints
+# ---------------------------------------------------------------------------
+
+@router.get('/personalization-profile')
+def get_personalization_profile(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+) -> dict[str, Any]:
+    """Return the personalization profile for the target person.
+
+    Creates a neutral default profile if none exists yet.
+    """
+    profile = get_or_create_profile(db, str(current_user.id), str(target_person.id))
+    return profile_to_dict(profile)
+
+
+@router.post('/personalization-profile/sync')
+def sync_personalization_profile(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    days: Annotated[int, Query(ge=7, le=90)] = 30,
+) -> dict[str, Any]:
+    """Recompute the personalization profile from recent notification history.
+
+    Reads the last `days` days of notification history and updates:
+    acted_categories, ignored_categories, high_response_categories,
+    engagement_score, response_style, preferred_notification_types.
+
+    Returns the updated profile dict.
+    """
+    uid = str(current_user.id)
+    pid = str(target_person.id)
+    history = load_notification_history(db, uid, pid, days=days)
+    profile = sync_profile_from_history(db, uid, pid, history)
+    return profile_to_dict(profile)
+
