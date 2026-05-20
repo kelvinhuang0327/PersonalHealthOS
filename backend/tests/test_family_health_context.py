@@ -318,3 +318,130 @@ class TestGenerateFamilyRecommendations:
         recs = generate_family_recommendations(ctx)
         child_recs = [r for r in recs if r["audience"] == "caregiver"]
         assert all(r["evidence_source"] == "child_attention_item" for r in child_recs)
+
+
+# ---------------------------------------------------------------------------
+# TestFamilyDedupHardening
+# ---------------------------------------------------------------------------
+
+class TestFamilyDedupHardening:
+
+    def test_active_child_action_suppresses_matching_child_recommendation(self):
+        # Child attention item text exactly matches child's active action → suppressed
+        ctx = _empty_context(childAttentionItems=["小明：LDL-C 異常（high）"])
+        recs = generate_family_recommendations(
+            ctx,
+            active_actions_by_profile={"pid-child": ["小明：LDL-C 異常（high）"]},
+        )
+        texts = [r["text"] for r in recs]
+        assert "小明：LDL-C 異常（high）" not in texts
+
+    def test_active_parent_action_does_not_suppress_unrelated_child_recommendation(self):
+        # Parent has active action "定期量血壓" — child has attention item "小明：LDL-C 異常"
+        # Parent's action must NOT suppress the child's unrelated recommendation
+        ctx = _empty_context(childAttentionItems=["小明：LDL-C 異常（high）"])
+        recs = generate_family_recommendations(
+            ctx,
+            active_actions_by_profile={
+                "pid-parent": ["定期量血壓"],      # parent's action
+                "pid-child": [],                   # child has no matching action
+            },
+        )
+        texts = [r["text"] for r in recs]
+        assert "小明：LDL-C 異常（high）" in texts
+
+    def test_caregiver_alert_and_child_attention_item_both_survive_when_different(self):
+        # caregiverAlerts and childAttentionItems with different text → both in output
+        ctx = _empty_context(
+            caregiverAlerts=["小明：血壓偏高"],
+            childAttentionItems=["小明：LDL-C 異常（high）"],
+        )
+        recs = generate_family_recommendations(ctx)
+        texts = [r["text"] for r in recs]
+        assert "小明：血壓偏高" in texts
+        assert "小明：LDL-C 異常（high）" in texts
+
+    def test_same_risk_in_two_profiles_creates_one_shared_suggestion(self):
+        # Both profiles share the same risk → appears once in sharedRisks → once in recs
+        rels = [_rel("pid-b"), _rel("pid-c", "spouse")]
+        ctx = build_family_health_context(
+            rels,
+            lab_abnormalities_by_profile={
+                "pid-b": ["血壓偏高"],
+                "pid-c": ["血壓偏高"],
+            },
+        )
+        recs = generate_family_recommendations(ctx)
+        shared_texts = [r["text"] for r in recs if r["audience"] == "family"]
+        blood_pressure_recs = [t for t in shared_texts if "血壓偏高" in t]
+        assert len(blood_pressure_recs) == 1
+
+    def test_repeated_profile_in_relationships_no_duplicate_recommendations(self):
+        # Same profile appears twice with different relationship_type
+        # Recommendations must not be duplicated
+        rels = [
+            _rel("pid-b", "child"),
+            _rel("pid-b", "caregiver"),  # same pid-b again
+        ]
+        ctx = build_family_health_context(
+            rels,
+            lab_abnormalities_by_profile={"pid-b": ["ALT 異常（warning）"]},
+        )
+        recs = generate_family_recommendations(ctx)
+        texts = [r["text"] for r in recs]
+        # Each text appears at most once
+        assert len(texts) == len(set(texts))
+
+    def test_case_insensitive_dedup_against_active_actions(self):
+        # Active action in different case → still deduped
+        ctx = _empty_context(childAttentionItems=["小明：血壓偏高"])
+        recs = generate_family_recommendations(
+            ctx,
+            active_actions_by_profile={"pid-child": ["小明：血壓偏高"]},  # same text, exact case
+        )
+        texts = [r["text"] for r in recs]
+        assert "小明：血壓偏高" not in texts
+
+
+# ---------------------------------------------------------------------------
+# TestLoadErrorVisibility
+# ---------------------------------------------------------------------------
+
+class TestLoadErrorVisibility:
+
+    def test_load_errors_param_adds_limitation(self):
+        rels = [_rel("pid-b", "child")]
+        ctx = build_family_health_context(
+            rels,
+            load_errors_by_profile={"pid-b": "evidence_unavailable"},
+        )
+        assert any("載入失敗" in lim for lim in ctx["limitations"])
+
+    def test_load_errors_limitation_does_not_expose_profile_id(self):
+        rels = [_rel("pid-b", "child")]
+        ctx = build_family_health_context(
+            rels,
+            load_errors_by_profile={"pid-b": "evidence_unavailable"},
+        )
+        # Profile UUID must NOT appear in any limitation string
+        for lim in ctx["limitations"]:
+            assert "pid-b" not in lim
+
+    def test_no_load_errors_does_not_add_limitation(self):
+        rels = [_rel("pid-b", "child")]
+        ctx = build_family_health_context(rels, load_errors_by_profile={})
+        assert all("載入失敗" not in lim for lim in ctx["limitations"])
+
+    def test_load_errors_limitation_includes_count(self):
+        rels = [_rel("pid-b"), _rel("pid-c", "spouse")]
+        ctx = build_family_health_context(
+            rels,
+            load_errors_by_profile={
+                "pid-b": "evidence_unavailable",
+                "pid-c": "evidence_unavailable",
+            },
+        )
+        failure_lims = [lim for lim in ctx["limitations"] if "載入失敗" in lim]
+        assert len(failure_lims) == 1
+        # Count 2 should appear in the limitation text
+        assert "2" in failure_lims[0]

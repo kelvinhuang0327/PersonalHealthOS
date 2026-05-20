@@ -651,6 +651,7 @@ def get_family_health_context_endpoint(
         lab_abnormalities_by_profile=evidence["lab_abnormalities_by_profile"],
         symptom_patterns_by_profile=evidence["symptom_patterns_by_profile"],
         escalations_by_profile=evidence["escalations_by_profile"],
+        load_errors_by_profile=evidence["load_errors_by_profile"],
     )
 
     return {
@@ -684,6 +685,7 @@ def get_family_recommendations_endpoint(
         lab_abnormalities_by_profile=evidence["lab_abnormalities_by_profile"],
         symptom_patterns_by_profile=evidence["symptom_patterns_by_profile"],
         escalations_by_profile=evidence["escalations_by_profile"],
+        load_errors_by_profile=evidence["load_errors_by_profile"],
     )
     recommendations = generate_family_recommendations(
         context,

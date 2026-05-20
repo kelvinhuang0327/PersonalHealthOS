@@ -1,7 +1,7 @@
-# Active Task Report — P8_FAMILY_HEALTH_ASSISTANT_VERIFIED
+# Active Task Report — P9_FAMILY_CONTEXT_VERIFIED_AND_HARDENED
 
 Generated: 2026-05-20  
-Classification: **`P8_FAMILY_HEALTH_ASSISTANT_VERIFIED`**
+Classification: **`P9_FAMILY_CONTEXT_VERIFIED_AND_HARDENED`**
 
 ---
 
@@ -9,27 +9,34 @@ Classification: **`P8_FAMILY_HEALTH_ASSISTANT_VERIFIED`**
 
 | Task | Status |
 |---|---|
-| Task 1 — P8 data flow verification | ✅ CONFIRMED |
-| Task 2 — Family API smoke tests (incl. cross-profile isolation) | ✅ 17/17 PASS |
-| Task 3 — Dashboard FamilyHealthCard integration | ✅ CONFIRMED — mounted after NarrativeMemoryCard |
+| Task 1 — P9 data flow verification | ✅ CONFIRMED (18/18 population tests PASS) |
+| Task 2 — Failure visibility for silent evidence errors | ✅ IMPLEMENTED + 4 tests PASS |
+| Task 3 — Family dedup edge-case tests | ✅ 10 new tests PASS |
 | Task 4 — Frontend build validation | ✅ tsc 0 errors, next build CLEAN |
 | Task 5 — Update active task report | ✅ THIS DOCUMENT |
 
 ---
 
-## P8 Sprint Context
+## P9 Sprint Context
 
-Previous sprint: **P8_FAMILY_HEALTH_ASSISTANT_FOUNDATION_READY** (commit `1c1717e`)
+Previous sprint: **P8_FAMILY_HEALTH_ASSISTANT_VERIFIED** (commit `cc4312b`)
 
-Foundation completed in prior session:
-- `FamilyRelationship` SQLAlchemy model (`family_relationships` table)
-- `family_health_context_service.py` (pure functions)
-- 4 family API endpoints
-- `FamilyHealthCard` frontend component
-- Frontend types + API methods in `lib/api.ts`
-- 44 backend tests (30 pure-function + 14 model/API)
+Prior sprint delivered:
+- `extract_family_evidence_from_bundle()` pure helper
+- `load_family_evidence_data()` DB helper
+- `GET /family-health-context` uses real per-profile evidence
+- `GET /family-recommendations` uses real `active_actions_by_profile` for dedup
 
-This sprint: verification, dashboard integration, and isolation testing.
+This sprint: verification, failure visibility, dedup edge-case hardening.
+
+---
+
+## Commits
+
+| Commit | Tag | Description |
+|---|---|---|
+| `cc4312b` | `P9_FAMILY_CONTEXT_DATA_POPULATED` | P9 — populate 6 per-profile dicts with real evidence data |
+| (current) | `P9_FAMILY_CONTEXT_VERIFIED_AND_HARDENED` | Failure visibility + dedup hardening |
 
 ---
 
@@ -37,33 +44,62 @@ This sprint: verification, dashboard integration, and isolation testing.
 
 | File | Change |
 |---|---|
-| `frontend/app/platform/dashboard/page.tsx` | Added `FamilyHealthCard` import; mounted `<FamilyHealthCard />` after `<NarrativeMemoryCard />` |
-| `backend/tests/test_family_relationships.py` | Added `TestCrossProfileIsolation` class: 3 new tests (caregiver context, cross-user isolation, unrelated profile exclusion) |
+| `backend/app/services/family_health_context_service.py` | `load_family_evidence_data()` now tracks errors in `load_errors_by_profile`; `build_family_health_context()` accepts `load_errors_by_profile` and adds limitation text |
+| `backend/app/api/health_assistant.py` | Both family endpoints pass `load_errors_by_profile` from evidence to `build_family_health_context` |
+| `backend/tests/test_family_health_context.py` | Added `TestFamilyDedupHardening` (6 tests) and `TestLoadErrorVisibility` (4 tests) |
 
 ---
 
-## P8 Data Flow Confirmation
+## P9 Data Flow Confirmation
 
 ```
-FamilyRelationship DB rows (family_relationships table)
+FamilyRelationship DB rows
     → load_family_relationships(db, owner_user_id, subject_profile_id)
-        → filters by owner_user_id + subject_profile_id (isolation enforced)
-        → returns [] when no relationships exist (explainable empty state)
-    → build_family_health_context(relationships)
-        → get_related_profiles(): dedup by related_profile_id
-        → get_family_risk_summary(): shared risks across ≥ 2 profiles
-        → caregiver alerts: types {caregiver, parent} OR perms {manage, full_access}
-        → child attention items: type {child}
-        → confidence = min(n_profiles/4, 1.0)*0.5 + min(evidence/10, 1.0)*0.3
+    → load_family_evidence_data(db, owner_user_id, relationships)
+        → unique related_profile_ids iterated
+        → build_evidence_bundle(db, uid, pid) per profile
+        → on failure: load_errors_by_profile[pid] = "evidence_unavailable" (skip, no crash)
+        → returns {
+              lab_abnormalities_by_profile,
+              symptom_patterns_by_profile,
+              escalations_by_profile,
+              active_actions_by_profile,
+              recommendations_by_profile,
+              load_errors_by_profile
+          }
+    → build_family_health_context(relationships, **evidence, load_errors_by_profile=...)
+        → limitations += "部分成員資料載入失敗（N 位）..." when errors present
+        → profile IDs never exposed in user-facing limitation text
     → generate_family_recommendations(context, active_actions_by_profile)
-        → child→caregiver (urgency=high)
-        → caregiverAlerts→caregiver (medium)
-        → sharedRisks→family (medium)
-        → suggestions→family (low)
-        → deduped vs active actions, sorted by urgency
+        → dedup via flat union all_active set (lowercase strip)
     → GET /family-health-context → frontend FamilyHealthCard
     → GET /family-recommendations → FamilyHealthCard recommendations section
 ```
+
+---
+
+## Failure Visibility Implementation
+
+| Behaviour | Result |
+|---|---|
+| Evidence load error for one profile → stored in `load_errors_by_profile` | ✅ |
+| Failed profile does not crash endpoint | ✅ |
+| Error count surfaced in `limitations` field | ✅ |
+| Profile UUID not exposed in `limitations` text | ✅ CONFIRMED by test |
+| No errors → no failure limitation added | ✅ |
+
+---
+
+## Family Dedup Hardening — Edge Cases
+
+| Case | Test | Result |
+|---|---|---|
+| Active child action suppresses matching child recommendation | `test_active_child_action_suppresses_matching_child_recommendation` | ✅ |
+| Active parent action does NOT suppress unrelated child recommendation | `test_active_parent_action_does_not_suppress_unrelated_child_recommendation` | ✅ |
+| Caregiver alert + child attention item with different text → both in output | `test_caregiver_alert_and_child_attention_item_both_survive_when_different` | ✅ |
+| Same risk across two profiles → one shared family suggestion (not two) | `test_same_risk_in_two_profiles_creates_one_shared_suggestion` | ✅ |
+| Repeated profile_id in relationships → no duplicate recommendations | `test_repeated_profile_in_relationships_no_duplicate_recommendations` | ✅ |
+| Same-case active action text → dedup triggered | `test_case_insensitive_dedup_against_active_actions` | ✅ |
 
 ---
 
@@ -71,8 +107,9 @@ FamilyRelationship DB rows (family_relationships table)
 
 | Suite | Count | Result |
 |---|---|---|
-| `test_family_health_context.py` | 30 | **PASS** |
-| `test_family_relationships.py` | 17 | **PASS** (+3 isolation tests) |
+| `test_family_health_context.py` | 40 | **PASS** (+10 new: 6 dedup + 4 error visibility) |
+| `test_family_context_data_population.py` | 18 | **PASS** |
+| `test_family_relationships.py` | 17 | **PASS** |
 | `test_narrative_reasoning.py` | (included) | **PASS** |
 | `test_narrative_memory_service.py` | (included) | **PASS** |
 | `test_api_narrative_memory.py` | (included) | **PASS** |
@@ -94,8 +131,7 @@ FamilyRelationship DB rows (family_relationships table)
 | `test_daily_summary_service.py` | (included) | **PASS** |
 | `test_recommendation_trust_service.py` | (included) | **PASS** |
 | `test_outcome_feedback_service.py` | (included) | **PASS** |
-| **Required suite total** | **583** | **583/583 PASS** |
-| **Full backend suite (excl. dual_agent)** | **644** | **644/644 PASS** |
+| **Full backend suite (excl. dual_agent)** | **672** | **672/672 PASS** |
 | `test_dual_agent_orchestrator.py` | 10 | **EXCLUDED — pre-existing failures** |
 | E2E / Playwright | — | **NOT RUN** |
 
@@ -105,59 +141,28 @@ FamilyRelationship DB rows (family_relationships table)
 
 | Check | Result |
 |---|---|
-| `POST /family-relationships` scoped to `owner_user_id` | ✅ |
-| `GET /family-relationships` filters by `owner_user_id + subject_profile_id` | ✅ |
-| `GET /family-health-context` returns empty when no relationships | ✅ |
-| User B cannot see User A's family data (separate DB sessions) | ✅ CONFIRMED (new test) |
-| Profile never linked as relationship → not in relatedProfiles | ✅ CONFIRMED (new test) |
-| `related_profile_id` must belong to same `owner_user_id` (404 otherwise) | ✅ CONFIRMED (existing test) |
+| Evidence loading scoped to `owner_user_id` | ✅ |
+| `load_errors_by_profile` keyed by `related_profile_id` only (not user ID) | ✅ |
+| User-facing limitation text contains no profile UUIDs | ✅ CONFIRMED by test |
+| Evidence load failure for profile A does not affect profile B's data | ✅ |
 
 ---
 
-## Dashboard FamilyHealthCard Verification
+## Frontend Build Verification
 
 | Check | Result |
 |---|---|
-| Component exists | ✅ `frontend/app/components/platform/family-health-card.tsx` |
-| Imported in `dashboard/page.tsx` | ✅ line added |
-| Rendered after `<NarrativeMemoryCard />` | ✅ |
-| Uses backend API (not mock data) | ✅ `api.getFamilyHealthContext()`, `api.getFamilyRecommendations()`, `api.getFamilyRelationships()` |
-| Empty state when no family profiles | ✅ "尚未設定家庭成員關係" |
-| Loading state | ✅ spinner |
-| Error state | ✅ dismissible error banner |
-| No diagnosis wording | ✅ factual observations only |
 | `npx tsc --noEmit` | ✅ 0 errors |
-| `npx next build` | ✅ ✓ Compiled successfully |
-
----
-
-## Family API Smoke Test Coverage
-
-| Scenario | Covered |
-|---|---|
-| Create child relationship | ✅ `test_post_creates_relationship` |
-| Create caregiver relationship | ✅ `test_caregiver_relationship_appears_in_context` |
-| Get family relationships (empty) | ✅ `test_get_family_relationships_empty` |
-| Get family relationships (after create) | ✅ `test_get_family_relationships_after_create` |
-| Get family health context | ✅ `test_context_has_related_profiles_after_relationship_created` |
-| Get family recommendations | ✅ `test_family_recommendations_empty_when_no_relationships` |
-| Unrelated profile isolation | ✅ `test_unrelated_profile_not_in_family_context` |
-| Duplicate relationship idempotency | ✅ `test_post_idempotent_returns_existing` |
-| Invalid relationship type rejected (422) | ✅ `test_post_invalid_relationship_type_422` |
-| Invalid permission level rejected (422) | ✅ `test_post_invalid_permission_level_422` |
-| Cross-user isolation | ✅ `test_user_b_cannot_see_user_a_relationships` |
-| Unknown related profile (404) | ✅ `test_post_unknown_related_profile_404` |
+| `npx next build` | ✅ CLEAN — all pages static/SSR, no errors |
 
 ---
 
 ## Known Limitations
 
-- **E2E / Playwright**: NOT RUN. All tests are unit / API integration. Real browser rendering not verified.
-- **Real family data**: No production data loaded. Tests use in-memory SQLite with synthetic profiles.
-- **FamilyHealthCard sub-sections** (child attention, caregiver alerts, shared risks): verified at API contract level. No pixel-level rendering verified.
-- **Cross-period family reasoning**: `generate_family_recommendations` deduplicates against `active_actions_by_profile`, but in API call the `active_actions_by_profile` arg defaults to `{}` (empty) — full dedup is a future improvement.
-- **`test_dual_agent_orchestrator.py`**: 10 pre-existing failures, always excluded. Unrelated to P8.
-- **Family member health data**: `build_family_health_context` currently receives empty dicts for `recommendations_by_profile`, `narrative_memories_by_profile` etc. — the context is structural/relationship-only until member health data is loaded per profile. This is intentional scaffolding; full per-profile data is a P9+ concern.
+- **E2E / Playwright**: NOT RUN. All tests are unit / API integration.
+- **Real family data**: Tests use in-memory SQLite with synthetic profiles.
+- **Evidence load error granularity**: `load_errors_by_profile` stores `"evidence_unavailable"` for all errors. Detailed error types not exposed to frontend (by design — privacy + simplicity).
+- **`test_dual_agent_orchestrator.py`**: 10 pre-existing failures, always excluded. Unrelated to P9.
 
 ---
 

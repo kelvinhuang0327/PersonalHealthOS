@@ -155,6 +155,7 @@ def build_family_health_context(
     escalations_by_profile: dict[str, list[str]] | None = None,
     lab_abnormalities_by_profile: dict[str, list[str]] | None = None,
     symptom_patterns_by_profile: dict[str, list[str]] | None = None,
+    load_errors_by_profile: dict[str, str] | None = None,
 ) -> FamilyHealthContext:
     """Aggregate full family health context from relationship and evidence data.
 
@@ -169,6 +170,7 @@ def build_family_health_context(
     lab_abnormalities_by_profile = lab_abnormalities_by_profile or {}
     symptom_patterns_by_profile = symptom_patterns_by_profile or {}
     narrative_memories_by_profile = narrative_memories_by_profile or {}
+    load_errors_by_profile = load_errors_by_profile or {}
 
     limitations: list[str] = []
 
@@ -247,6 +249,11 @@ def build_family_health_context(
         limitations.append("相關成員尚無健康資料，無法評估共同風險。")
     if not caregiver_alerts and not child_attention_items:
         limitations.append("目前無照護者警示或兒童注意事項需要顯示。")
+    if load_errors_by_profile:
+        n_failed = len(load_errors_by_profile)
+        limitations.append(
+            f"部分成員資料載入失敗（{n_failed} 位），家庭健康分析可能不完整。"
+        )
 
     return {
         "relatedProfiles": related_profiles,
@@ -427,6 +434,7 @@ def load_family_evidence_data(
     escalations_by_profile: dict[str, list[str]] = {}
     active_actions_by_profile: dict[str, list[str]] = {}
     recommendations_by_profile: dict[str, list[str]] = {}
+    load_errors_by_profile: dict[str, str] = {}
 
     seen_pids: set[str] = set()
     for rel in relationships:
@@ -440,6 +448,7 @@ def load_family_evidence_data(
         except Exception:
             # Never crash the family context endpoint due to a single
             # profile's evidence loading error — skip and continue.
+            load_errors_by_profile[pid] = "evidence_unavailable"
             continue
 
         extracted = extract_family_evidence_from_bundle(bundle)
@@ -456,6 +465,7 @@ def load_family_evidence_data(
         "escalations_by_profile": escalations_by_profile,
         "active_actions_by_profile": active_actions_by_profile,
         "recommendations_by_profile": recommendations_by_profile,
+        "load_errors_by_profile": load_errors_by_profile,
     }
 
 
