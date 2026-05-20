@@ -175,6 +175,15 @@ export type PersonalizationProfile = {
   last_updated_at: string | null
 }
 
+export type EngagementAnalytics = {
+  engagementTrend: 'improving' | 'stable' | 'declining'
+  avgResponseDelayMinutes: number | null
+  bestNotificationWindows: string[]
+  ignoredTimeWindows: string[]
+  actionCompletionRate: number
+  notificationOpenRate: number
+}
+
 export type IntelligentNotifications = {
   person_id: string
   generated_at: string
@@ -365,6 +374,8 @@ export const api = {
     request('/health-assistant/personalization-profile'),
   syncPersonalizationProfile: (days = 30): Promise<PersonalizationProfile> =>
     request(`/health-assistant/personalization-profile/sync?days=${days}`, { method: 'POST' }),
+  getEngagementAnalytics: (days = 30): Promise<EngagementAnalytics> =>
+    request(`/health-assistant/engagement-analytics?days=${days}`),
 };
 
 export async function uploadDocument(category: string, file: File) {

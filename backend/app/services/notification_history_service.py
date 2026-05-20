@@ -188,6 +188,13 @@ def load_notification_history(
 
         # Determine effective status (most recent non-suppressed if exists, else most recent)
 
+        def _iso_dt(dt: datetime | None) -> str | None:
+            if dt is None:
+                return None
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.isoformat()
+
         history.append({
             "cooldown_key": key,
             "priority": active_row.priority,
@@ -196,6 +203,10 @@ def load_notification_history(
             "ignore_count": ignore_count,
             "sent_at": sent_at,
             "snoozed_until": snoozed_until,
+            # Extended fields for analytics (added P6.2)
+            "source_type": active_row.source_type,
+            "acted_at": _iso_dt(active_row.acted_at),
+            "clicked_at": _iso_dt(active_row.clicked_at),
         })
 
     return history

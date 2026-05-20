@@ -14,10 +14,10 @@
  * - All copy is framed as "the assistant is learning", not "you have X condition"
  */
 
-import { Brain, ChevronRight, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
+import { Brain, ChevronRight, Clock, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { api, type PersonalizationProfile } from '../../../lib/api'
+import { api, type EngagementAnalytics, type PersonalizationProfile } from '../../../lib/api'
 
 // ---------------------------------------------------------------------------
 // Label maps (source_type → human-readable)
@@ -34,6 +34,45 @@ const SOURCE_LABELS: Record<string, string> = {
 
 function sourceLabel(key: string) {
   return SOURCE_LABELS[key] ?? key
+}
+
+const WINDOW_LABELS: Record<string, string> = {
+  morning: '早上',
+  afternoon: '下午',
+  evening: '傍晚',
+  night: '夜間',
+}
+
+function windowLabel(w: string) {
+  return WINDOW_LABELS[w] ?? w
+}
+
+// ---------------------------------------------------------------------------
+// Trend badge
+// ---------------------------------------------------------------------------
+
+function TrendBadge({ trend }: { trend: EngagementAnalytics['engagementTrend'] }) {
+  if (trend === 'improving') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+        <TrendingUp className="h-3 w-3" />
+        提升中
+      </span>
+    )
+  }
+  if (trend === 'declining') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+        <TrendingDown className="h-3 w-3" />
+        下降趨勢
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+      穩定
+    </span>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -112,18 +151,25 @@ function EmptyState() {
 
 export default function PersonalizationInsights() {
   const [profile, setProfile] = useState<PersonalizationProfile | null>(null)
+  const [analytics, setAnalytics] = useState<EngagementAnalytics | null>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function fetchProfile() {
+  async function fetchAll() {
     try {
       setLoading(true)
-      const data = await api.getPersonalizationProfile()
-      setProfile(data)
-      setError(null)
-    } catch {
-      setError('暫時無法載入個人化資料')
+      const [profileData, analyticsData] = await Promise.allSettled([
+        api.getPersonalizationProfile(),
+        api.getEngagementAnalytics(30),
+      ])
+      if (profileData.status === 'fulfilled') setProfile(profileData.value)
+      if (analyticsData.status === 'fulfilled') setAnalytics(analyticsData.value)
+      if (profileData.status === 'rejected' && analyticsData.status === 'rejected') {
+        setError('暫時無法載入個人化資料')
+      } else {
+        setError(null)
+      }
     } finally {
       setLoading(false)
     }
@@ -132,16 +178,20 @@ export default function PersonalizationInsights() {
   async function handleSync() {
     try {
       setSyncing(true)
-      const data = await api.syncPersonalizationProfile(30)
-      setProfile(data)
+      const [profileData, analyticsData] = await Promise.allSettled([
+        api.syncPersonalizationProfile(30),
+        api.getEngagementAnalytics(30),
+      ])
+      if (profileData.status === 'fulfilled') setProfile(profileData.value)
+      if (analyticsData.status === 'fulfilled') setAnalytics(analyticsData.value)
     } catch {
-      // silent — stale profile is still useful
+      // silent — stale data is still useful
     } finally {
       setSyncing(false)
     }
   }
 
-  useEffect(() => { fetchProfile() }, [])
+  useEffect(() => { fetchAll() }, [])
 
   const actedEntries = profile
     ? Object.entries(profile.acted_categories).sort((a, b) => b[1] - a[1]).slice(0, 3)
@@ -150,7 +200,9 @@ export default function PersonalizationInsights() {
     ? Object.entries(profile.ignored_categories).sort((a, b) => b[1] - a[1]).slice(0, 3)
     : []
 
-  const hasData = actedEntries.length > 0 || ignoredEntries.length > 0
+  const hasProfileData = actedEntries.length > 0 || ignoredEntries.length > 0
+  const hasAnalytics = analytics !== null
+  const hasData = hasProfileData || hasAnalytics
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -192,6 +244,53 @@ export default function PersonalizationInsights() {
           <>
             {/* Engagement bar */}
             <EngagementBar score={profile.engagement_score} />
+
+            {/* Analytics section */}
+            {hasAnalytics && analytics && (
+              <div className="space-y-3 rounded-lg bg-slate-50 px-3 py-2.5">
+                {/* Trend row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500">近期互動趨勢</span>
+                  <TrendBadge trend={analytics.engagementTrend} />
+                </div>
+
+                {/* Declining nudge — gentle, non-alarming */}
+                {analytics.engagementTrend === 'declining' && (
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1.5">
+                    助手偵測到近期互動減少，正在調整提醒頻率以更符合您的節奏。
+                  </p>
+                )}
+
+                {/* Completion rate + open rate */}
+                <div className="flex gap-4">
+                  <div className="flex-1 text-center">
+                    <p className="text-lg font-semibold text-slate-800">
+                      {Math.round(analytics.actionCompletionRate * 100)}%
+                    </p>
+                    <p className="text-xs text-slate-400">採取行動率</p>
+                  </div>
+                  <div className="flex-1 text-center">
+                    <p className="text-lg font-semibold text-slate-800">
+                      {Math.round(analytics.notificationOpenRate * 100)}%
+                    </p>
+                    <p className="text-xs text-slate-400">提醒開啟率</p>
+                  </div>
+                </div>
+
+                {/* Best windows */}
+                {analytics.bestNotificationWindows.length > 0 && (
+                  <div className="flex items-start gap-1.5">
+                    <Clock className="mt-0.5 h-3 w-3 shrink-0 text-violet-400" />
+                    <div>
+                      <p className="text-xs text-slate-500">您最常回應的時段</p>
+                      <p className="text-xs font-medium text-slate-700">
+                        {analytics.bestNotificationWindows.map(windowLabel).join('、')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Acted categories */}
             {actedEntries.length > 0 && (

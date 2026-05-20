@@ -564,3 +564,95 @@ def apply_personalization_ranking(
         result.append(c)
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# P6.2 — Adaptive Timing
+# ---------------------------------------------------------------------------
+
+def apply_adaptive_notification_timing(
+    candidates: list[dict[str, Any]],
+    analytics: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Adjust candidate priorities / confidence based on engagement timing analytics.
+
+    Rules (applied in order; urgent / device_escalation always bypass):
+    T1. BYPASS — priority=="urgent" or source_type=="device_escalation"
+        → returned unchanged; reason appended
+    T2. Best window (current time in bestNotificationWindows)
+        → confidence +0.08 (cap 0.95), reason appended
+    T3. Ignored window (current time in ignoredTimeWindows)
+        → confidence −0.10 (floor 0.20), downgrade priority one level, reason
+    T4. Declining engagement trend
+        → confidence −0.05 (floor 0.20), downgrade priority one level if > medium
+
+    Parameters
+    ----------
+    candidates:
+        Output of apply_personalization_ranking() or build_notification_candidates().
+    analytics:
+        EngagementAnalytics dict from build_engagement_analytics().
+        If None the candidates are returned unchanged (safe fallback).
+
+    Returns
+    -------
+    list[dict] — same length, same order, adjustments applied in-place copies.
+    """
+    if not analytics:
+        return list(candidates)
+
+    from datetime import datetime, timezone as _tz
+    current_hour = datetime.now(_tz.utc).hour
+    current_window = _get_time_window_label(current_hour)
+
+    best_windows: set[str] = set(analytics.get("bestNotificationWindows") or [])
+    ignored_windows: set[str] = set(analytics.get("ignoredTimeWindows") or [])
+    trend: str = analytics.get("engagementTrend") or "stable"
+
+    result: list[dict[str, Any]] = []
+    for raw_c in candidates:
+        c = dict(raw_c)
+        src = c.get("source_type", "")
+        reasons: list[str] = list(c.get("personalization_reasons") or [])
+
+        # T1 — bypass
+        if c.get("priority") == "urgent" or src == "device_escalation":
+            result.append(c)
+            continue
+
+        conf = float(c.get("confidence", 0.5))
+
+        # T2 — best window boost
+        if current_window in best_windows:
+            conf = min(conf + 0.08, 0.95)
+            reasons.append("當前為您最佳回應時段，已優先提醒")
+
+        # T3 — ignored window penalty
+        if current_window in ignored_windows:
+            conf = max(conf - 0.10, 0.20)
+            c["priority"] = _downgrade_priority(c.get("priority", "medium"))
+            reasons.append("當前為您較少回應的時段，提醒強度已調整")
+
+        # T4 — declining engagement penalty
+        if trend == "declining":
+            conf = max(conf - 0.05, 0.20)
+            if _PRIORITY_RANK.get(c.get("priority", "medium"), 0) > _PRIORITY_RANK["medium"]:
+                c["priority"] = _downgrade_priority(c.get("priority", "high"))
+            reasons.append("助手偵測到提醒回應減少，已降低頻率以避免疲勞")
+
+        c["confidence"] = min(max(conf, 0.20), 0.95)
+        c["personalization_reasons"] = reasons
+        result.append(c)
+
+    return result
+
+
+def _get_time_window_label(hour: int) -> str:
+    """Map 0–23 hour to a named window label (matches engagement_analytics_service)."""
+    if 6 <= hour < 12:
+        return "morning"
+    if 12 <= hour < 18:
+        return "afternoon"
+    if 18 <= hour < 22:
+        return "evening"
+    return "night"

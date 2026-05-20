@@ -23,7 +23,9 @@ from app.services.health_assistant_service import (
     get_action_recommendations,
 )
 from app.services.adaptive_recommendation_service import adaptive_recommendation_score
+from app.services.engagement_analytics_service import build_engagement_analytics
 from app.services.notification_intelligence_service import (
+    apply_adaptive_notification_timing,
     apply_notification_fatigue_guard,
     apply_personalization_ranking,
     build_notification_candidates,
@@ -186,6 +188,10 @@ def get_intelligent_notifications(
     profile_dict = profile_to_dict(profile)
     ranked_active = apply_personalization_ranking(result["active"], profile_dict)
 
+    # P6.2 — apply adaptive timing adjustments
+    analytics = build_engagement_analytics(history)
+    ranked_active = apply_adaptive_notification_timing(ranked_active, analytics)
+
     # Persist and get DB notification_ids
     id_map = persist_notification_candidates(
         db, uid, pid, ranked_active, result["suppressed"]
@@ -273,6 +279,7 @@ def ignore_notification(
         db, notification_id, str(current_user.id), str(target_person.id),
         status="ignored",
     )
+    _trigger_profile_sync(db, str(current_user.id), str(target_person.id))
     return updated
 
 
@@ -289,6 +296,7 @@ def click_notification(
         db, notification_id, str(current_user.id), str(target_person.id),
         status="clicked",
     )
+    _trigger_profile_sync(db, str(current_user.id), str(target_person.id))
     return updated
 
 
@@ -305,7 +313,20 @@ def acted_notification(
         db, notification_id, str(current_user.id), str(target_person.id),
         status="acted",
     )
+    _trigger_profile_sync(db, str(current_user.id), str(target_person.id))
     return updated
+
+
+def _trigger_profile_sync(db: Session, user_id: str, person_id: str) -> None:
+    """Non-blocking profile sync after any status update (Task 4 auto-sync).
+
+    Never raises — any failure here must not break the primary response.
+    """
+    try:
+        hist = load_notification_history(db, user_id, person_id, days=30)
+        sync_profile_from_history(db, user_id, person_id, hist)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -324,6 +345,27 @@ def get_personalization_profile(
     """
     profile = get_or_create_profile(db, str(current_user.id), str(target_person.id))
     return profile_to_dict(profile)
+
+
+@router.get('/engagement-analytics')
+def get_engagement_analytics(
+    target_person: Annotated[PersonProfile, Depends(get_target_person)],
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+    days: Annotated[int, Query(ge=7, le=90)] = 30,
+) -> dict[str, Any]:
+    """Return engagement analytics for the target person.
+
+    Computes engagement trend, best notification windows, avg response delay,
+    action completion rate, and open rate from notification history.
+
+    Returns safe empty/neutral defaults when history is insufficient
+    (no hallucination guarantee).
+    """
+    uid = str(current_user.id)
+    pid = str(target_person.id)
+    history = load_notification_history(db, uid, pid, days=days)
+    return build_engagement_analytics(history)
 
 
 @router.post('/personalization-profile/sync')
