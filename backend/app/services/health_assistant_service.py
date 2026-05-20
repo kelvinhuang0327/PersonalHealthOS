@@ -33,6 +33,10 @@ from app.services.device_signal_escalation_service import (
     build_device_signal_history,
     evaluate_signal_escalation,
 )
+from app.services.symptom_intelligence_service import (
+    build_symptom_timeline,
+    detect_symptom_patterns,
+)
 from app.services.recommendation_trust_service import recommendation_confidence_score
 
 # ---------------------------------------------------------------------------
@@ -493,6 +497,14 @@ def build_evidence_bundle(
         device_signals, signal_history, _all_symptoms, outcomes,
     )
 
+    # ── symptom intelligence (timeline + patterns) ─────────────────────────
+    symptom_timeline: list[dict[str, Any]] = build_symptom_timeline(
+        symptoms, long_term_symptoms, external_metrics, device_signals, lab_report_items
+    )
+    symptom_patterns: list[dict[str, Any]] = detect_symptom_patterns(
+        symptom_timeline, symptoms, long_term_symptoms, device_signals, lab_report_items
+    )
+
     # ── bundle ─────────────────────────────────────────────────────────────
     return {
         "person_id": person_id,
@@ -505,6 +517,8 @@ def build_evidence_bundle(
         "device_signals": device_signals,
         "device_signal_history": signal_history,
         "device_escalation": device_escalation,
+        "symptom_timeline": symptom_timeline,
+        "symptom_patterns": symptom_patterns,
         "lab_report_items": lab_report_items,
         "risk_alerts": risk_alerts,
         "insights": insights,
@@ -536,6 +550,7 @@ _SOURCE_PRIORITY: dict[str, int] = {
     "risk_alert": 100,
     "lab_report_item": 80,
     "device_signal": 70,
+    "symptom_pattern": 65,
     "insight": 60,
     "symptom": 50,
     "health_metric": 40,
@@ -642,6 +657,17 @@ def get_action_recommendations(
                 "rule_id":     f"device_{sig.get('signal_type', '')}",
             })
 
+    # From symptom patterns (high severity only)
+    for pat in bundle.get("symptom_patterns", []):
+        if pat.get("severity") == "high":
+            score = _SOURCE_PRIORITY["symptom_pattern"] + _SEVERITY_SCORE.get("high", 30)
+            candidates.append({
+                "_score":      score,
+                "_source":     pat,
+                "_source_type": "symptom_pattern",
+                "rule_id":     f"symptom_pattern_{pat.get('patternType', '')}_{pat.get('symptomType', '')}",
+            })
+
     # From decision_items if provided (backend authoritative)
     if decision_items:
         for di in decision_items[:5]:
@@ -716,6 +742,7 @@ def get_action_recommendations(
         "recommendations": final_recs,
         "device_signals": bundle.get("device_signals", []),
         "device_escalation": bundle.get("device_escalation", {}),
+        "symptom_patterns": bundle.get("symptom_patterns", []),
         "evidence_bundle_summary": bundle["summary"],
         "missing_data": bundle["missing_data"],
     }
@@ -782,6 +809,17 @@ def _build_recommendation_from_candidate(
         next_action = src.get("suggested_action") or "查看裝置健康訊號詳情"
         priority = _map_severity_to_priority(src.get("severity", "medium"))
         evidence = [{"type": "device_signal", "id": signal_type, "summary": src.get("why_detected", title)}]
+
+    elif src_type == "symptom_pattern":
+        pattern_type = src.get("patternType", "")
+        symptom_type = src.get("symptomType", "")
+        label = src.get("label", symptom_type)
+        title = f"症狀模式需關注：{label}"
+        why_now = src.get("whyDetected", "症狀偵測到異常模式")
+        impact = "及早識別症狀模式有助於預防演變為慢性問題"
+        next_action = src.get("suggestedAction") or "請追蹤症狀變化並諮詢醫師"
+        priority = _map_severity_to_priority(src.get("severity", "medium"))
+        evidence = src.get("evidenceSources", [])
 
     elif src_type == "decision_item":
         title = src.get("title", "健康優先事項")

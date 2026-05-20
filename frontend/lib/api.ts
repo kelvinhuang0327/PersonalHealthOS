@@ -75,6 +75,25 @@ export type EscalationDecision = {
   requiresFollowUp: boolean
 }
 
+// ── Symptom Intelligence types (P3) ──────────────────────────────────────────
+export type SymptomPattern = {
+  patternType:
+    | 'recurring_symptom'
+    | 'worsening_symptom'
+    | 'symptom_with_device_signal'
+    | 'symptom_with_lab_risk'
+    | 'unresolved_high_severity_symptom'
+  severity: 'low' | 'medium' | 'high'
+  symptomType: string
+  label: string
+  whyDetected: string
+  confidence: number
+  suggestedAction: string | null
+  evidenceSources: EvidenceSource[]
+  relatedDeviceSignals: string[]
+  relatedLabItems: string[]
+}
+
 // ── Daily Health Summary type (Task 5 — P1) ──────────────────────────────────
 export type DailyHealthSummary = {
   person_id: string
