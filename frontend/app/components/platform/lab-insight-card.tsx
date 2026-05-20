@@ -1,6 +1,6 @@
 'use client';
 
-import { FlaskConical, ChevronDown, ChevronUp, AlertTriangle, RotateCcw, Lightbulb } from 'lucide-react';
+import { FlaskConical, ChevronDown, ChevronUp, AlertTriangle, RotateCcw, Lightbulb, Clock } from 'lucide-react';
 import { useState } from 'react';
 import type { LabAbnormality } from '../../../lib/api';
 
@@ -79,6 +79,17 @@ function RecurrencePill({ count }: { count: number }) {
   );
 }
 
+function StaleBadge({ sources }: { sources: LabAbnormality['evidenceSources'] }) {
+  const hasStale = sources.some(s => s.recency === 'older');
+  if (!hasStale) return null;
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">
+      <Clock className="w-3 h-3" />
+      舊資料
+    </span>
+  );
+}
+
 function SkeletonCard() {
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 animate-pulse space-y-3">
@@ -116,6 +127,7 @@ function AbnormalityCard({ abn }: { abn: LabAbnormality }) {
             {SEVERITY_LABEL[abn.severity] ?? abn.severity}
           </span>
           <RecurrencePill count={abn.recurrenceCount} />
+          <StaleBadge sources={abn.evidenceSources} />
         </div>
         <button
           onClick={() => setExpanded(v => !v)}

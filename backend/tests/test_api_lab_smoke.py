@@ -219,6 +219,23 @@ class TestEvidenceBundleLabKeys:
         summary = resp.json().get("summary", {})
         assert "lab_abnormality_count" in summary
 
+    def test_stale_report_confidence_lower_than_recent(self):
+        """Report from 60+ days ago (recency=older) → confidence lower than recent."""
+        # Build and query each client sequentially so global app.dependency_overrides
+        # are not overwritten before the previous request completes.
+        client_recent, _ = _build_client(seed_labs=[_ldl_report(days_ago=5)])
+        resp_recent = client_recent.get("/api/v1/health-assistant/evidence-bundle")
+        ldl_recent = next((a for a in resp_recent.json()["lab_abnormalities"] if a["labItemName"] == "LDL"), None)
+
+        client_stale, _ = _build_client(seed_labs=[_ldl_report(days_ago=65)])
+        resp_stale = client_stale.get("/api/v1/health-assistant/evidence-bundle")
+        ldl_stale = next((a for a in resp_stale.json()["lab_abnormalities"] if a["labItemName"] == "LDL"), None)
+
+        assert ldl_recent and ldl_stale, "Expected LDL entry in both responses"
+        assert ldl_stale["confidence"] < ldl_recent["confidence"], (
+            f"Stale confidence {ldl_stale['confidence']} should be < recent {ldl_recent['confidence']}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # GET /health-assistant/recommendations — lab_abnormalities key

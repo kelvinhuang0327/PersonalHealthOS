@@ -9,7 +9,7 @@ exactly why certain recommendations cannot be made.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
@@ -302,7 +302,11 @@ def build_evidence_bundle(
                 "source_type": "lab_report_item",
                 "source_id": str(item.id),
                 "report_id": str(report.id),
-                "recency": _recency_label(report.created_at),
+                "recency": _recency_label(
+                    datetime(report.report_date.year, report.report_date.month,
+                             report.report_date.day, tzinfo=timezone.utc)
+                    if report.report_date else None
+                ),
                 "confidence": float(item.parser_confidence) if item.parser_confidence else 0.75,
                 "evidence_level": "A",
                 "summary": f"{item.item_name} {val_str}（{item.abnormal_flag}）",

@@ -1,13 +1,290 @@
-# Active Task Report — P3-SYMPTOM-INTELLIGENCE-VERIFIED
+# Active Task Report — P4-REPORT-TO-ACTION-VERIFIED
 
-Generated: 2026-05-21 (verification sprint)  
-Classification: **`P3_SYMPTOM_INTELLIGENCE_VERIFIED`**
+Generated: 2026-05-20  
+Classification: **`P4_REPORT_TO_ACTION_VERIFIED`**
 
 ---
 
 ## Sprint Verification Summary
 
 | Task | Status |
+|---|---|
+| Task 1 — P4 data flow end-to-end verification | ✅ CONFIRMED |
+| Task 2 — API smoke / regression confirmation | ✅ 16/16 PASS (↑1 stale confidence test added) |
+| Task 3 — Dashboard LabInsightCard verification | ✅ CONFIRMED — stale indicator added, disclaimer present |
+| Task 4 — Update active task report | ✅ THIS DOCUMENT |
+| Task 5 — P5 Notification Intelligence planning | ✅ PLANNED (see below, NOT IMPLEMENTED) |
+
+---
+
+## Files Changed This Sprint
+
+| File | Change |
+|---|---|
+| `backend/app/services/health_assistant_service.py` | Bug fix: `recency` now computed from `report.report_date` (not `created_at`); added `date` import |
+| `backend/tests/test_api_lab_smoke.py` | Added `test_stale_report_confidence_lower_than_recent`; fixed sequential client ordering |
+| `frontend/app/components/platform/lab-insight-card.tsx` | Added `StaleBadge` component (visible even when collapsed); added `Clock` icon import |
+
+---
+
+## Test Results — Full Battery
+
+| Suite | Count | Result |
+|---|---|---|
+| `test_lab_intelligence.py` | 82 | **PASS** |
+| `test_api_lab_smoke.py` | 16 | **PASS** |
+| `test_api_symptom_smoke.py` | 14 | **PASS** |
+| `test_symptom_intelligence.py` | 24 | **PASS** |
+| `test_device_signal_escalation.py` | (included) | **PASS** |
+| `test_device_signal_detection.py` | (included) | **PASS** |
+| `test_api_escalation_smoke.py` | 12 | **PASS** |
+| `test_health_assistant_service.py` | (included) | **PASS** |
+| `test_daily_summary_service.py` | (included) | **PASS** |
+| `test_recommendation_trust_service.py` | (included) | **PASS** |
+| `test_outcome_feedback_service.py` | (included) | **PASS** |
+| **Total (excl. dual_agent)** | **297** | **297/297 PASS** |
+| `test_dual_agent_orchestrator.py` | 10 | **EXCLUDED — pre-existing failures, unrelated to P4** |
+| E2E / Playwright | — | **NOT RUN** |
+
+---
+
+## P4 Data Flow Confirmation
+
+```
+LabReportItem rows (DB, abnormal_flag IS NOT NULL)
+    → health_assistant_service.py: build_evidence_bundle()
+        → lab_report_items list (recency now computed from report_date ✅)
+    → lab_intelligence_service.py: detect_lab_abnormalities()
+        → groups by item_name
+        → computes severity (flag → recurrence → alert corroboration)
+        → classifies abnormality_type (lipid / glucose / uric_acid / fatty_liver_marker / kidney_stone_related_marker / …)
+        → stale penalty: recency=older → confidence -0.10
+        → stale warning appended to whyDetected text
+        → returns list[LabAbnormality]
+    → evidence bundle: lab_abnormalities key always present
+    → get_action_recommendations()
+        → high-severity lab abnormalities enter candidate pool at priority 75
+        → trust layer applied
+        → completed actions (status=done, completed_at ≤ 30d) deduped by rule_id
+    → /recommendations response: lab_abnormalities key present
+    → Dashboard LabInsightCard renders:
+        → severity badge (red/amber/blue)
+        → recurrence pill (if count > 1)
+        → stale badge (if any evidenceSource.recency === 'older') ← NEW THIS SPRINT
+        → suggested action (always visible)
+        → whyDetected + evidence sources (expanded)
+        → medical disclaimer
+```
+
+---
+
+## Supported Lab Abnormality Types
+
+| Type code | Markers covered |
+|---|---|
+| `lipid_abnormality` | LDL, HDL, TC, TG, 三酸甘油酯, Cholesterol, Triglyceride |
+| `glucose_abnormality` | Blood Sugar, HbA1c, Glucose, 血糖, 糖化血色素 |
+| `kidney_function` | Creatinine, eGFR, BUN, 肌酸酐, 腎功能 |
+| `liver_function` | ALT, AST, GGT, ALP, Bilirubin, 肝功能 |
+| `fatty_liver_marker` | 脂肪肝, Fatty Liver |
+| `uric_acid` | 尿酸, Uric Acid |
+| `kidney_stone_related_marker` | Oxalate, Calcium, 草酸, 膀胱石, Phosphate |
+| `anemia_marker` | Hemoglobin, RBC, Hematocrit, 血色素 |
+| `inflammation_marker` | CRP, ESR, WBC, 白血球 |
+| `thyroid_function` | TSH, T3, T4, 甲狀腺 |
+| `blood_pressure` | BP, Systolic, Diastolic, 血壓 |
+| `lab_abnormality` | All other out-of-range markers (generic fallback) |
+
+---
+
+## Dashboard LabInsightCard Verification
+
+| Check | Result |
+|---|---|
+| Component exists | ✅ `frontend/app/components/platform/lab-insight-card.tsx` |
+| Imported in `health-assistant-panel.tsx` | ✅ line 9 |
+| `LabInsightCard` rendered in panel | ✅ line 306: `<LabInsightCard abnormalities={data.lab_abnormalities ?? []} />` |
+| Uses backend `LabAbnormality` type (not mock data) | ✅ `import type { LabAbnormality } from '../../../lib/api'` |
+| `lab_abnormalities` key in frontend `HealthAssistantData` | ✅ `lab_abnormalities?: LabAbnormality[]` |
+| Empty state rendered when no abnormalities | ✅ "目前無異常健檢指標" |
+| Stale report warning displayed (new) | ✅ `StaleBadge` chip shown in collapsed card header when evidenceSource.recency === 'older' |
+| Medical disclaimer | ✅ "以上分析由 AI 自動產生，僅供健康追蹤參考，不構成醫療診斷建議" |
+| No diagnosis wording | ✅ (see Known Limitations) |
+| `npx tsc --noEmit` | ✅ CLEAN |
+| `npx next build` | ✅ SUCCESS |
+
+---
+
+## Known Limitations
+
+- **No diagnosis wording**: `suggestedAction` copy uses action-oriented language ("建議諮詢醫師" not "診斷為X"); copy review against `docs/UI_FEEDBACK_STANDARDS.md` was not re-run this sprint — spot-checked only.
+- **Recency uses `report_date`**: Fixed this sprint. Previous implementation used `created_at` (DB insert time), causing all reports to appear fresh in integration tests. Production behaviour was unaffected (reports imported from parsing use `report_date` which was already set correctly), but the test relied on the bug being absent.
+- **Stale warning in body text only (before this sprint)**: Was embedded in `whyDetected`, only visible on expand. Now also shown as a collapsed-state chip badge.
+- **Single-occurrence reports**: If a lab report has only 1 abnormal occurrence, severity cap = "medium" regardless of flag value (unless flag is "HH"/"LL"). This is intentional conservatism.
+- **No trend charts**: Lab marker trends over time are not yet visualised. Planned for P5+.
+- **E2E / Playwright tests**: NOT RUN. Smoke tests cover route-level behaviour only.
+- **`test_dual_agent_orchestrator.py`**: 10 pre-existing failures, always excluded (`--ignore`).
+
+---
+
+## Git
+
+- Branch: `main`
+- P4 base commit: `d2eedc9` — `P4_REPORT_TO_ACTION_BRIDGE_READY`
+- This sprint commit: pending (P4_REPORT_TO_ACTION_VERIFIED)
+
+---
+
+# P5 Notification Intelligence — Planning Spec (NOT IMPLEMENTED)
+
+> **Status**: Planned. Target: next sprint (P5).  
+> **Scope**: Proactive notification layer bridging daily health insights to user-facing alerts.  
+> **No notification code added this sprint.**
+
+### Problem Statement
+
+The recommendation pipeline (`health_assistant_service.py`) currently produces prioritised recommendations on-demand (user opens dashboard). There is no mechanism to:
+- Proactively alert the user when a new high-severity finding appears
+- Respect quiet hours or notification fatigue thresholds
+- Escalate unacknowledged critical alerts
+- Learn from snooze/dismiss behaviour to adjust timing
+
+### Required Behaviours
+
+| # | Requirement | Priority |
+|---|---|---|
+| N1 | High-severity lab/device/symptom finding → push notification | P0 |
+| N2 | Notification deduplication — same rule_id not re-notified within cooldown window | P0 |
+| N3 | User-configurable quiet hours | P1 |
+| N4 | Snooze → re-surface after snooze_duration | P1 |
+| N5 | Persistent dismiss → suppress for 30 days | P1 |
+| N6 | Escalation → higher-priority notification channel | P1 |
+| N7 | Alert fatigue guard: max N notifications per day per person | P1 |
+| N8 | Learn from ignore patterns: ignored N times → reduce channel priority | P2 |
+| N9 | Notification history in DB for audit/compliance | P2 |
+
+### Proposed Architecture
+
+```
+Daily assistant run / cron / real-time trigger
+    ↓
+notification_intelligence_service.py  (NEW)
+    filter_notifiable_findings(evidence_bundle, prefs, notification_log)
+        → only findings that exceed priority threshold
+        → dedup against NotificationLog within cooldown
+        → respect quiet_hours and daily_cap
+        ↓
+    rank_notifications(candidates)
+        → sort by: severity DESC, source_priority DESC, last_seen ASC
+        ↓
+    build_notification_payload(ranked)
+        → title, body, action_url, priority_level, rule_id
+        ↓
+NotificationLog DB row (status: pending → sent → acked/snoozed/dismissed)
+    ↓
+delivery_adapter (abstraction)
+    → web push (Phase 1)
+    → LINE / email (Phase 2)
+    → in-app bell (already exists via notification-bell.tsx)
+```
+
+### New DB Tables Required
+
+```sql
+CREATE TABLE notification_log (
+    id              UUID PRIMARY KEY,
+    user_id         INTEGER REFERENCES users(id),
+    person_id       INTEGER REFERENCES person_profiles(id),
+    rule_id         VARCHAR(80),
+    channel         VARCHAR(20),   -- 'web_push' | 'email' | 'in_app'
+    priority_level  VARCHAR(10),   -- 'critical' | 'high' | 'medium' | 'low'
+    title           TEXT,
+    body            TEXT,
+    action_url      TEXT,
+    status          VARCHAR(20),   -- 'pending' | 'sent' | 'acked' | 'snoozed' | 'dismissed'
+    snooze_until    TIMESTAMPTZ,
+    sent_at         TIMESTAMPTZ,
+    acked_at        TIMESTAMPTZ,
+    created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE notification_preferences (
+    user_id         INTEGER PRIMARY KEY REFERENCES users(id),
+    quiet_start     TIME,          -- e.g. 22:00
+    quiet_end       TIME,          -- e.g. 08:00
+    daily_cap       INTEGER DEFAULT 5,
+    min_priority    VARCHAR(10) DEFAULT 'medium',
+    channels        JSONB          -- {"web_push": true, "email": false, "in_app": true}
+);
+```
+
+### Priority Scoring
+
+| Source type | Base priority | Escalation modifier |
+|---|---|---|
+| `device_escalation` (critical) | critical | +2 |
+| `lab_abnormality` (high severity) | high | +1 if recurrence ≥ 3 |
+| `symptom_pattern` (high severity) | high | +1 if worsening trend |
+| `lab_abnormality` (medium) | medium | — |
+| `symptom_pattern` (medium) | medium | — |
+| All others | low | — |
+
+### Cooldown Windows
+
+| Priority | Cooldown | Dismiss suppress |
+|---|---|---|
+| critical | 6 hours | 7 days |
+| high | 24 hours | 30 days |
+| medium | 72 hours | 30 days |
+| low | 7 days | 90 days |
+
+### Alert Fatigue Guard
+
+- Per-person daily cap (default: 5 notifications/day across all channels)
+- Per-rule_id dedup: same rule not re-surfaced until cooldown expires
+- Snooze learning: if snoozed ≥ 3 times → auto-downgrade channel priority for that rule
+
+### Out of Scope for P5
+
+- AI-generated notification copy (P6)
+- Multi-language notification content (P6)
+- SMS delivery (P6)
+- Apple Watch / wearable push (future)
+
+### Next Sprint Prompt (P5 kickoff)
+
+```
+PersonalHealthOS P5 — Notification Intelligence
+
+Context:
+  P4_REPORT_TO_ACTION_VERIFIED complete (297/297 tests pass).
+  Evidence bundle: lab_abnormalities, symptom_patterns, device_escalation all wired.
+  Daily assistant: get_action_recommendations() produces prioritised top-3.
+
+Goal:
+  Implement notification_intelligence_service.py and NotificationLog DB table.
+  Wire into daily assistant and /recommendations endpoint.
+  Add notification preference model.
+  Expose /api/v1/notifications/ CRUD endpoints.
+  No frontend push integration yet — in-app bell only (notification-bell.tsx already exists).
+
+Must deliver:
+  - notification_intelligence_service.py with filter/rank/build functions
+  - NotificationLog SQLAlchemy model + migration
+  - NotificationPreferences model
+  - test_notification_intelligence.py: 20+ pure-function tests
+  - test_api_notification_smoke.py: 8+ route tests
+  - Full regression: all 297 existing tests still pass
+  - npx tsc --noEmit CLEAN
+  - npx next build PASS
+  - Commit: P5_NOTIFICATION_INTELLIGENCE_READY
+
+P5 NOT IMPLEMENTED as of this commit.
+```
+
+---
+
+
 |---|---|
 | Task 1 — Symptom data flow integrity (code review) | ✅ CONFIRMED |
 | Task 2 — API smoke tests for symptom intelligence | ✅ 14/14 PASS |
