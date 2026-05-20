@@ -1,4 +1,147 @@
-# Active Task Report — P3-SYMPTOM-INTELLIGENCE-READY
+# Active Task Report — P3-SYMPTOM-INTELLIGENCE-VERIFIED
+
+Generated: 2026-05-21 (verification sprint)  
+Classification: **`P3_SYMPTOM_INTELLIGENCE_VERIFIED`**
+
+---
+
+## Sprint Verification Summary
+
+| Task | Status |
+|---|---|
+| Task 1 — Symptom data flow integrity (code review) | ✅ CONFIRMED |
+| Task 2 — API smoke tests for symptom intelligence | ✅ 14/14 PASS |
+| Task 3 — `npx tsc --noEmit` + `npx next build` | ✅ CLEAN / BUILD OK |
+| Task 4 — Report-to-Action Bridge planning spec | ✅ DOCUMENTED (NOT IMPLEMENTED) |
+
+### Test results — full battery
+
+| Suite | Tests | Result |
+|---|---|---|
+| `test_symptom_intelligence.py` | 24 | **PASS** |
+| `test_device_signal_escalation.py` | (included) | **PASS** |
+| `test_device_signal_detection.py` | (included) | **PASS** |
+| `test_api_escalation_smoke.py` | 12 | **PASS** |
+| `test_api_symptom_smoke.py` | 14 | **PASS** |
+| `test_health_assistant_service.py` | (included) | **PASS** |
+| `test_daily_summary_service.py` | (included) | **PASS** |
+| `test_recommendation_trust_service.py` | (included) | **PASS** |
+| `test_outcome_feedback_service.py` | (included) | **PASS** |
+| **Total (excl. dual_agent)** | **199** | **199/199 PASS** |
+
+### Data flow confirmation
+
+- `SymptomLog` DB rows → `build_evidence_bundle()` reads last 90 days of symptoms  
+- `build_symptom_timeline()` groups rows → produces `symptom_timeline` list in bundle  
+- `detect_symptom_patterns()` analyses timeline → produces `symptom_patterns` list in bundle  
+- `/evidence-bundle` response always includes `symptom_timeline` + `symptom_patterns` keys  
+- High-severity patterns enter `get_action_recommendations()` candidate pool (priority 65)  
+- `/recommendations` response always includes `symptom_patterns` key  
+- `SymptomInsightCard` renders patterns in `health-assistant-panel.tsx`
+
+### Frontend build
+
+- `npx tsc --noEmit`: **CLEAN** (0 errors)  
+- `npx next build`: **SUCCESS** — all pages compiled, static output generated
+
+### Known limitations (carried forward)
+
+- Symptom intelligence computed request-time only; no historical pattern DB table  
+- E2E / Playwright tests: NOT RUN  
+- `test_dual_agent_orchestrator.py`: 10 pre-existing failures, always excluded  
+- Report-to-Action Bridge: NOT IMPLEMENTED (see spec below)
+
+### Git
+
+- Branch: `main`  
+- This sprint: `test_api_symptom_smoke.py` (14 tests) + this report  
+
+---
+
+## Report-to-Action Bridge — Planning Spec (NOT IMPLEMENTED)
+
+> **Status**: Planned. Target: next sprint (P4).  
+> **Scope**: Bridge between parsed lab report items and the recommendation / decision pipeline.
+
+### Problem statement
+
+Lab reports are parsed and stored as `LabReportItem` rows.  Currently they
+inform the `evidence_bundle` but do **not** automatically produce prioritised
+action items.  The clinician's intent is: _an abnormal lab result → patient
+knows what to do next_.
+
+### Required behaviours
+
+| # | Requirement | Priority |
+|---|---|---|
+| 1 | Lab abnormality → decision item in `recommendations` | P0 |
+| 2 | Lab abnormality → a specific recommended next action | P0 |
+| 3 | Repeated abnormal result for same marker → higher recommendation priority | P1 |
+| 4 | Completed or active action for same marker → deduplicate (no double-surfacing) | P1 |
+| 5 | Each recommendation includes full evidence source traceability | P1 |
+| 6 | No medical diagnosis wording — all copy reviewed against `ui-feedback-standards.md` | P0 |
+
+### Proposed architecture
+
+```
+LabReportItem rows (DB)
+    ↓
+build_lab_evidence()          ← new function in lab_intelligence_service.py
+    ↓
+detect_lab_abnormalities()    ← new function; returns list[LabAbnormality]
+    ├─ compares value vs reference_range
+    ├─ checks historical recurrence (count of same marker out-of-range)
+    └─ deduplicates against existing ActionItem DB rows
+    ↓
+get_action_recommendations()  ← existing; add "lab_abnormality" source type
+    priority score: 75 (above device_signal=70)
+    rule_id: "lab_abnormality_{marker_name}"
+    ↓
+/recommendations response      ← new key: "lab_abnormalities"
+    ↓
+LabInsightCard (new component) ← renders in health-assistant-panel.tsx
+```
+
+### Concrete next-sprint tasks
+
+1. **`lab_intelligence_service.py`** — implement `build_lab_evidence()` and `detect_lab_abnormalities()`:
+   - Input: `LabReportItem` list from DB query
+   - Output: `list[LabAbnormality]` — each with `markerName`, `value`, `unit`, `referenceRange`, `severity` (low/medium/high), `recurrenceCount`, `suggestedAction`, `evidenceSources`
+   - Severity mapping: ≥2× out-of-range = high, 1× = medium, borderline = low
+   - No hallucination: only markers actually present in `LabReportItem` inputs
+
+2. **`health_assistant_service.py`** — integrate `detect_lab_abnormalities()` into `build_evidence_bundle()`:
+   - Add `"lab_abnormalities"` key to bundle return
+   - Add `"lab_abnormality"` to `_SOURCE_PRIORITY` at 75
+   - Add `elif src_type == "lab_abnormality":` case in `_build_recommendation_from_candidate()`
+
+3. **Deduplication** — before returning recommendations, check `ActionItem` DB for existing active items with matching `rule_id`; skip if found within 7 days
+
+4. **`LabInsightCard` component** — `frontend/app/components/platform/lab-insight-card.tsx`:
+   - Renders each abnormality with severity badge, recurrence count, suggested action
+   - Links to source lab report
+   - Identical medical-disclaimer footer as `SymptomInsightCard`
+   - Loading skeleton + empty state
+
+5. **Tests** (`test_lab_intelligence.py` — 20 pure-function tests + `test_api_lab_smoke.py` — 8 route tests):
+   - No abnormalities → empty list (anti-hallucination)
+   - Single out-of-range → medium severity
+   - Repeated out-of-range → high severity + recurrenceCount
+   - Existing ActionItem → deduplication suppresses recommendation
+   - All required schema keys present
+   - No medical diagnosis wording (keyword blacklist check)
+
+6. **Copy review** — audit all `suggestedAction` and `label` strings against `docs/UI_FEEDBACK_STANDARDS.md` blacklist before merge
+
+### Out of scope for P4
+
+- Trend charts for lab markers (P5)
+- Integration with external reference range APIs (P5)
+- GP/clinician report generation (future)
+
+---
+
+# Previous Report — P3-SYMPTOM-INTELLIGENCE-READY
 
 Generated: 2026-05-21  
 Classification: **`P3_SYMPTOM_INTELLIGENCE_READY`**
