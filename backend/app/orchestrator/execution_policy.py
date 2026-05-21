@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import logging
 from typing import Any, Final
 
-from app.core.config import get_settings
+
 from app.orchestrator.common import iso_utc_now, load_project_profile
 from app.orchestrator.db import OrchestratorDB
 
@@ -91,8 +91,7 @@ def record_llm_call(
 
 
 def _open_db(profile_path: str | None = None) -> OrchestratorDB:
-    settings = get_settings()
-    loaded = load_project_profile(profile_path=profile_path or settings.orchestrator_profile_path)
+    loaded = load_project_profile(profile_path=profile_path)
     profile = loaded.profile
     return OrchestratorDB(
         db_path=loaded.repo_root / profile['database_path'],
