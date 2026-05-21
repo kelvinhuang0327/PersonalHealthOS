@@ -20,6 +20,7 @@ SCHEDULER_CONTROLLED_SOURCES: Final[frozenset[str]] = frozenset(
         'worker-daemon',
         'copilot-daemon',
         'cto-scheduler',
+        'manual',       # user-triggered runs are allowed when scheduler is enabled
     }
 )
 

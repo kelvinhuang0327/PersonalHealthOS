@@ -32,7 +32,7 @@ def _compliant_backlog_lines() -> list[str]:
     ]
 
 
-def _setup_test_profile(tmp_path: Path, backlog_lines: list[str] | None = None) -> Path:
+def _setup_test_profile(tmp_path: Path, backlog_lines: list[str] | None = None, scheduler_enabled: bool = True) -> Path:
     repo_root = tmp_path / 'orchestrator-test-repo'
     runtime = repo_root / 'runtime/agent_orchestrator'
     runtime.mkdir(parents=True, exist_ok=True)
@@ -100,6 +100,17 @@ def _setup_test_profile(tmp_path: Path, backlog_lines: list[str] | None = None) 
     }
     profile_path = runtime / 'project_profile.json'
     profile_path.write_text(json.dumps(profile, indent=2) + '\n', encoding='utf-8')
+
+    # Enable/disable scheduler so execution policy behaves as requested
+    loaded = load_project_profile(profile_path=str(profile_path))
+    db = OrchestratorDB(
+        db_path=loaded.repo_root / loaded.profile['database_path'],
+        default_schedule_minutes=loaded.profile['default_schedule_minutes'],
+        planner_provider=loaded.profile['planner_provider'],
+        worker_provider=loaded.profile['worker_provider'],
+    )
+    db.update_scheduler_state(enabled=scheduler_enabled)
+
     return profile_path
 
 

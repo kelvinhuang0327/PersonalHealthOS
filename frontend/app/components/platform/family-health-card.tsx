@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { api, type FamilyHealthContext, type FamilyRecommendation, type FamilyRelationshipRecord } from '../../../lib/api'
+import { api, type FamilyContextItem, type FamilyHealthContext, type FamilyRecommendation, type FamilyRelationshipRecord } from '../../../lib/api'
 import {
   Users,
   AlertTriangle,
@@ -54,6 +54,23 @@ function EvidenceSourceBadge({ sourceType }: { sourceType: string }) {
     action:           { label: '行動建議', className: 'bg-blue-50 text-blue-600 border border-blue-200' },
   }
   const { label, className } = cfg[sourceType] ?? { label: sourceType, className: 'bg-slate-100 text-slate-500' }
+  return (
+    <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${className}`}>
+      {label}
+    </span>
+  )
+}
+
+function SourcePoolBadge({ pool }: { pool: string }) {
+  const cfg: Record<string, { label: string; className: string }> = {
+    lab:          { label: '檢驗', className: 'bg-purple-50 text-purple-600 border border-purple-200' },
+    symptom:      { label: '症狀', className: 'bg-orange-50 text-orange-600 border border-orange-200' },
+    device:       { label: '裝置', className: 'bg-teal-50 text-teal-600 border border-teal-200' },
+    narrative:    { label: '記錄', className: 'bg-sky-50 text-sky-600 border border-sky-200' },
+    action:       { label: '行動', className: 'bg-blue-50 text-blue-600 border border-blue-200' },
+    relationship: { label: '關係', className: 'bg-indigo-50 text-indigo-600 border border-indigo-200' },
+  }
+  const { label, className } = cfg[pool] ?? { label: pool, className: 'bg-slate-100 text-slate-500' }
   return (
     <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium shrink-0 ${className}`}>
       {label}
@@ -248,12 +265,20 @@ export default function FamilyHealthCard() {
                 <Info className="w-3 h-3" /> 來源：健康觀察資料（檢驗 / 症狀 / 裝置）
               </p>
               <ul className="space-y-1">
-                {context.childAttentionItems.map((item, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                    <Baby className="w-3.5 h-3.5 text-pink-400 mt-0.5 shrink-0" />
-                    {item}
-                  </li>
-                ))}
+                {context.childAttentionDetails && context.childAttentionDetails.length > 0
+                  ? context.childAttentionDetails.map((item: FamilyContextItem, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                        <Baby className="w-3.5 h-3.5 text-pink-400 mt-0.5 shrink-0" />
+                        <span className="flex-1">{item.text}</span>
+                        <SourcePoolBadge pool={item.source_pool} />
+                      </li>
+                    ))
+                  : context.childAttentionItems.map((item, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                        <Baby className="w-3.5 h-3.5 text-pink-400 mt-0.5 shrink-0" />
+                        {item}
+                      </li>
+                    ))}
               </ul>
             </Section>
           )}
@@ -270,12 +295,20 @@ export default function FamilyHealthCard() {
                 <Info className="w-3 h-3" /> 來源：健康觀察資料（檢驗 / 症狀 / 裝置）
               </p>
               <ul className="space-y-1">
-                {context.caregiverAlerts.map((alert, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
-                    {alert}
-                  </li>
-                ))}
+                {context.caregiverAlertDetails && context.caregiverAlertDetails.length > 0
+                  ? context.caregiverAlertDetails.map((item: FamilyContextItem, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+                        <span className="flex-1">{item.text}</span>
+                        <SourcePoolBadge pool={item.source_pool} />
+                      </li>
+                    ))
+                  : context.caregiverAlerts.map((alert, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
+                        {alert}
+                      </li>
+                    ))}
               </ul>
             </Section>
           )}
@@ -289,12 +322,20 @@ export default function FamilyHealthCard() {
               defaultOpen={false}
             >
               <ul className="space-y-1">
-                {context.sharedRisks.map((risk, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
-                    <Shield className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
-                    {risk}
-                  </li>
-                ))}
+                {context.sharedRiskDetails && context.sharedRiskDetails.length > 0
+                  ? context.sharedRiskDetails.map((item: FamilyContextItem, i: number) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                        <Shield className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
+                        <span className="flex-1">{item.text}</span>
+                        <SourcePoolBadge pool={item.source_pool} />
+                      </li>
+                    ))
+                  : context.sharedRisks.map((risk, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
+                        <Shield className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
+                        {risk}
+                      </li>
+                    ))}
               </ul>
             </Section>
           )}

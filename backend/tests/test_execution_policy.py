@@ -9,7 +9,7 @@ from test_dual_agent_orchestrator import _setup_test_profile
 
 
 def test_execution_policy_records_blocked_scheduler_attempt(tmp_path):
-    profile_path = _setup_test_profile(tmp_path)
+    profile_path = _setup_test_profile(tmp_path, scheduler_enabled=False)
 
     decision = evaluate_llm_execution(source='scheduler', profile_path=str(profile_path))
 

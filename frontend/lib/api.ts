@@ -240,6 +240,12 @@ export type FamilyProfile = {
   permission_level: 'read_only' | 'manage' | 'full_access'
 }
 
+export type FamilyContextItem = {
+  text: string
+  source_pool: 'lab' | 'symptom' | 'device' | 'narrative' | 'action' | 'relationship'
+  confidence?: number
+}
+
 export type FamilyHealthContext = {
   relatedProfiles: FamilyProfile[]
   sharedRisks: string[]
@@ -248,6 +254,10 @@ export type FamilyHealthContext = {
   familyActionSuggestions: string[]
   confidence: number
   limitations: string[]
+  // Per-item detail arrays — optional; fallback to string arrays when absent
+  childAttentionDetails?: FamilyContextItem[]
+  caregiverAlertDetails?: FamilyContextItem[]
+  sharedRiskDetails?: FamilyContextItem[]
 }
 
 export type FamilyRelationshipRecord = {

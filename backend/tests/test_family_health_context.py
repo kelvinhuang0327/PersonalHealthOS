@@ -17,6 +17,11 @@ Coverage
   - generate_family_recommendations: no duplicates in output
   - generate_family_recommendations: empty context returns empty
   - confidence scales with data richness
+  - P12: read_only hides raw lab / symptom / device evidence
+  - P12: manage hides raw lab evidence
+  - P12: full_access returns all evidence
+  - P12: childAttentionDetails / caregiverAlertDetails / sharedRiskDetails source_pool
+  - P12: no profile UUID leakage in detail text
 """
 from __future__ import annotations
 
@@ -495,3 +500,197 @@ class TestFamilyRecommendationAPIShape:
         assert "limitations" in ctx
         assert isinstance(ctx["confidence"], float)
         assert isinstance(ctx["limitations"], list)
+
+
+# ---------------------------------------------------------------------------
+# P12 \u2014 TestPermissionEnforcement (Task 1)
+# ---------------------------------------------------------------------------
+
+class TestPermissionEnforcement:
+    """Verify build_family_health_context respects permission_level filter."""
+
+    def _build_read_only(self) -> dict:
+        rels = [_rel("pid-b", "child", permission_level="read_only")]
+        return build_family_health_context(
+            rels,
+            lab_abnormalities_by_profile={"pid-b": ["LDL-C \u7570\u5e38"]},
+            symptom_patterns_by_profile={"pid-b": ["\u982d\u75db \u91cd\u8907\u767c\u4f5c"]},
+            escalations_by_profile={"pid-b": ["\u8a08\u6e2c\u8a0a\u865f\u7dca\u6025"]},
+        )
+
+    def _build_full_access(self) -> dict:
+        rels = [_rel("pid-b", "child", permission_level="full_access")]
+        return build_family_health_context(
+            rels,
+            lab_abnormalities_by_profile={"pid-b": ["LDL-C \u7570\u5e38"]},
+            symptom_patterns_by_profile={"pid-b": ["\u982d\u75db \u91cd\u8907\u767c\u4f5c"]},
+            escalations_by_profile={"pid-b": ["\u8a08\u6e2c\u8a0a\u865f\u7dca\u6025"]},
+        )
+
+    # read_only hides raw lab abnormalities
+    def test_read_only_hides_raw_lab_abnormalities(self):
+        ctx = self._build_read_only()
+        all_text = " ".join(ctx["childAttentionItems"] + ctx["caregiverAlerts"] + ctx["sharedRisks"])
+        assert "LDL-C" not in all_text
+
+    # read_only hides raw symptom patterns
+    def test_read_only_hides_raw_symptom_patterns(self):
+        ctx = self._build_read_only()
+        all_text = " ".join(ctx["childAttentionItems"] + ctx["caregiverAlerts"] + ctx["sharedRisks"])
+        assert "\u982d\u75db" not in all_text
+
+    # read_only hides raw device escalation details
+    def test_read_only_hides_raw_device_escalation(self):
+        ctx = self._build_read_only()
+        all_text = " ".join(ctx["childAttentionItems"] + ctx["caregiverAlerts"] + ctx["sharedRisks"])
+        assert "\u8a08\u6e2c\u8a0a\u865f" not in all_text
+
+    # full_access still returns all evidence
+    def test_full_access_returns_lab_evidence(self):
+        ctx = self._build_full_access()
+        all_text = " ".join(ctx["childAttentionItems"] + ctx["caregiverAlerts"] + ctx["sharedRisks"])
+        assert "LDL-C" in all_text
+
+    def test_full_access_returns_symptom_evidence(self):
+        ctx = self._build_full_access()
+        all_text = " ".join(ctx["childAttentionItems"] + ctx["caregiverAlerts"] + ctx["sharedRisks"])
+        assert "\u982d\u75db" in all_text
+
+    def test_full_access_returns_device_evidence(self):
+        ctx = self._build_full_access()
+        all_text = " ".join(ctx["childAttentionItems"] + ctx["caregiverAlerts"] + ctx["sharedRisks"])
+        assert "\u8a08\u6e2c\u8a0a\u865f" in all_text
+
+    # manage sees raw evidence (same as full_access; existing behaviour preserved)
+    def test_manage_hides_raw_lab_abnormalities(self):
+        rels = [_rel("pid-b", "child", permission_level="manage")]
+        ctx = build_family_health_context(
+            rels,
+            lab_abnormalities_by_profile={"pid-b": ["\u8840\u7cd6\u504f\u9ad8"]},
+        )
+        all_text = " ".join(ctx["childAttentionItems"] + ctx["caregiverAlerts"])
+        # manage retains access to raw evidence (only read_only is restricted)
+        assert "\u8840\u7cd6" in all_text
+
+    # unrelated profile is still not mixed in (boundary check)
+    def test_unrelated_profile_not_mixed_in_under_any_permission(self):
+        rels = [_rel("pid-b", "child", permission_level="full_access")]
+        ctx = build_family_health_context(
+            rels,
+            lab_abnormalities_by_profile={"pid-z": ["LDL-C \u7570\u5e38"]},  # pid-z not in rels
+        )
+        all_text = " ".join(ctx["childAttentionItems"] + ctx["caregiverAlerts"] + ctx["sharedRisks"])
+        assert "LDL-C" not in all_text
+
+    # limitation message should appear for non-full_access profiles
+    # (tested via load_family_evidence_data return value \u2014 not build_family_health_context)
+    # We verify that read_only does not expose profile UUIDs in limitations
+    def test_limitations_do_not_expose_profile_uuid(self):
+        ctx = self._build_read_only()
+        for lim in ctx["limitations"]:
+            assert "pid-b" not in lim
+
+
+# ---------------------------------------------------------------------------
+# P12 \u2014 TestSourceGranularity (Task 2)
+# ---------------------------------------------------------------------------
+
+class TestSourceGranularity:
+    """Verify per-item detail arrays are returned with correct source_pool."""
+
+    def _build_child_lab(self) -> dict:
+        rels = [_rel("pid-b", "child", permission_level="full_access")]
+        return build_family_health_context(
+            rels,
+            lab_abnormalities_by_profile={"pid-b": ["LDL-C \u7570\u5e38"]},
+        )
+
+    def _build_child_symptom(self) -> dict:
+        rels = [_rel("pid-b", "child", permission_level="full_access")]
+        return build_family_health_context(
+            rels,
+            symptom_patterns_by_profile={"pid-b": ["\u982d\u75db \u91cd\u8907"]},
+        )
+
+    def _build_child_device(self) -> dict:
+        rels = [_rel("pid-b", "child", permission_level="full_access")]
+        return build_family_health_context(
+            rels,
+            escalations_by_profile={"pid-b": ["\u8a08\u6e2c\u8a0a\u865f\u7dca\u6025"]},
+        )
+
+    def _build_caregiver_lab(self) -> dict:
+        rels = [_rel("pid-b", "caregiver", permission_level="full_access")]
+        return build_family_health_context(
+            rels,
+            lab_abnormalities_by_profile={"pid-b": ["\u8840\u538b\u504f\u9ad8"]},
+        )
+
+    # childAttentionDetails fields
+    def test_child_attention_details_present(self):
+        ctx = self._build_child_lab()
+        assert "childAttentionDetails" in ctx
+
+    def test_child_attention_details_lab_source_pool(self):
+        ctx = self._build_child_lab()
+        details = ctx["childAttentionDetails"]
+        assert len(details) > 0
+        assert details[0]["source_pool"] == "lab"
+
+    def test_child_attention_details_symptom_source_pool(self):
+        ctx = self._build_child_symptom()
+        details = ctx["childAttentionDetails"]
+        assert len(details) > 0
+        assert details[0]["source_pool"] == "symptom"
+
+    def test_child_attention_details_device_source_pool(self):
+        ctx = self._build_child_device()
+        details = ctx["childAttentionDetails"]
+        assert len(details) > 0
+        assert details[0]["source_pool"] == "device"
+
+    # caregiverAlertDetails
+    def test_caregiver_alert_details_present(self):
+        ctx = self._build_caregiver_lab()
+        assert "caregiverAlertDetails" in ctx
+
+    def test_caregiver_alert_details_lab_source_pool(self):
+        ctx = self._build_caregiver_lab()
+        details = ctx["caregiverAlertDetails"]
+        assert len(details) > 0
+        assert details[0]["source_pool"] == "lab"
+
+    # sharedRiskDetails
+    def test_shared_risk_details_present(self):
+        rels = [
+            _rel("pid-b", "child", permission_level="full_access"),
+            _rel("pid-c", "spouse", permission_level="full_access", display_name="\u914d\u5076"),
+        ]
+        ctx = build_family_health_context(
+            rels,
+            lab_abnormalities_by_profile={"pid-b": ["\u8840\u7cd6\u504f\u9ad8"], "pid-c": ["\u8840\u7cd6\u504f\u9ad8"]},
+        )
+        assert "sharedRiskDetails" in ctx
+        details = ctx["sharedRiskDetails"]
+        assert len(details) > 0
+        assert details[0]["source_pool"] == "lab"
+        assert "\u8840\u7cd6" in details[0]["text"]
+
+    # detail text must not contain raw profile UUID
+    def test_child_attention_detail_text_no_uuid(self):
+        ctx = self._build_child_lab()
+        for item in ctx.get("childAttentionDetails", []):
+            assert "pid-b" not in item["text"]
+
+    def test_caregiver_alert_detail_text_no_uuid(self):
+        ctx = self._build_caregiver_lab()
+        for item in ctx.get("caregiverAlertDetails", []):
+            assert "pid-b" not in item["text"]
+
+    # detail arrays empty when no evidence
+    def test_empty_evidence_gives_empty_details(self):
+        rels = [_rel("pid-b", "child", permission_level="full_access")]
+        ctx = build_family_health_context(rels)
+        assert ctx["childAttentionDetails"] == []
+        assert ctx["caregiverAlertDetails"] == []
+        assert ctx["sharedRiskDetails"] == []

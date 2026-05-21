@@ -653,6 +653,9 @@ def get_family_health_context_endpoint(
         escalations_by_profile=evidence["escalations_by_profile"],
         load_errors_by_profile=evidence["load_errors_by_profile"],
     )
+    # Merge permission limitations (Task 1)
+    if evidence.get("permission_limitations"):
+        context["limitations"].extend(evidence["permission_limitations"])
 
     return {
         "person_id": pid,
@@ -687,6 +690,9 @@ def get_family_recommendations_endpoint(
         escalations_by_profile=evidence["escalations_by_profile"],
         load_errors_by_profile=evidence["load_errors_by_profile"],
     )
+    # Merge permission limitations (Task 1)
+    if evidence.get("permission_limitations"):
+        context["limitations"].extend(evidence["permission_limitations"])
     recommendations = generate_family_recommendations(
         context,
         active_actions_by_profile=evidence["active_actions_by_profile"],

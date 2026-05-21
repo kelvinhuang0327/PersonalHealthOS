@@ -66,7 +66,21 @@ FamilyHealthContext = dict[str, Any]
   familyActionSuggestions: list[str]
   confidence: float
   limitations: list[str]
+  # Per-item detail arrays (Task 2 — source granularity)
+  childAttentionDetails: list[FamilyContextItem]
+  caregiverAlertDetails: list[FamilyContextItem]
+  sharedRiskDetails: list[FamilyContextItem]
 }
+"""
+
+FamilyContextItem = dict[str, Any]
+"""
+{
+  text: str
+  source_pool: "lab"|"symptom"|"device"|"narrative"|"action"|"relationship"
+  confidence: float | None
+}
+Note: profile UUIDs are never included in user-facing text.
 """
 
 FamilyRecommendation = dict[str, Any]
@@ -184,27 +198,90 @@ def build_family_health_context(
             "familyActionSuggestions": [],
             "confidence": 0.0,
             "limitations": ["尚未設定家庭成員關係，無法建立家庭健康脈絡。"],
+            "childAttentionDetails": [],
+            "caregiverAlertDetails": [],
+            "sharedRiskDetails": [],
         }
 
     related_profiles = get_related_profiles(relationships)
 
-    # ── Build risk pool across all related profiles ───────────────────────────
+    # ── Permission enforcement (Task 1) ─────────────────────────────────────
+    # Build highest permission level per pid so the pure function is also safe
+    # when called directly with unfiltered evidence maps.
+    _PERM_ORDER_CTX: dict[str, int] = {"full_access": 2, "manage": 1, "read_only": 0}
+    highest_perm_by_pid_ctx: dict[str, str] = {}
+    for _rel_c in relationships:
+        _pid_c = str(_rel_c.get("related_profile_id", ""))
+        _perm_c = _rel_c.get("permission_level", "read_only")
+        if not _pid_c:
+            continue
+        current_order = _PERM_ORDER_CTX.get(highest_perm_by_pid_ctx.get(_pid_c, "read_only"), 0)
+        if _PERM_ORDER_CTX.get(_perm_c, 0) > current_order:
+            highest_perm_by_pid_ctx[_pid_c] = _perm_c
+
+    # Filter raw evidence for non-full_access profiles
+    effective_escalations: dict[str, list[str]] = {}
+    effective_lab: dict[str, list[str]] = {}
+    effective_symptom: dict[str, list[str]] = {}
+    for _pid_e in set(
+        list(escalations_by_profile.keys())
+        + list(lab_abnormalities_by_profile.keys())
+        + list(symptom_patterns_by_profile.keys())
+    ):
+        _perm_e = highest_perm_by_pid_ctx.get(_pid_e, "read_only")
+        if _perm_e == "read_only":
+            # read_only: raw lab / symptom / device are hidden
+            effective_escalations[_pid_e] = []
+            effective_lab[_pid_e] = []
+            effective_symptom[_pid_e] = []
+        else:
+            # manage / full_access: existing behaviour preserved
+            effective_escalations[_pid_e] = escalations_by_profile.get(_pid_e, [])
+            effective_lab[_pid_e] = lab_abnormalities_by_profile.get(_pid_e, [])
+            effective_symptom[_pid_e] = symptom_patterns_by_profile.get(_pid_e, [])
+
+    # Replace with permission-filtered versions
+    escalations_by_profile = effective_escalations
+    lab_abnormalities_by_profile = effective_lab
+    symptom_patterns_by_profile = effective_symptom
+
+    # ── Build risk pool across all related profiles (tagged with source_pool) ─
     all_risk_pools: dict[str, list[str]] = {}
+    # Tagged: {pid: [(text, source_pool), ...]}
+    all_risk_pools_tagged: dict[str, list[tuple[str, str]]] = {}
     for rel in relationships:
         pid = str(rel.get("related_profile_id", ""))
         if not pid:
             continue
-        all_risks: list[str] = []
-        all_risks.extend(escalations_by_profile.get(pid, []))
-        all_risks.extend(lab_abnormalities_by_profile.get(pid, []))
-        all_risks.extend(symptom_patterns_by_profile.get(pid, []))
-        all_risk_pools[pid] = all_risks
+        tagged: list[tuple[str, str]] = [
+            (r, "device") for r in escalations_by_profile.get(pid, [])
+        ] + [
+            (r, "lab") for r in lab_abnormalities_by_profile.get(pid, [])
+        ] + [
+            (r, "symptom") for r in symptom_patterns_by_profile.get(pid, [])
+        ]
+        all_risk_pools[pid] = [t[0] for t in tagged]
+        all_risk_pools_tagged[pid] = tagged
 
     shared_risks = get_family_risk_summary(relationships, all_risk_pools)
 
+    # ── Shared risk details (source-tagged) ──────────────────────────────────
+    shared_risk_set = set(shared_risks)
+    seen_shared_detail_texts: set[str] = set()
+    shared_risk_details: list[dict] = []
+    for pid_sr, tagged_sr in all_risk_pools_tagged.items():
+        for text_sr, pool_sr in tagged_sr:
+            if text_sr in shared_risk_set and text_sr not in seen_shared_detail_texts:
+                seen_shared_detail_texts.add(text_sr)
+                shared_risk_details.append({"text": text_sr, "source_pool": pool_sr})
+
     # ── Caregiver alerts: surfaced to caregiver / parent relationships ────────
     caregiver_alerts: list[str] = []
+    caregiver_alert_details: list[dict] = []
     child_attention_items: list[str] = []
+    child_attention_details: list[dict] = []
+    seen_caregiver_detail_keys: set[str] = set()
+    seen_child_detail_keys: set[str] = set()
 
     for rel in relationships:
         rel_type = rel.get("relationship_type", "")
@@ -213,18 +290,29 @@ def build_family_health_context(
         display = rel.get("related_display_name") or rel.get("display_name") or "家庭成員"
 
         profile_risks = all_risk_pools.get(pid, [])
+        profile_tagged = all_risk_pools_tagged.get(pid, [])
 
         if rel_type in _CAREGIVER_TYPES or perm in _CAREGIVER_PERMISSIONS:
             for risk in profile_risks:
                 alert = f"{display}：{risk}"
                 if alert not in caregiver_alerts:
                     caregiver_alerts.append(alert)
+            for text_t, pool_t in profile_tagged:
+                key_t = f"{display}：{text_t}"
+                if key_t not in seen_caregiver_detail_keys:
+                    seen_caregiver_detail_keys.add(key_t)
+                    caregiver_alert_details.append({"text": key_t, "source_pool": pool_t})
 
         if rel_type in _CHILD_TYPES:
             for risk in profile_risks:
                 item = f"{display}：{risk}"
                 if item not in child_attention_items:
                     child_attention_items.append(item)
+            for text_t, pool_t in profile_tagged:
+                key_t = f"{display}：{text_t}"
+                if key_t not in seen_child_detail_keys:
+                    seen_child_detail_keys.add(key_t)
+                    child_attention_details.append({"text": key_t, "source_pool": pool_t})
 
     # ── Family action suggestions: from recommendations across profiles ────────
     suggestion_counter: Counter[str] = Counter()
@@ -264,6 +352,10 @@ def build_family_health_context(
         "familyActionSuggestions": family_action_suggestions,
         "confidence": confidence,
         "limitations": limitations,
+        # Per-item detail arrays (Task 2 — source granularity)
+        "childAttentionDetails": child_attention_details,
+        "caregiverAlertDetails": caregiver_alert_details,
+        "sharedRiskDetails": shared_risk_details,
     }
 
 
@@ -432,12 +524,25 @@ def load_family_evidence_data(
     """
     from app.services.health_assistant_service import build_evidence_bundle
 
+    # Permission level order: full_access > manage > read_only
+    _PERM_ORDER: dict[str, int] = {"full_access": 2, "manage": 1, "read_only": 0}
+    highest_perm_by_pid: dict[str, str] = {}
+    for rel in relationships:
+        _pid = str(rel.get("related_profile_id", ""))
+        _perm = rel.get("permission_level", "read_only")
+        if not _pid:
+            continue
+        current_order = _PERM_ORDER.get(highest_perm_by_pid.get(_pid, "read_only"), 0)
+        if _PERM_ORDER.get(_perm, 0) > current_order:
+            highest_perm_by_pid[_pid] = _perm
+
     lab_abnormalities_by_profile: dict[str, list[str]] = {}
     symptom_patterns_by_profile: dict[str, list[str]] = {}
     escalations_by_profile: dict[str, list[str]] = {}
     active_actions_by_profile: dict[str, list[str]] = {}
     recommendations_by_profile: dict[str, list[str]] = {}
     load_errors_by_profile: dict[str, str] = {}
+    permission_limited_count = 0
 
     seen_pids: set[str] = set()
     for rel in relationships:
@@ -445,6 +550,8 @@ def load_family_evidence_data(
         if not pid or pid in seen_pids:
             continue
         seen_pids.add(pid)
+
+        perm = highest_perm_by_pid.get(pid, "read_only")
 
         try:
             bundle = build_evidence_bundle(db, owner_user_id, pid)
@@ -456,11 +563,29 @@ def load_family_evidence_data(
 
         extracted = extract_family_evidence_from_bundle(bundle)
 
-        lab_abnormalities_by_profile[pid] = extracted["lab_abnormality_summaries"]
-        symptom_patterns_by_profile[pid] = extracted["symptom_pattern_summaries"]
-        escalations_by_profile[pid] = extracted["escalation_summaries"]
+        # ── Permission enforcement (Task 1) ───────────────────────────────────
+        # full_access / manage: all raw evidence available (existing behaviour preserved)
+        # read_only: raw lab / symptom / device detail hidden
+        if perm == "read_only":
+            lab_abnormalities_by_profile[pid] = []
+            symptom_patterns_by_profile[pid] = []
+            escalations_by_profile[pid] = []
+            permission_limited_count += 1
+        else:
+            # manage or full_access: no restriction on raw evidence
+            lab_abnormalities_by_profile[pid] = extracted["lab_abnormality_summaries"]
+            symptom_patterns_by_profile[pid] = extracted["symptom_pattern_summaries"]
+            escalations_by_profile[pid] = extracted["escalation_summaries"]
+
+        # action_titles are action-level evidence — always available
         active_actions_by_profile[pid] = extracted["action_titles"]
         recommendations_by_profile[pid] = extracted["action_titles"]
+
+    permission_limitations: list[str] = []
+    if permission_limited_count > 0:
+        permission_limitations.append(
+            "部分資料因權限限制未顯示。如需查看完整健康資料，請聯繫相關成員調整權限設定。"
+        )
 
     return {
         "lab_abnormalities_by_profile": lab_abnormalities_by_profile,
@@ -469,6 +594,7 @@ def load_family_evidence_data(
         "active_actions_by_profile": active_actions_by_profile,
         "recommendations_by_profile": recommendations_by_profile,
         "load_errors_by_profile": load_errors_by_profile,
+        "permission_limitations": permission_limitations,
     }
 
 
