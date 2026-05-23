@@ -23,7 +23,7 @@ router = APIRouter(prefix='/documents', tags=['documents'])
 
 @router.post('/upload', response_model=DocumentResponse)
 async def upload_document(
-    category: Annotated[str, Form(...)],
+    category: Annotated[str, Form(..., min_length=1, max_length=60)],
     file: Annotated[UploadFile, File(...)],
     target_person: Annotated[PersonProfile, Depends(get_target_person)],
     current_user: Annotated[User, Depends(get_current_user)],
@@ -331,7 +331,7 @@ def get_lab_history(
     target_person: Annotated[PersonProfile, Depends(get_target_person)],
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
-    metric: Optional[str] = Query(default=None),
+    metric: Optional[str] = Query(default=None, max_length=120),
     limit: int = Query(default=5, ge=2, le=20),
 ):
     """Return confirmed lab values history for one metric or all metrics."""

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class AIModuleRequest(BaseModel):
     days: int = Field(default=90, ge=7, le=365)
-    focus: Optional[str] = None
+    focus: Optional[str] = Field(default=None, max_length=200)
     max_items: int = Field(default=5, ge=1, le=10)
 
 

@@ -23,8 +23,11 @@ _REPORT_STATE: dict[str, dict[str, Any]] = {}
 
 
 class ReportGenerateRequest(BaseModel):
-    person_id: Optional[str] = None
-    include_sections: list[str] = Field(default_factory=lambda: ['score', 'metrics', 'labs', 'insights', 'actions'])
+    person_id: Optional[str] = Field(default=None, max_length=36)
+    include_sections: list[Annotated[str, Field(max_length=60)]] = Field(
+        default_factory=lambda: ['score', 'metrics', 'labs', 'insights', 'actions'],
+        max_length=20,
+    )
 
 
 class ReportGenerateResponse(BaseModel):
