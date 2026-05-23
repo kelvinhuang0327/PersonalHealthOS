@@ -1,5 +1,97 @@
 # Active Task Report
 
+## P29-PRODUCTION-CONFIG-RUNTIME-SMOKE (2026-05-23)
+
+**Final Classification: `P29_PRODUCTION_CONFIG_RUNTIME_SMOKE_READY`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `69d46e2` (P28 complete) ✅ |
+| Dirty files | none ✅ |
+
+---
+
+### 2. Runtime Guard Surface Classification
+
+| Surface | Classification | Evidence |
+|---|---|---|
+| `validate_production_secrets()` function | **SAFE A** | 15 unit tests in `test_config_security_guard.py` (P28) |
+| `startup_event()` integration | **PARTIAL B → FIXED** | Not tested in P28; fixed by P29 startup integration tests |
+| Env-var → Settings resolution | **PARTIAL B → FIXED** | `APP_ENV` / `JWT_SECRET_KEY` env var priority not smoke-tested; fixed in P29 |
+| `get_settings()` lru_cache override | **PARTIAL B → FIXED** | Cache-clear + env var re-read behavior not verified; fixed in P29 |
+| `config-smoke` Makefile target | **GAP C → FIXED** | Target absent from Makefile; added in P29 |
+| `runtime-smoke` includes guard | **GAP C → FIXED** | `runtime-smoke` did not call config tests; now calls `config-smoke` as third stage |
+
+---
+
+### 3. Tests Added — `backend/tests/test_runtime_config_startup_guard.py`
+
+9 tests, 3 classes:
+
+| Class | Tests | What is verified |
+|---|---|---|
+| `TestEnvVarToSettingsResolution` | 4 | `APP_ENV` env var overrides default; `JWT_SECRET_KEY` env var overrides default; production+placeholder via env vars triggers guard; production+real secret via env vars accepted |
+| `TestStartupEventIntegration` | 3 | `startup_event()` raises `RuntimeError` with production+insecure settings (monkeypatched); passes with dev+insecure; passes with production+real secret |
+| `TestGetSettingsCacheBehavior` | 2 | `cache_clear()` + env var override gives production env; after cleanup, local dev env is safe and guard-free |
+
+All tests are DB-independent. `app_auto_create_tables=False` used in pass-through startup tests.
+
+---
+
+### 4. Makefile Changes
+
+**New target `config-smoke`:**
+```makefile
+config-smoke:
+    cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q \
+        tests/test_config_security_guard.py \
+        tests/test_runtime_config_startup_guard.py
+```
+Runs 24 tests (P28 + P29), no DB required, ~1.5s.
+
+**`runtime-smoke` updated** — now three stages:
+1. `test_runtime_smoke.py` — health endpoint contracts
+2. `security-smoke` — auth/JWT regression + TypeScript typecheck
+3. `config-smoke` — production secret guard regression (new)
+
+---
+
+### 5. Test Results
+
+| Suite | Result |
+|---|---|
+| `make config-smoke` | **24 / 24 PASSED** |
+| `make runtime-smoke` | **ALL STAGES PASS** |
+| Full backend regression | **813 passed, 2 skipped, 0 failed** |
+
+---
+
+### 6. Commits
+
+| Ref | Message |
+|---|---|
+| `d7aab81` | `test(config): add runtime startup guard smoke regression` |
+| `954b62a` | `chore(governance): add config-smoke runtime guard target` |
+| C3 (this report) | `docs(report): P29 production config runtime smoke report` |
+
+---
+
+### 7. Known Limitations
+
+| Limitation | Impact |
+|---|---|
+| `startup_event()` tested via direct call, not `TestClient` ASGI lifecycle | TestClient ASGI startup is already covered by `test_runtime_smoke.py` (local env) |
+| `on_event('startup')` is deprecated in FastAPI; 4 deprecation warnings in tests | Cosmetic; pre-existing; does not affect guard behavior |
+| env-var tests use `monkeypatch.setenv` which may interact with `.env` file if pydantic-settings priority order changes | Low risk; priority (env > .env file) is documented pydantic-settings behavior |
+
+---
+
 ## P28-SECRETS-PRODUCTION-CONFIG-GUARD (2026-05-23)
 
 **Final Classification: `P28_PRODUCTION_SECRET_GUARD_HARDENED`**
