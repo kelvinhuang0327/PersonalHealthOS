@@ -34,6 +34,13 @@ security-smoke:
 	$(MAKE) backend-auth-audit
 	$(MAKE) frontend-tsc
 
+# Health endpoint contract smoke + full security regression — no running server required
+# /health and /health/live are DB-independent (always 200).
+# /health/ready accepts 200 (DB up) or 503 (DB down); never 500.
+runtime-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v tests/test_runtime_smoke.py
+	$(MAKE) security-smoke
+
 # Targeted Playwright auth E2E tests
 # Requires:
 #   1. Backend running:  cd backend && uvicorn app.main:app --port 8000
