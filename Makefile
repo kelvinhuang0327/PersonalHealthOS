@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke frontend-auth-smoke local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke frontend-auth-smoke frontend-e2e-local local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
 
 up:
 	docker compose up -d --build
@@ -45,6 +45,14 @@ frontend-auth-smoke:
 		tests/e2e/auth-ui-negative.spec.ts \
 		tests/e2e/auth-ui-multi.spec.ts \
 		--reporter=line
+
+# Full Playwright e2e suite (all 6 specs)
+# Requires:
+#   1. Backend running:  cd backend && uvicorn app.main:app --port 8000
+#   2. Frontend built:   cd frontend && npm run build
+# CI uses npm run e2e:ci (mocked-only subset) instead of this target
+frontend-e2e-local:
+	cd frontend && npm run e2e
 
 local-db-up:
 	docker compose -f docker-compose.local.yml up -d
