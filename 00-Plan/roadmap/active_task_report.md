@@ -1,5 +1,94 @@
 # Active Task Report
 
+## P33-HEALTH-ASSISTANT-RESPONSE-AUDIT (2026-05-23)
+
+**Final Classification: `P33_HEALTH_ASSISTANT_SMOKE_VERIFIED`**
+
+---
+
+### 1. Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- HEAD at start: `799f164` (P32 docs commit) ✅
+- Working tree: clean ✅
+
+### 2. Scope
+
+`backend/app/api/health_assistant.py` — 706 lines, 20+ routes, all returning `dict[str, Any]` with no `response_model`. Goal: verify no sensitive/internal fields leak through these untyped responses.
+
+### 3. Route Audit Results
+
+| Route | Return shape | Classification | Notes |
+|---|---|---|---|
+| GET /evidence-bundle | `build_evidence_bundle()` dict | B.PARTIAL | `_completed_rule_ids`: internal prefixed field; value is rule ID strings (e.g., "R001"), not credentials |
+| GET /recommendations | `get_action_recommendations()` dict | A.SAFE | No sensitive fields |
+| GET /device-signals | manual dict | A.SAFE | `person_id`, `generated_at`, `signals`, `signal_count` — clean |
+| GET /product-signals | `build_product_signals()` dict | A.SAFE | Aggregate metrics only |
+| GET /outcome-feedback | `compare_expected_vs_actual_outcome()` dict | A.SAFE | No sensitive fields |
+| GET /daily-summary | `generate_daily_health_summary()` dict | A.SAFE | Deterministic health aggregates |
+| GET /notifications/intelligent | manual dict | A.SAFE | `person_id`, `items`, `suppressed`, `total_candidates` |
+| POST /notifications/{id}/snooze | `_serialize_log()` | A.SAFE | 14 notification fields; no credentials |
+| POST /notifications/{id}/ignore | `_serialize_log()` | A.SAFE | Same |
+| POST /notifications/{id}/click | `_serialize_log()` | A.SAFE | Same |
+| POST /notifications/{id}/acted | `_serialize_log()` | A.SAFE | Same |
+| GET /personalization-profile | `profile_to_dict()` | B.PARTIAL | Returns `PersonalizationProfile.id` (row UUID, not `user.id`) — own-user only |
+| GET /engagement-analytics | `build_engagement_analytics()` dict | A.SAFE | Engagement aggregates |
+| POST /personalization-profile/sync | `profile_to_dict()` | B.PARTIAL | Same as GET |
+| GET /narrative-memory | manual dict | A.SAFE | `person_id`, `found`, `memory` — own user only |
+| POST /narrative-memory/generate | manual dict | A.SAFE | Same |
+| GET /narrative-memory/cross-period | manual dict | A.SAFE | `person_id`, `reasoning` |
+| POST /family-relationships | manual dict | B.PARTIAL | `owner_user_id` = own UUID; not cross-user |
+| GET /family-relationships | `load_family_relationships()` | B.PARTIAL | `owner_user_id` = own UUID |
+| GET /family-health-context | manual dict | A.SAFE | `person_id`, `context` — aggregate |
+| GET /family-recommendations | manual dict | A.SAFE | `person_id`, `recommendations`, `total` |
+
+**No C.GAP found.** No `password_hash`, `storage_key`, `storage_bucket`, `file_path`, `download_token`, `is_superuser` in any route.
+
+### 4. Cross-User Isolation Confirmed
+
+`get_target_person` (deps.py:81):
+```python
+.filter(PersonProfile.id == person_uuid, PersonProfile.owner_user_id == current_user.id)
+```
+Cross-user `person_id` → 404 at the dependency level. Confirmed via 3 regression tests.
+
+### 5. B.PARTIAL Items Documented (Not Fixed — Own-User Data Only)
+
+| Field | Location | Reason B.PARTIAL (not C.GAP) |
+|---|---|---|
+| `_completed_rule_ids` | evidence-bundle | Internal-prefixed; value is rule ID strings, not credentials |
+| `owner_user_id` | family-relationships GET/POST | Always own user's UUID; no cross-user path exists |
+| `id` in profile_to_dict | personalization-profile | PersonalizationProfile row UUID, not User.id |
+
+### 6. Tests Added
+
+**`backend/tests/test_health_assistant_leakage.py`** — 15 tests, all PASS
+
+| Class | Tests | Purpose |
+|---|---|---|
+| `TestEvidenceBundleLeakage` | 2 | Recursive scan + person_id ownership |
+| `TestDeviceSignalsLeakage` | 2 | Recursive scan + person_id ownership |
+| `TestFamilyRelationshipsLeakage` | 4 | No sensitive keys; owner_user_id == own UUID (list + create) |
+| `TestFamilyContextLeakage` | 2 | family-health-context and family-recommendations recursive scan |
+| `TestCrossUserIsolation` | 3 | Cross-user person_id → 404 on evidence-bundle, family-context, recommendations |
+| `TestNotificationStatusLeakage` | 2 | Snooze + ignore `_serialize_log` response recursive scan |
+
+Recursive scanner: checks `password_hash`, `hashed_password`, `password`, `storage_bucket`, `storage_key`, `file_path`, `download_token`, `secret_key`, `secret`, `is_superuser`, `is_staff`.
+
+### 7. Commits
+- `967fe18` — `test(security): add health_assistant response leakage regression (P33)`
+
+### 8. runtime-smoke Results
+| Stage | Suite | Result |
+|---|---|---|
+| 1 | Health check | 3 passed |
+| 2 | Security smoke | 29 passed, 2 skipped |
+| 3 | Config smoke | 24 passed |
+| 4 | Validation smoke | 57 passed |
+| **Total** | | **113 passed, 2 skipped** |
+
+---
+
 ## P32-RESPONSE-SCHEMA-LEAKAGE-AUDIT (2026-05-23)
 
 **Final Classification: `P32_RESPONSE_LEAKAGE_HARDENED`**
