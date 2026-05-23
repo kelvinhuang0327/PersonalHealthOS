@@ -1,3 +1,134 @@
+# Active Task Report — P15-REAL-JWT-STORAGESTATE-UI-NEGATIVE-SMOKE (2026-05-23)
+
+## P15-REAL-JWT-STORAGESTATE-UI-NEGATIVE-SMOKE (2026-05-23)
+
+**Final Classification: `P15_REAL_JWT_STORAGESTATE_UI_NEGATIVE_SMOKE_VERIFIED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `ca16633` (P14 final report) ✅ |
+| Dirty files at start | None ✅ |
+
+---
+
+### 2. Objective
+
+Prove that a user-A browser session (real JWT in localStorage) **cannot** access user-B's family health data at the **UI rendering layer** — network assertion (HTTP 404) AND DOM assertion (error text visible, no data leakage).
+
+---
+
+### 3. Root Cause Analysis — Why Naive Approaches Failed
+
+#### Attempt 1 — React controlled-input fill
+
+`page.fill()` on the Next.js login form did not trigger React's `onChange` handler in a production (`next start`) build.  No `/api/v1/auth/login` request appeared in the network trace.  **Root cause**: Playwright's `fill()` sets the native DOM value but does not fire synthetic React events in production bundle.
+
+#### Attempt 2 — addInitScript + waitForFunction (initial hang)
+
+Switched to JWT bootstrap via `addInitScript`.  Two bugs caused the test to hang for the full 120 s test timeout:
+
+| Bug | Cause | Fix |
+|---|---|---|
+| **CORS** | Playwright webServer runs on `:3010`; backend `cors_allow_origins` only covers `:3000,3100`. Browser sent all requests but received `time:-1` (no response). PersonProvider's `listPersons()` call never resolved → `person_id` was never set in localStorage. | Added `context.route('http://localhost:8000/**', ...)` CORS bridge in fixture: intercepts every backend request, forwards it unchanged via `route.fetch()`, patches `Access-Control-Allow-Origin: http://127.0.0.1:3010` onto the response. |
+| **`waitForFunction` arg/options confusion** | `{ timeout: 10_000 }` was passed as the **2nd** positional argument (the page-function `arg`), not the **3rd** (`options`). Playwright applied `timeout: 0` (infinite) and silently ignored the `10_000` value. Test hung until the 120 s `test.setTimeout` fired. | Reordered to `waitForFunction(fn, undefined, { timeout: 10_000 })`. Confirmed in trace: `params.timeout` changed from `0` to `10000`. |
+
+#### Attempt 3 — addInitScript re-injection on reload
+
+Passing `personId = userA.personId` to `bootstrapWithRealJWT` caused it to be re-injected on `page.reload()` (addInitScript runs on every navigation), overwriting the cross-user injection.  **Fix**: call `bootstrapWithRealJWT(context, token)` without `personId`; let PersonProvider auto-select it.
+
+---
+
+### 4. Final Architecture
+
+```
+setupTwoUsers(request)
+  ├─ POST /auth/register + /auth/login  → userA.token, userA.personId
+  └─ POST /auth/register + /auth/login  → userB.token, userB.personId
+
+bootstrapWithRealJWT(contextA, userA.token)
+  ├─ context.route('localhost:8000/**')  ← CORS bridge (new)
+  ├─ page.addInitScript({ token })       ← localStorage['token'] = userA.token
+  ├─ page.goto('/platform/dashboard')   ← PersonProvider mounts → listPersons()
+  └─ waitForFunction(person_id truthy, undefined, { timeout: 10_000 })  ← fix
+
+page.evaluate(() => localStorage.setItem('person_id', userB.personId))
+
+waitForResponse(url.includes('family-health-context'))  ← set up BEFORE reload
+page.reload()
+  └─ addInitScript fires: token=userA  (person_id stays as userB via localStorage)
+
+familyCtxResponse.status()  →  404   (backend get_target_person owner check)
+getByText('無法載入家庭健康資料')  →  visible
+bodyText.includes(userB.personId)  →  false
+```
+
+---
+
+### 5. Files Changed
+
+| File | Action |
+|---|---|
+| `frontend/tests/e2e/fixtures/auth-ui.ts` | Created — CORS bridge + real-JWT bootstrap fixture |
+| `frontend/tests/e2e/auth-ui-negative.spec.ts` | Created — P15 full-UI cross-user smoke spec |
+| `00-Plan/roadmap/active_task_report.md` | Updated — P15 report block prepended |
+
+---
+
+### 6. Test Result
+
+```
+Running 1 test using 1 worker
+  1 passed (7.3s)
+```
+
+| Test | Status |
+|---|---|
+| user A real-JWT session → user B person_id → family-health-context 404 + error UI rendered | ✅ PASS |
+
+P14 regression check (3/3 API-level tests):
+
+```
+Running 3 tests using 1 worker
+  3 passed (3.1s)
+```
+
+---
+
+### 7. TypeScript Result
+
+```
+npx tsc --noEmit
+tsc exit: 0  (0 errors)
+```
+
+---
+
+### 8. Commit List
+
+| Commit | Hash | Message |
+|---|---|---|
+| C1 | `78c1e40` | `test(e2e): add real-JWT storageState bootstrap fixture for UI smoke (P15)` |
+| C2 | `d2aea8c` | `test(e2e): add full UI cross-user auth negative smoke (P15)` |
+| C3 | (this commit) | `docs(report): P15 real-JWT storageState UI auth smoke report` |
+
+---
+
+### 9. Key Lessons
+
+| Lesson | Detail |
+|---|---|
+| Playwright `waitForFunction(fn, arg, options)` — arg vs options | Passing `{ timeout }` as 2nd param silently makes it the page-function argument, not the timeout option.  Always pass `undefined` as arg when no arg is needed. |
+| CORS with Playwright webServer | If `reuseExistingServer: false` and the webServer port is not in the backend CORS whitelist, ALL browser API calls will silently fail.  Use `context.route()` to bridge CORS in the fixture layer without touching production code. |
+| `addInitScript` runs on every navigation | Do NOT inject values into `addInitScript` that you intend to override mid-test.  Inject only stable values (JWT token); let the app populate dynamic values (person_id). |
+
+---
+
 # Active Task Report — P14-BROWSER-AUTH-FIXTURE-FOUNDATION (2026-05-23)
 
 ## P14-BROWSER-AUTH-FIXTURE-FOUNDATION (2026-05-23)
