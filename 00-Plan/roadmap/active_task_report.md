@@ -1,4 +1,145 @@
-# Active Task Report — P13-FINALIZE-AND-BROWSER-AUTH-SMOKE (2026-05-23)
+# Active Task Report — P14-BROWSER-AUTH-FIXTURE-FOUNDATION (2026-05-23)
+
+## P14-BROWSER-AUTH-FIXTURE-FOUNDATION (2026-05-23)
+
+**Final Classification: `P14_BROWSER_AUTH_NEGATIVE_SMOKE_VERIFIED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `f1be74b` (P13-FINALIZE report, clean tree) ✅ |
+| Dirty files at start | None ✅ |
+
+---
+
+### 2. Current Git HEAD Before Work
+
+```
+f1be74b docs(report): P13-FINALIZE + browser auth smoke report — NOT_IMPLEMENTED with gap detail
+b484c56 docs(roadmap): P13 closure — roadmap + CTO + CEO + active task + report
+eeadbf7 chore(governance): backend-smoke target + artifact ignore rules + entrypoint alignment
+0a73f1a feat(auth): P13 real-token JWT negative smoke + override smoke
+```
+
+---
+
+### 3. Auth Route / Token Endpoint Findings
+
+| Item | Value |
+|---|---|
+| Register endpoint | `POST /api/v1/auth/register` — `{"email": str, "password": str}` — 201 on success, 400 if already registered |
+| Login endpoint | `POST /api/v1/auth/login` — `{"email": str, "password": str}` → `{"access_token": str, "token_type": "bearer"}` |
+| Token format | JWT (HS256), subject = user UUID |
+| Persons create | `POST /api/v1/persons` with `Authorization: Bearer <token>` |
+| Family health context | `GET /api/v1/health-assistant/family-health-context?person_id=<pid>` |
+| Family recommendations | `GET /api/v1/health-assistant/family-recommendations?person_id=<pid>` |
+| Cross-user isolation | `get_target_person` in `backend/app/core/deps.py` filters `PersonProfile.owner_user_id == current_user.id` → 404 on mismatch |
+| No-token behavior | 401 `{"detail":"Not authenticated"}` |
+| Backend URL | `http://localhost:8000` (from `frontend/.env.local`: `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`) |
+
+---
+
+### 4. Existing Playwright Fixture / Mock-Auth Findings
+
+All three prior specs (`family-health-card`, `health-platform`, `platform-app`) use:
+- `localStorage.setItem('token', 'e2e-token')` — hardcoded mock token
+- `page.route('**/api/v1/**', ...)` — full API route interception
+
+No `storageState`, no `globalSetup`, no real credential flow found. Confirmed P13 gap.
+
+---
+
+### 5. Files Changed
+
+| File | Action |
+|---|---|
+| `frontend/tests/e2e/fixtures/auth.ts` | Created — real-auth fixture (116 lines) |
+| `frontend/tests/e2e/auth-negative.spec.ts` | Created — 3 negative smoke tests (73 lines) |
+| `00-Plan/roadmap/active_task_report.md` | Updated — P14 report block prepended |
+
+---
+
+### 6. Test User / Token Bootstrap Decision
+
+**Decision: register two dedicated e2e users on first run (idempotent)**
+
+| User | Email | Password | Strategy |
+|---|---|---|---|
+| User A | `e2e-user-a@example.com` | `E2eTestA1!` | `POST /api/v1/auth/register` (400 = already exists → ok) then `POST /api/v1/auth/login` |
+| User B | `e2e-user-b@example.com` | `E2eTestB1!` | Same |
+
+Both users were pre-verified against the running backend before writing the fixture. PersonProfile creation is also idempotent — returns existing profile if one already exists.
+
+---
+
+### 7. Single-File Playwright Result
+
+```
+Running 3 tests using 1 worker
+  3 passed (5.7s)
+```
+
+| Test | Status |
+|---|---|
+| user A JWT cannot access user B family-health-context → 404 | ✅ PASS |
+| request without Authorization header → 401 | ✅ PASS |
+| user A JWT cannot access user B family-recommendations → 404 | ✅ PASS |
+
+**Scope note**: browser-context/API smoke (not full UI smoke). All HTTP calls use Playwright's `request` fixture (APIRequestContext) directly to the backend. The frontend UI login flow is not exercised — multi-user `storageState` fixture remains an open gap.
+
+---
+
+### 8. TypeScript Result
+
+```
+npx tsc --noEmit
+tsc exit: 0  (0 errors)
+```
+
+---
+
+### 9. Commit List
+
+| Commit | Hash | Message |
+|---|---|---|
+| C1 | `8af3262` | `test(e2e): add real-auth Playwright fixture for browser auth smoke` |
+| C2 | `78afae7` | `test(e2e): add cross-user browser-context auth negative smoke` |
+| C3 | (this commit) | `docs(report): P14 browser auth fixture foundation report` |
+
+---
+
+### 10. Known Limitations / Unknown / Inferred
+
+| Category | Detail |
+|---|---|
+| **Limitation** | Tests use `request` (APIRequestContext), not `page` — no browser UI rendering, no JS navigation, no DOM assertion. Full UI smoke requires storageState + login UI fixture (P15 candidate). |
+| **Limitation** | `playwright.config.ts` `webServer` starts Next.js production server (`next start`) before any test run. Tests pass because a production build exists in `.next/`. If the build is stale, `next start` may fail. |
+| **Limitation** | Test user credentials (`e2e-user-a@example.com`, `e2e-user-b@example.com`) are now seeded in the running SQLite DB. They persist across restarts. |
+| **Inferred** | `reuseExistingServer: false` in playwright config means Playwright always starts a fresh Next.js process on port 3010. If port 3010 is occupied, tests will fail with server-start error. |
+| **Unknown** | Whether CI will have a running backend at `localhost:8000`. Backend must be started before Playwright tests in any CI pipeline. |
+| **Open gap** | `storageState` multi-user login fixture for full UI smoke — not implemented in this task. |
+
+---
+
+### Final Classification
+
+**`P14_BROWSER_AUTH_NEGATIVE_SMOKE_VERIFIED`**
+
+- Real auth fixture implemented (`frontend/tests/e2e/fixtures/auth.ts`)
+- Cross-user negative smoke: 3/3 PASS (5.7s)
+- TypeScript: 0 errors
+- Boundary verified: `get_target_person()` ownership filter enforced end-to-end
+
+---
+
+---
+
+## APPENDIX: P13-FINALIZE-AND-BROWSER-AUTH-SMOKE (2026-05-23)
 
 ## P13-FINALIZE-AND-BROWSER-AUTH-SMOKE (2026-05-23)
 
