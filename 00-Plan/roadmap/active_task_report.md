@@ -1,5 +1,23 @@
 # Active Task Report
 
+## P36-LAB-RISK-RESPONSE-AUDIT (2025-07-27)
+
+**Final Classification: `P36_LAB_RISK_SMOKE_VERIFIED`**
+
+### Summary
+- Audited: `api/documents.py` (8 routes), `api/risk_alerts.py` (5 routes), `schemas/documents.py`, `schemas/risk_alerts.py`
+- **No C.GAP found** — all schema-based routes exclude user_id/storage fields
+- B.PARTIAL routes: `GET /documents/lab-history`, `GET /risk-alerts/unread-count`, `POST /risk-alerts/{id}/dismiss` — explicit safe dict construction, regression tests added
+- 12 regression tests added → 12/12 PASS
+- runtime-smoke: 113 passed, 2 skipped
+- Commits: `e4929a8` (tests), `8ecb96e` (docs)
+
+### Next: P37 — Health Score & AI Summary Response Audit
+- Target: `AISummary` ORM has `user_id` — verify not in response schemas
+- Files: `backend/app/api/health_score.py`, `backend/app/api/ai_summary.py` (if exist), corresponding schemas
+
+---
+
 ## P35-METRICS-SYMPTOMS-RESPONSE-AUDIT (2026-05-24)
 
 **Final Classification: `P35_METRICS_SYMPTOMS_LEAKAGE_HARDENED`**
