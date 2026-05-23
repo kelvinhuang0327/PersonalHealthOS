@@ -1,5 +1,81 @@
 # Active Task Report
 
+## P20-REPORT-DOWNLOAD-AUTHORIZATION-CLOSED (2026-05-23)
+
+**Final Classification: `P20_REPORT_DOWNLOAD_AUTHORIZATION_CLOSED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `b37cab2` (P19 gap doc) ✅ |
+| Authorization phrase | `YES modify frontend/app/components/platform/report-export-modal.tsx` ✅ confirmed in P20 task |
+
+---
+
+### 2. Problem
+
+P19 identified that `GET /api/v1/reports/download/{report_id}` accepted a URL-only
+`?token=` parameter — no `Authorization` header required. A browser `<a href target="_blank">`
+cannot attach headers, so adding `Depends(get_current_user)` to the download endpoint would
+have broken the UI. This was documented as `P19_DOWNLOAD_JWT_REQUIRED_FRONTEND_CONTRACT_GAP`.
+
+P20 is the atomic closure: change the frontend to use `fetch+blob`, then harden the backend
+with a JWT owner check.
+
+---
+
+### 3. Changes
+
+| Step | File | Change |
+|---|---|---|
+| C1 | `frontend/app/components/platform/report-export-modal.tsx` | Replace `<a href target="_blank">下載報告</a>` with authenticated `fetch+blob+createObjectURL` handler reading JWT from `localStorage.getItem('token')` |
+| C2 | `backend/app/api/reports.py` | Add `current_user: Annotated[User, Depends(get_current_user)]` to `download_report`; insert ownership check (`owner_user_id != current_user.id → 404`) before token check |
+| C3 | `backend/tests/test_report_authorization_hardening.py` | Add `test_download_cross_user_denied` to `TestReportDownloadTokenOnly` — user B + user A's valid token → 404 |
+
+**Security order in `download_report` after C2:**
+1. Report exists + status == ready → else 404 (no existence leak)
+2. **JWT owner match** → else 404 (ownership gate; 404 not 403 to avoid confirming report existence to wrong user)
+3. Token (UUID) match → else 403
+4. Token not expired → else 403
+5. `FileResponse` 
+
+Both conditions (valid JWT as owner **AND** valid one-time token) are now required.
+
+---
+
+### 4. Test Results
+
+```
+backend/tests/test_report_authorization_hardening.py  9 passed
+make backend-smoke                                    10 passed
+npx tsc --noEmit                                       0 errors
+```
+
+---
+
+### 5. Commits
+
+| SHA | Message |
+|---|---|
+| `0be0368` | `fix(frontend): use authenticated blob fetch for report downloads` |
+| `4c33e35` | `fix(auth): require report owner JWT for report downloads` |
+| `15102e1` | `test(auth): add report download owner authorization regression` |
+| final | `docs(report): P20 report download authorization closure report` |
+
+---
+
+### 6. Known Limitations
+
+- `_REPORT_STATE` is an in-memory `dict` — state is lost on backend restart, no persistent report storage.
+- `_set_user()` test helper overrides `get_current_user` via `dependency_overrides` — tests never exercise real JWT decode. Real JWT path is covered by `test_real_token_auth_negative.py`.
+
+---
+
 ## P19-REPORT-DOWNLOAD-JWT-HARDENING (2026-05-23)
 
 **Final Classification: `P19_DOWNLOAD_JWT_REQUIRED_FRONTEND_CONTRACT_GAP`**
