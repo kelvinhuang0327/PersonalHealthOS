@@ -1,5 +1,91 @@
 # Active Task Report
 
+## P34-DASHBOARD-RESPONSE-AUDIT (2026-05-24)
+
+**Final Classification: `P34_DASHBOARD_SMOKE_VERIFIED`**
+
+---
+
+### 1. Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- HEAD at start: `1fa28c4` (P33 docs commit) ✅
+- Working tree: clean ✅
+
+### 2. Scope
+
+`backend/app/api/dashboard.py` — 3 routes, all using explicit `response_model=`.
+`backend/app/schemas/dashboard.py` — Pydantic models; `DashboardOverviewV2Response` contains multiple `list[dict[str, Any]]` and `dict[str, Any]` fields.
+All contributing service functions in `backend/app/services/health_ai_engine/` and `backend/app/services/decision_engine_service.py` audited.
+
+### 3. Route Audit Inventory
+
+| Route | Response Model | Dynamic dict[str, Any] Fields | Data Sources | Classification | Action |
+|---|---|---|---|---|---|
+| GET /dashboard/overview | `DashboardOverviewResponse` | `latest_metrics`, `active_alerts`, `summary` | HealthMetric ORM (explicit field selection), risk alerts | A. SAFE | Regression tests added |
+| GET /dashboard/trends | `DashboardTrendsResponse` | None — all `list[TrendPoint]` (typed Pydantic) | HealthMetric ORM | A. SAFE | Regression tests added |
+| GET /dashboard (v2) | `DashboardOverviewV2Response` | `alerts`, `insights`, `recent_symptoms`, `recent_metrics`, `recent_labs`, `trends`, `predictive_insights`, `anomaly_alerts`, `clinical_labels`, `recommendations`, `health_narrative_v2`, `health_narrative_v3`, `prioritized_actions` | Multiple — see below | A. SAFE | Regression tests added |
+
+### 4. DashboardOverviewV2Response Dict Fields — Detailed Audit
+
+| Field | Shape | Data Source | Sensitive Fields? | Classification |
+|---|---|---|---|---|
+| `alerts` | `list[dict]` | Explicit construction: `id`, `severity`, `title`, `description`, `created_at`, `rule_id`, `category`, `priority`, `confidence`, `evidence_level`, `guideline_source`, `medical_disclaimer` | None | A.SAFE |
+| `insights` | `list[dict]` | Explicit construction: `id`, `insight_type`, `severity`, `title`, `summary`, `recommendation`, `generated_at`, `rule_id`, `category`, `priority`, `confidence`, `evidence_level`, `guideline_source`, `guideline_version`, `medical_disclaimer` | None | A.SAFE |
+| `recent_symptoms` | `list[dict]` | ORM explicit: `id`, `symptom`, `occurred_at`, `note`, `estimated_start_date`, `estimated_duration_days` | No `user_id` | A.SAFE |
+| `recent_metrics` | `list[dict]` | ORM explicit: `id`, `recorded_at`, `systolic_bp`, `diastolic_bp`, `heart_rate`, `blood_glucose`, `weight_kg`, `sleep_hours`, `steps` | No `user_id` | A.SAFE |
+| `recent_labs` | `list[dict]` | ORM explicit: `id`, `report_date`, `report_type`, `created_at`, `abnormal_items` | No `file_path`, `storage_key`, `user_id` | A.SAFE |
+| `predictive_insights` | `list[dict]` | `generate_predictive_insights()` — health clinical text only | None | A.SAFE |
+| `anomaly_alerts` | `list[dict]` | `detect_anomalies()` — health clinical text only | None | A.SAFE |
+| `clinical_labels` | `list[dict]` | `derive_clinical_labels()` — health label + guideline metadata | None | A.SAFE |
+| `recommendations` | `list[dict]` | `generate_recommendations()` — health text + guideline metadata | None | A.SAFE |
+| `health_narrative_v2` | `dict` | `generate_health_narrative_v2()` — narrative text lists | None | A.SAFE |
+| `health_narrative_v3` | `dict` | `generate_health_narrative_v3()` — narrative text lists | None | A.SAFE |
+| `prioritized_actions` | `list[dict]` | ORM explicit: `id`, `title`, `category`, `status`, `priority`, `frequency`, `impact_status`, `reminder_status`, `streak_count` | No `user_id` | A.SAFE |
+| `decision_items` | `list[UnifiedDecisionItem]` | `build_decision_items()` → `UnifiedDecisionItem` (typed Pydantic) | None | A.SAFE |
+| `health_score.components` | `dict` | Explicit score components: `blood_pressure`, `bmi`, `lab_results`, penalties | None | A.SAFE |
+
+### 5. Confirmed Safety Properties
+
+1. **No `password_hash`** — zero occurrences in all dashboard-contributing services
+2. **No `storage_bucket` / `storage_key`** — `LabReport.storage_bucket` / `.storage_key` never forwarded to client; only `id`, `report_date`, `report_type`, `created_at`, `abnormal_items` are serialized
+3. **No `file_path` / `download_token`** — same as above
+4. **No `user_id`** in nested metric/symptom/lab items — all ORM queries use `current_user.id` as a filter only, never return it in the dict payload
+5. **`UnifiedDecisionItem`** is strongly-typed Pydantic — no arbitrary dict passthrough possible
+6. **`enrich_explainability()`** only adds `guideline_source`, `guideline_version`, `evidence_level` — all clinical metadata, no secrets
+7. **Cross-user isolation** — `get_target_person` (deps.py:81) filters `owner_user_id == current_user.id` on all 3 routes; cross-user `person_id` → 404
+
+### 6. Tests Added
+
+**`backend/tests/test_dashboard_response_leakage.py`** — 16 tests, all PASS
+
+| Class | Tests | Purpose |
+|---|---|---|
+| `TestDashboardOverviewLeakage` | 3 | Status 200 + recursive scan + no user_id in latest_metrics |
+| `TestDashboardTrendsLeakage` | 3 | Status 200 + recursive scan + TrendPoint key shape enforcement |
+| `TestDashboardV2Leakage` | 7 | Full v2 recursive scan; recent_metrics/labs/symptoms/alerts/decision_items/health_score individual scans |
+| `TestCrossUserDashboardIsolation` | 3 | Cross-user person_id → 404 on overview, trends, and v2 |
+
+Recursive scanner: checks `password_hash`, `hashed_password`, `password`, `storage_bucket`, `storage_key`, `file_path`, `download_token`, `secret_key`, `secret`, `is_superuser`, `is_staff`.
+
+### 7. Commits
+- `3d410d8` — `test(security): add dashboard response leakage regression (P34)`
+
+### 8. runtime-smoke Results
+| Stage | Suite | Result |
+|---|---|---|
+| 1 | Health check | 3 passed |
+| 2 | Security smoke | 29 passed, 2 skipped |
+| 3 | Config smoke | 24 passed |
+| 4 | Validation smoke | 57 passed |
+| **Total** | | **113 passed, 2 skipped** |
+
+### 9. Known Limitations
+- `health_narrative_v2` and `health_narrative_v3` are `dict[str, Any]` — runtime recursive scan covers these but they are not individually exhausted in static analysis; snapshot tests would be needed if narrative service structure changes significantly.
+- Cache layer (`cache_set`/`cache_get`) uses in-memory dict; if upgraded to Redis, the cached payload is a `model_dump(mode='json')` snapshot of the same `DashboardOverviewV2Response` — same safe field set.
+
+---
+
 ## P33-HEALTH-ASSISTANT-RESPONSE-AUDIT (2026-05-23)
 
 **Final Classification: `P33_HEALTH_ASSISTANT_SMOKE_VERIFIED`**
