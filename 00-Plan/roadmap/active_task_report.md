@@ -1,5 +1,106 @@
 # Active Task Report
 
+## P21-CI-ENTRYPOINT-HARDENING (2026-05-23)
+
+**Final Classification: `P21_SECURITY_SMOKE_AND_CI_READY`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `b26cf25` (P20 report) ✅ |
+| Dirty files | none ✅ |
+
+---
+
+### 2. Current Command Inventory (pre-P21)
+
+| Command | Classification | File |
+|---|---|---|
+| `make backend-test` | PARTIAL — re-creates `.venv` every run | Makefile |
+| `make backend-smoke` | SAFE — `.venv/bin/python -m pytest`, 2 files (P12/P13 only) | Makefile |
+| `PYTHONPATH=. pytest -q` (CI) | UNSAFE — bare `pytest` not guaranteed to use correct interpreter | `.github/workflows/ci-cd.yml:67` |
+| `npm run e2e` (CI) | PARTIAL — runs full Playwright suite; backend not started in CI frontend job | `.github/workflows/ci-cd.yml:41` |
+| `backend-auth-audit` | MISSING — no target covering full P13–P20 stack | — |
+| `security-smoke` | MISSING | — |
+| `frontend-auth-smoke` | MISSING | — |
+| `frontend-tsc` | MISSING | — |
+
+---
+
+### 3. Changes
+
+#### Makefile — 4 new targets added
+
+| Target | Description |
+|---|---|
+| `backend-auth-audit` | Full P13–P20 auth regression: 4 test files, 31 collected, `.venv/bin/python -m pytest` |
+| `frontend-tsc` | `cd frontend && npx tsc --noEmit` — no server required |
+| `security-smoke` | `backend-auth-audit` + `frontend-tsc` — complete non-server security gate |
+| `frontend-auth-smoke` | Targeted Playwright: `auth-negative`, `auth-ui-negative`, `auth-ui-multi` only |
+
+`backend-auth-audit` covers:
+- `tests/test_auth_negative_smoke.py` (P12)
+- `tests/test_real_token_auth_negative.py` (P13/P14)
+- `tests/test_person_id_authorization_audit.py` (P17)
+- `tests/test_report_authorization_hardening.py` (P18+P20)
+
+#### CI workflow (`.github/workflows/ci-cd.yml`)
+
+- Line 67: `PYTHONPATH=. pytest -q` → `PYTHONPATH=. python -m pytest -q`
+- CI installs to GitHub-managed Python via `pip install -r requirements-dev.txt` (no venv);  
+  `python -m pytest` is more robust than bare `pytest` for PATH lookup.
+- Change is minimal (1 line). No new services, no new cache.
+
+#### backend/README.md (local only — untracked)
+
+- Added auth audit commands section with table of covered files.
+- File is excluded by `~/.gitignore_global` rule `README.md` — documented as known limitation.
+
+---
+
+### 4. Validation Results
+
+```
+make backend-auth-audit    29 passed, 2 skipped (expected SQLite UUID skips)
+make security-smoke        29 passed, 2 skipped + 0 tsc errors
+make backend-smoke         10 passed (P12/P13 regression)
+```
+
+---
+
+### 5. Commits
+
+| SHA | Message |
+|---|---|
+| `ae0cf5c` | `chore(governance): add reproducible auth security smoke targets` |
+| `69badf4` | `ci: use canonical backend auth smoke entrypoint` |
+| final | `docs(report): P21 CI entrypoint hardening report` |
+
+---
+
+### 6. CI Status
+
+| Job | Status |
+|---|---|
+| Backend `Run tests` | Fixed: `pytest -q` → `python -m pytest -q` |
+| Frontend `E2E` | **NOT UPDATED** — `npm run e2e` runs full suite without backend; backend is not started in the frontend CI job. Full e2e CI hardening deferred (requires service containers or job dependency). Documented as P22 candidate. |
+
+---
+
+### 7. Known Limitations
+
+- `backend/README.md` documentation update is local-only; global `~/.gitignore_global:README.md` prevents commit without `-f`. 
+- `make frontend-auth-smoke` requires: (1) backend running at `localhost:8000`, (2) `npm run build` completed. Not self-contained; documented in Makefile comment.
+- `_REPORT_STATE` remains in-memory; report tests would fail after server restart (not a CI risk since tests use TestClient).
+- CI frontend job still runs full `npm run e2e`; non-auth E2E specs (`health-platform.spec.ts`, `platform-app.spec.ts`) may fail without a real backend. Deferred.
+
+---
+
 ## P20-REPORT-DOWNLOAD-AUTHORIZATION-CLOSED (2026-05-23)
 
 **Final Classification: `P20_REPORT_DOWNLOAD_AUTHORIZATION_CLOSED`**
