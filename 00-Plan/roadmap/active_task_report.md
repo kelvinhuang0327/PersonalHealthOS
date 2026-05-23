@@ -1,4 +1,142 @@
-# Active Task Report — P15-REAL-JWT-STORAGESTATE-UI-NEGATIVE-SMOKE (2026-05-23)
+# Active Task Report
+
+## P16-MULTI-BROWSER-STORAGESTATE-UI-NEGATIVE-SMOKE (2026-05-23)
+
+**Final Classification: `P16_FULL_UI_AUTH_NEGATIVE_SMOKE_VERIFIED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `2a81426` (P15 final report) ✅ |
+| Dirty files at start | None ✅ |
+
+---
+
+### 2. Objective
+
+Extend P15 to full multi-browser simultaneous sessions:
+- **Positive control**: userB can access their own persons data (userB.personId in response, userA.personId absent)
+- **Cross-user negative**: userA injected with userB.personId gets HTTP 404 + error UI with no data leakage
+- **storageState round-trip**: JWT persists across a fresh browser context without `addInitScript`
+
+---
+
+### 3. Root Cause Analysis — Two Failures Fixed
+
+#### Failure 1 — `waitForResponse` filter excluded `?person_id=...` URLs
+`api.request()` appends `?person_id=<id>` to every request once `localStorage.person_id` is set. The filter `!url.includes('person_id')` excluded all matching responses → 15s timeout.
+**Fix**: changed filter to `/\/api\/v1\/persons(\?|$)/.test(url)` — matches path regardless of query string.
+
+#### Failure 2 — Route handler throw on context close propagated to test runner
+`contextA.close()` while dashboard API calls were in-flight caused `route.fetch()` to throw `"Target page, context or browser has been closed"`. Playwright propagated this to the test, ending it before `contextFromStorageState` could run.
+**Fix**: wrapped `route.fetch()` in try-catch inside `installCORSBridge`; on catch, calls `route.abort().catch(() => {})` silently.
+
+---
+
+### 4. Architecture
+
+#### `installCORSBridge` (hardened)
+```typescript
+try {
+  const response = await route.fetch()
+  await route.fulfill({ response, headers: { ...response.headers(), ...CORS_HEADERS } })
+} catch {
+  await route.abort().catch(() => {})  // context closed while in-flight
+}
+```
+
+#### `contextFromStorageState`
+```typescript
+export async function contextFromStorageState(browser: Browser, statePath: string): Promise<BrowserContext> {
+  const context = await browser.newContext({ storageState: statePath })
+  await installCORSBridge(context)  // route handlers NOT persisted in storageState
+  return context
+}
+```
+
+#### Test 1 — Simultaneous sessions
+- `Promise.all([bootstrapWithRealJWT(ctxA), bootstrapWithRealJWT(ctxB)])` — two independent CORS bridges
+- Positive control: reload pageB, assert `GET /api/v1/persons` → 200, contains userB.personId, not userA.personId
+- Cross-user: inject userB.personId into pageA localStorage, reload, assert family-health-context → 404, error text visible, body does not contain userB.personId
+
+#### Test 2 — storageState round-trip
+- Bootstrap ctxA, `ctxA.storageState({ path: tmpFile })`, close ctxA
+- `contextFromStorageState(browser, tmpFile)` → fresh context, no `addInitScript`
+- Navigate to dashboard, assert `GET /api/v1/persons` → 200, `localStorage.person_id === userA.personId`
+
+---
+
+### 5. Test Results
+
+| Test | Result | Duration |
+|---|---|---|
+| Simultaneous sessions — userB positive + userA cross-user 404 | ✅ PASS | ~9.6s combined |
+| storageState round-trip — auth persists without addInitScript | ✅ PASS | ~9.6s combined |
+| P15 regression (auth-ui-negative.spec.ts) | ✅ PASS | |
+| P14 regression (auth-negative.spec.ts × 3) | ✅ PASS | |
+| **Total** | **6/6** | **~18s** |
+
+---
+
+### 6. Commits
+
+| Hash | Message |
+|---|---|
+| `d59c11c` | test(e2e): extract installCORSBridge + add contextFromStorageState + harden route teardown (P16) |
+| `5d652cc` | test(e2e): add multi-browser storageState auth isolation smoke (P16) |
+| _(this commit)_ | docs(report): P16 multi-browser storageState UI auth smoke report |
+
+---
+
+### 7. Files Changed
+
+| File | Change |
+|---|---|
+| `frontend/tests/e2e/fixtures/auth-ui.ts` | Extracted `installCORSBridge`, added `contextFromStorageState`, hardened route handler |
+| `frontend/tests/e2e/auth-ui-multi.spec.ts` | New — 2 multi-browser tests |
+
+---
+
+### 8. CTO Summary (10 lines)
+
+P16 extends P15's JWT-in-localStorage auth isolation to full multi-browser simultaneous sessions. Two independent Playwright browser contexts (userA + userB) each get their own CORS bridge and JWT bootstrap. Positive control confirms userB's JWT returns their own person records and excludes userA's. Cross-user negative confirms userA injected with userB's personId gets HTTP 404 from the backend and the error UI renders with no data leakage. storageState round-trip proves that Playwright's `context.storageState()` + `browser.newContext({ storageState })` preserves the JWT across a fresh browser context without any `addInitScript` re-injection. Two bugs were fixed: (1) `api.request()` appends `?person_id=...` to all requests — the URL filter needed a path-only regex; (2) `contextA.close()` while dashboard requests were in-flight caused `route.fetch()` to throw into the test runner — fixed by try-catch inside `installCORSBridge`. All 6 tests pass (P14 × 3 + P15 × 1 + P16 × 2) in ~18s total. Auth isolation is now verified at API, UI network, UI DOM, multi-browser, and storageState persistence layers.
+
+---
+
+### 9. Next 24h Prompt
+
+```
+Resuming PersonalHealthOS on main (HEAD: <see git log>).
+P13–P16 are COMPLETE. All 6 e2e auth isolation tests pass.
+
+P17 PLAN — Backend Authorization Enforcement Audit:
+The P14–P16 test suite proved that the frontend correctly scopes requests to the
+authenticated user's person_id. The next layer to verify is that the FastAPI backend
+ALSO enforces this scoping — i.e., that endpoint handlers validate the JWT sub claim
+against the requested person_id and return 403/404 for cross-user attempts at the
+API level (not just via the frontend's person_id injection trick).
+
+Task: Audit all FastAPI routes that accept a person_id path/query parameter and verify
+they check `current_user.id == person_id` (or equivalent). For any route missing this
+check, add the guard and write a backend pytest that directly calls the endpoint with
+a valid JWT but a foreign person_id to prove 403 is returned.
+
+Governance:
+- Branch: main
+- Do NOT modify frontend/**
+- Do NOT run full e2e suite
+- Do NOT push or create branches
+- Run only the new pytest file(s) to verify
+```
+
+---
+
+## P15-REAL-JWT-STORAGESTATE-UI-NEGATIVE-SMOKE (2026-05-23)
 
 ## P15-REAL-JWT-STORAGESTATE-UI-NEGATIVE-SMOKE (2026-05-23)
 
