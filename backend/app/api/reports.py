@@ -213,10 +213,16 @@ def get_report_status(
 
 
 @router.get('/download/{report_id}')
-def download_report(report_id: str, token: str):
+def download_report(
+    report_id: str,
+    token: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+):
     state = _REPORT_STATE.get(report_id)
     if not state or state.get('status') != 'ready':
         raise HTTPException(status_code=404, detail='Report not ready')
+    if str(state.get('owner_user_id')) != str(current_user.id):
+        raise HTTPException(status_code=404, detail='Report not found')
     if token != state.get('token'):
         raise HTTPException(status_code=403, detail='Invalid token')
     if datetime.now(timezone.utc) > state['expires_at']:
