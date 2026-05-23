@@ -1,5 +1,126 @@
 # Active Task Report
 
+## P27-INPUT-SANITIZATION-INJECTION-AUDIT (2026-05-23)
+
+**Final Classification: `P27_INJECTION_HARDENED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `37736a1` (P26 tests) ✅ |
+| Dirty files | none ✅ |
+
+---
+
+### 2. Audit Scope
+
+Full input sanitization / injection surface audit across all routes. Five injection
+categories checked: SQL injection, filesystem path traversal, AI prompt injection,
+log injection, module/parameter injection.
+
+No auth changes. No new dependencies. No frontend changes.
+
+---
+
+### 3. Surface Classification (Final)
+
+| Surface | Sink Type | Guard Before P27 | Classification | Action |
+|---|---|---|---|---|
+| All DB queries (every route) | SQL | SQLAlchemy ORM — parameterized | **SAFE A** | None |
+| `conn.execute(text('SELECT 1'))` in `main.py` | SQL | Hardcoded query, no user input | **SAFE A** | None |
+| `upload_file()` storage key | Filesystem | UUID-based key, never uses filename | **SAFE A** | None |
+| `_local_path_from_key()` | Filesystem | `startswith(root)` guard | **SAFE A** | None |
+| `original_filename = file.filename` | DB metadata + PDF | ❌ No basename normalization | **GAP C → FIXED** | `os.path.basename` applied |
+| `evaluate_module` `module_name` URL param | Module dispatch | Allowlist `{'health_check_interpreter','symptom_analysis','health_risk_prediction'}` | **SAFE A** | None |
+| Fixed-route module names | Module dispatch | Hardcoded in handler | **SAFE A** | None |
+| `_build_prompt()` `focus` field | AI prompt | `max_length=200` only (P24) | **PARTIAL B** | Documented — self-contained risk |
+| `_load_prompt_template()` module param | Filesystem | `PROMPT_FILES` dict guard | **SAFE A** | None |
+| `report_id` URL param | Dict lookup + FileResponse | `_REPORT_STATE.get(id)` → None → 404 | **SAFE A** | None |
+| Download `file_path` | FileResponse | Server-set UUID path; not from client | **SAFE A** | None |
+| Request logger | Log | Logs only method/path/status/latency/ip; `json.dumps(ensure_ascii=True)` | **SAFE A** | None |
+| PDF `original_filename` content | PDF bytes | Parens escaped; covered by GAP C fix | **SAFE A (after fix)** | Covered by filename fix |
+
+---
+
+### 4. Fix Applied — GAP C: `original_filename` Path Traversal in DB Metadata
+
+**File:** `backend/app/api/documents.py`
+
+**Symptom:** Uploading a file named `../../evil.pdf` (valid PDF extension, valid
+MIME type) would store the raw string `../../evil.pdf` in `MedicalDocument.original_filename`.
+The filesystem was already safe (storage key is `documents/<user_id>/<uuid4>.pdf`).
+The DB metadata and PDF report rendering received the un-sanitized value.
+
+**Fix (1 line):**
+```python
+# Before (line 42):
+original_filename=file.filename or 'unknown',
+
+# After:
+original_filename=os.path.basename(file.filename or '') or 'unknown',
+```
+`os.path.basename('../../evil.pdf')` → `'evil.pdf'`.
+
+Also added `import os` at the top of `documents.py` (stdlib, no new dependency).
+
+---
+
+### 5. Documented Gap — PARTIAL B: `focus` Prompt Injection Surface
+
+**File:** `backend/app/services/ai_modules_service.py` → `_build_prompt()`
+
+`focus` is interpolated directly into the AI prompt string:
+```python
+focus_text = focus or '無特定焦點，請綜合分析。'
+f'分析焦點: {focus_text}\n'
+```
+
+**Risk level:** Low. The `focus` field is:
+- Bounded to `max_length=200` chars (P24 hardening)
+- Requires authentication to reach the route
+- Self-contained: an attacker can only affect their own AI analysis output
+- No data leakage to other users is possible through this vector
+- AI model is only called when `settings.openai_api_key` is set; test/default env uses rule-based fallback
+
+**Decision:** Document only. Structural prompt injection mitigations (e.g.,
+instruction delimiters, output format enforcement) are AI model layer concerns
+outside the scope of backend hardening. The bounded max_length from P24 already
+limits the surface area.
+
+---
+
+### 6. Tests Created
+
+**File:** `backend/tests/test_injection_smoke.py` — 7 tests, all pass
+
+```
+TestDocumentFilenameInjection::test_path_traversal_filename_stored_as_basename   PASS
+TestAIModuleInjection::test_unknown_module_name_rejected                         PASS
+TestAIModuleInjection::test_prompt_injection_focus_does_not_crash                PASS
+TestReportIdentifierInjection::test_status_unknown_id_returns_404                PASS
+TestReportIdentifierInjection::test_status_injection_strings_return_404          PASS
+TestReportIdentifierInjection::test_download_unknown_report_returns_404          PASS
+TestReportIdentifierInjection::test_download_wrong_token_returns_403             PASS
+```
+
+Full regression: **789 passed, 2 skipped, 0 failures** (13.6 s)
+
+---
+
+### 7. Commits
+
+| SHA | Message |
+|---|---|
+| `43912e8` | `fix(security): normalize uploaded filename to basename before DB storage` |
+| `f2a2209` | `test(security): P27 injection surface smoke regression (7 tests)` |
+
+---
+
 ## P26-RATE-LIMIT-BRUTE-FORCE-AUDIT (2026-05-23)
 
 **Final Classification: `P26_RATE_LIMIT_SMOKE_VERIFIED`**
