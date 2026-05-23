@@ -1,5 +1,133 @@
 # Active Task Report
 
+## P25-DEPLOYMENT-SMOKE-RUNTIME-READINESS (2026-05-23)
+
+**Final Classification: `P25_RUNTIME_HEALTH_ENDPOINT_HARDENED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `6537e33` (P24 report) ✅ |
+| Dirty files | none ✅ |
+
+---
+
+### 2. Audit Scope
+
+Runtime readiness audit — verifying that:
+- Health endpoints exist and return the correct contract
+- A single `make runtime-smoke` target chains health + security regression
+- Runtime configuration gaps are inventoried and classified
+
+No DB schema changes. No auth logic changes. No new production dependencies.
+
+---
+
+### 3. Inventory Classification
+
+| Item | Classification |
+|---|---|
+| `GET /health` → 200, `{status: ok}` | **SAFE A** — exists, correct |
+| `GET /health/live` → 200, `{status: alive}` | **SAFE A** — exists, correct |
+| `GET /health/ready` → 200 (DB up) / 503 (DB down) | **SAFE A** — DB probed via `SELECT 1` |
+| `InMemoryRateLimitMiddleware` skips `/health` paths | **SAFE A** — confirmed in `rate_limit.py` |
+| `app_auto_create_tables=True` on startup | **SAFE A** — documented behavior |
+| `docker-compose.local.yml` starts PostgreSQL only | **SAFE A** — correct by design |
+| `smoke_check.py` is an orchestrator task checker | **PARTIAL B** — NOT a deployment health check; named misleadingly |
+| `rate_limit_enabled=False` by default | **PARTIAL B** — middleware exists but must be enabled via `RATE_LIMIT_ENABLED=true` |
+| No health endpoint pytest coverage | **GAP C** → **FIXED** — `test_runtime_smoke.py` added |
+| No `make runtime-smoke` target | **GAP C** → **FIXED** — added to `Makefile` |
+| `jwt_secret_key` default is an insecure placeholder | **GAP C** → DOCUMENTED (no code change; mitigated by `.env.local` override) |
+
+---
+
+### 4. Security Gaps Documented (no code change warranted)
+
+#### `jwt_secret_key` insecure default
+- **Location**: `backend/app/core/config.py`
+- **Issue**: Default value is a well-known placeholder. If deployed to a production environment without an explicit env override, all JWTs would share a predictable signing key.
+- **Current mitigation**: `.env.local` overrides with a non-default local value. Production deployments are expected to set `JWT_SECRET_KEY` via environment variable.
+- **Recommended hardening** (future): Add a startup guard in `main.py` that raises `RuntimeError` when `app_env == 'production'` and `jwt_secret_key` matches the insecure default.
+
+#### `rate_limit_enabled=False`
+- **Location**: `backend/app/core/config.py`
+- **Issue**: `InMemoryRateLimitMiddleware` is implemented correctly but disabled by default. Public deployments without `RATE_LIMIT_ENABLED=true` have no in-process rate limiting.
+- **Note**: `InMemoryRateLimitMiddleware` already correctly exempts `/health` paths.
+
+#### `smoke_check.py` naming
+- **Location**: root `smoke_check.py`
+- **Issue**: The file name implies deployment health checking but it queries the `OrchestratorDB` task pool. Developers may wrongly assume it verifies API readiness.
+- **Resolution**: This audit adds `make runtime-smoke` → `test_runtime_smoke.py` as the canonical health smoke entry point.
+
+---
+
+### 5. Fixes Applied
+
+| Commit | SHA | Description |
+|---|---|---|
+| C1 | `f09a530` | `test(runtime): add health endpoint contract smoke regression` |
+| C2 | `a5a8d6d` | `chore(governance): add runtime-smoke Makefile target` |
+
+#### C1 — `backend/tests/test_runtime_smoke.py`
+Three in-process TestClient tests:
+- `test_health_returns_ok` → `GET /health` → 200, `{status: ok, service: ...}`
+- `test_health_live_returns_alive` → `GET /health/live` → 200, `{status: alive, service: ...}`
+- `test_health_ready_contract` → `GET /health/ready` → 200 or 503 (not 500), `{status: ready|not_ready, ...}`
+
+No auth overrides needed (public endpoints). Passes in CI regardless of PostgreSQL availability.
+
+#### C2 — `Makefile` — `runtime-smoke` target
+```
+make runtime-smoke
+```
+Runs:
+1. `tests/test_runtime_smoke.py` (health endpoint contract, in-process)
+2. `make security-smoke` (backend-auth-audit + frontend-tsc)
+
+No running server required for any step.
+
+---
+
+### 6. Regression Gate
+
+| Gate | Result |
+|---|---|
+| `test_runtime_smoke.py` (3 tests) | **3/3 PASS** |
+| `make runtime-smoke` full chain | **EXIT:0** — 29 passed, 2 skipped |
+| P23 / P24 test files | **unmodified** |
+
+---
+
+### 7. Files Changed
+
+| File | Change |
+|---|---|
+| `backend/tests/test_runtime_smoke.py` | **CREATED** — 64 lines, 3 health endpoint tests |
+| `Makefile` | **UPDATED** — `runtime-smoke` target added (7 lines) |
+| `00-Plan/roadmap/active_task_report.md` | **UPDATED** — P25 block prepended |
+
+---
+
+### 8. Final Status
+
+```
+P25_RUNTIME_HEALTH_ENDPOINT_HARDENED
+HEAD: a5a8d6d
+make runtime-smoke: EXIT:0
+Health endpoint contract: VERIFIED
+Gaps documented: jwt_secret_key default, rate_limit_enabled=False, smoke_check.py naming
+Next: P26 — TBD
+```
+
+---
+
+---
+
 ## P24-BOUNDARY-INPUT-VALIDATION (2026-05-23)
 
 **Final Classification: `P24_BOUNDARY_INPUT_VALIDATION_HARDENED`**
