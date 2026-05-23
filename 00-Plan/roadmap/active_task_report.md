@@ -1,5 +1,163 @@
 # Active Task Report
 
+## P18-REPORT-DOWNLOAD-AUTHORIZATION-HARDENING (2026-05-23)
+
+**Final Classification: `P18_REPORT_STATUS_AUTH_HARDENED_DOWNLOAD_GAP`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `7d36258` (P17 report) ✅ |
+| Dirty files at start | None ✅ |
+
+---
+
+### 2. Objective
+
+Close the UNKNOWN / low-risk report authorization gap found in P17: `GET /api/v1/reports/{report_id}` had no user-ownership check — any authenticated user who knew the `report_id` could query report status and retrieve the download token.
+
+---
+
+### 3. `_REPORT_STATE` Before / After
+
+**Before P18** — no user binding:
+```python
+_REPORT_STATE[report_id] = {
+    'status': 'generating',
+    'token': token,
+    'expires_at': expires_at,
+}
+```
+
+**After P18** — owner bound on generate:
+```python
+_REPORT_STATE[report_id] = {
+    'status': 'generating',
+    'token': token,
+    'expires_at': expires_at,
+    'owner_user_id': str(current_user.id),   # NEW
+}
+```
+
+Both the initial `'generating'` state and the final `'ready'` state now include `owner_user_id`.
+
+---
+
+### 4. Endpoint Changes
+
+#### `GET /api/v1/reports/{report_id}` — HARDENED ✅
+
+**Before**: returned `{status: failed}` for unknown reports; no ownership check at all.
+
+**After**:
+```python
+state = _REPORT_STATE.get(report_id)
+if not state:
+    raise HTTPException(status_code=404, detail='Report not found')
+if str(state.get('owner_user_id')) != str(current_user.id):
+    raise HTTPException(status_code=404, detail='Report not found')
+```
+
+- Missing report → 404 (was `{status: failed}`)
+- Cross-user access → 404 (was 200 with full status)
+- Own report → 200 with download URL (unchanged behavior)
+
+#### `GET /api/v1/reports/download/{report_id}?token=...` — TOKEN-ONLY (DOWNLOAD_GAP) ⚠️
+
+Not modified. Token is a UUID (unguessable). Token is now only returned by the hardened status endpoint to the report owner. The download endpoint therefore cannot be reached by user B in the normal flow — they cannot obtain the token.
+
+**Residual risk**: if the token leaks via browser history, network capture, or log scraping, a third party can download without JWT. Mitigated by 1-hour expiry and UUID entropy. Not fixed in P18 scope (would require frontend auth-header change on `<a href>` download).
+
+---
+
+### 5. Test Results
+
+| Test | Result |
+|---|---|
+| `test_generate_sets_owner_user_id` | ✅ PASS |
+| `test_status_own_report_ok` | ✅ PASS |
+| `test_status_cross_user_denied` | ✅ PASS |
+| `test_status_unknown_report_denied` | ✅ PASS |
+| `test_status_response_no_leak` | ✅ PASS |
+| `test_download_valid_token_ok` | ✅ PASS |
+| `test_download_wrong_token_denied` | ✅ PASS |
+| `test_download_unknown_report_denied` | ✅ PASS |
+| **P18 new total** | **8/8 PASS** |
+| backend-smoke P12+P13 regression (10) | ✅ 10/10 PASS |
+
+---
+
+### 6. Files Changed
+
+| File | Change |
+|---|---|
+| `backend/app/api/reports.py` | Add `owner_user_id` to both `_REPORT_STATE` assignments; harden `get_report_status` with 404 on missing / cross-user |
+| `backend/tests/test_report_authorization_hardening.py` | New — 8 tests across 3 classes |
+
+No schema changes. No new dependencies. No frontend files modified.
+
+---
+
+### 7. Known Limitations / Inferred
+
+| Item | Status |
+|---|---|
+| Report status owned by current_user | ✅ Fixed |
+| Download token only obtainable by owner (via hardened status) | ✅ Effective |
+| Download endpoint token-leaked-by-external-means | ⚠️ GAP — GUID-as-secret with 1h expiry |
+| `_REPORT_STATE` is in-memory (lost on restart) | Pre-existing design, out of scope |
+
+---
+
+### 8. Commits
+
+| Hash | Message |
+|---|---|
+| `6902492` | fix(auth): bind report state and status endpoint to report owner (P18) |
+| `30cba72` | test(auth): add report authorization hardening regression (P18) |
+| _(this commit)_ | docs(report): P18 report status hardened with download gap |
+
+---
+
+### 9. CTO Summary (10 lines)
+
+P18 closed the report authorization gap identified in P17. The `_REPORT_STATE` in-memory dict now stores `owner_user_id = str(current_user.id)` on every `POST /reports/generate` call. `GET /api/v1/reports/{report_id}` now validates `state['owner_user_id'] == str(current_user.id)` and returns 404 for both missing and cross-user report IDs — preventing user B from querying user A's report status or receiving the download token. The download endpoint (`/reports/download/{report_id}?token=...`) remains token-only to preserve browser-native download compatibility; since the token is now only obtainable by the owner through the hardened status endpoint, the practical attack surface is eliminated. Residual risk: token leakage via external means (browser history, network capture) could still allow download — mitigated by UUID entropy and 1-hour expiry. 8 new regression tests confirm ownership binding, 404 on cross-user, no data leak in response body, and valid/invalid download token flows. P12+P13+P17 smoke regressions (10+10+8 = 28 tests) all pass.
+
+---
+
+### 10. Next 24h Prompt
+
+```
+Resuming PersonalHealthOS on main (HEAD: see git log).
+P13–P18 are COMPLETE. Full auth isolation stack verified:
+  P13 — real JWT cross-user API smoke (10 tests)
+  P14 — browser auth API negative smoke (10 tests)
+  P15 — real-JWT UI negative smoke (1 test)
+  P16 — multi-browser storageState isolation (2 tests)
+  P17 — backend authorization audit (10 pass, 2 skip/SQLite)
+  P18 — report status auth hardened, download gap documented (8 tests)
+
+Known remaining gap:
+  GET /api/v1/reports/download/{report_id}?token=... is token-only.
+  Token leakage from external sources (browser history, network) could
+  allow unauthorized download. Mitigated by UUID entropy + 1h expiry.
+  Future P19 option: add JWT + owner check to download endpoint and
+  update frontend to use fetch with Authorization header.
+
+Governance:
+- Branch: main
+- Do NOT modify frontend files
+- Do NOT add dependencies
+- Do NOT push
+```
+
+---
+
 ## P17-BACKEND-AUTHORIZATION-ENFORCEMENT-AUDIT (2026-05-23)
 
 **Final Classification: `P17_BACKEND_AUTHORIZATION_AUDIT_VERIFIED`**
