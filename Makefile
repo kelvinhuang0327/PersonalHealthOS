@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke frontend-auth-smoke local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
 
 up:
 	docker compose up -d --build
@@ -15,6 +15,36 @@ backend-test:
 # Quick auth negative smoke only (no DB required — uses in-memory SQLite)
 backend-smoke:
 	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v tests/test_auth_negative_smoke.py tests/test_real_token_auth_negative.py
+
+# Full P13-P20 auth/security regression (no DB required — in-memory SQLite)
+# Covers: API auth, real JWT, person_id audit, report owner hardening
+backend-auth-audit:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v \
+		tests/test_auth_negative_smoke.py \
+		tests/test_real_token_auth_negative.py \
+		tests/test_person_id_authorization_audit.py \
+		tests/test_report_authorization_hardening.py
+
+# TypeScript typecheck only — no backend required
+frontend-tsc:
+	cd frontend && npx tsc --noEmit
+
+# backend-auth-audit + frontend tsc — no running server required
+security-smoke:
+	$(MAKE) backend-auth-audit
+	$(MAKE) frontend-tsc
+
+# Targeted Playwright auth E2E tests
+# Requires:
+#   1. Backend running:  cd backend && uvicorn app.main:app --port 8000
+#   2. Frontend built:   cd frontend && npm run build
+# Playwright webServer auto-starts next start --port 3010
+frontend-auth-smoke:
+	cd frontend && npx playwright test \
+		tests/e2e/auth-negative.spec.ts \
+		tests/e2e/auth-ui-negative.spec.ts \
+		tests/e2e/auth-ui-multi.spec.ts \
+		--reporter=line
 
 local-db-up:
 	docker compose -f docker-compose.local.yml up -d
