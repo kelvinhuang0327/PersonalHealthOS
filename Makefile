@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
 
 up:
 	docker compose up -d --build
@@ -11,6 +11,10 @@ logs:
 
 backend-test:
 	cd backend && python3 -m venv .venv && .venv/bin/python -m pip install -r requirements-dev.txt && PYTHONPATH=. .venv/bin/python -m pytest -q
+
+# Quick auth negative smoke only (no DB required — uses in-memory SQLite)
+backend-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v tests/test_auth_negative_smoke.py tests/test_real_token_auth_negative.py
 
 local-db-up:
 	docker compose -f docker-compose.local.yml up -d

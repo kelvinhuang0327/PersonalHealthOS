@@ -43,3 +43,8 @@ frontend/test-results/
 frontend/playwright-report/
 htmlcov/
 .coverage
+
+# Runtime artifacts
+frontend/tsconfig.tsbuildinfo
+runtime/launchd/pids/backend.pid
+runtime/launchd/pids/frontend.pid
