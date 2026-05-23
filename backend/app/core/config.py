@@ -1,6 +1,16 @@
 from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Placeholder values that must never be used in a production environment.
+# These are checked at startup when app_env is 'production' or 'prod'.
+_INSECURE_JWT_PLACEHOLDERS: frozenset[str] = frozenset({
+    '',
+    'replace_me',
+    'replace_me_in_prod',
+})
+
+_PRODUCTION_ENVS: frozenset[str] = frozenset({'production', 'prod'})
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=('.env', '.env.local'), env_file_encoding='utf-8', extra='ignore')
@@ -54,3 +64,26 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def validate_production_secrets(settings: Settings) -> None:
+    """Fail-fast guard: raise RuntimeError if a production environment is
+    started with an insecure JWT secret placeholder.
+
+    Call this early in the application startup sequence so the server
+    refuses to accept requests rather than silently operating with
+    forgeable tokens.
+
+    Raises:
+        RuntimeError: when app_env is 'production' or 'prod' and
+            jwt_secret_key is an empty string or a known placeholder value.
+    """
+    if settings.app_env.lower() in _PRODUCTION_ENVS:
+        if settings.jwt_secret_key in _INSECURE_JWT_PLACEHOLDERS:
+            raise RuntimeError(
+                f"UNSAFE STARTUP: jwt_secret_key is set to a known insecure "
+                f"placeholder in app_env='{settings.app_env}'. "
+                f"Set the JWT_SECRET_KEY environment variable to a "
+                f"cryptographically random value (>= 32 bytes of entropy) "
+                f"before starting the application in production."
+            )
