@@ -271,3 +271,21 @@ class TestReportDownloadTokenOnly:
         assert resp.status_code == 404, (
             f"Unknown report_id: expected 404, got {resp.status_code}. Body: {resp.text}"
         )
+
+    def test_download_cross_user_denied(self):
+        """User B with user A's valid token cannot download user A's report.
+
+        After P20 hardening, the download endpoint checks current_user ownership.
+        Even a valid (non-guessable) token is insufficient without matching JWT.
+        """
+        db, user_a, user_b, report_id, token = self._generate_as_user_a()
+        # Switch to user B — JWT check uses user_b identity
+        client_b = _set_user(db, user_b)
+
+        resp = client_b.get(f'/api/v1/reports/download/{report_id}', params={'token': token})
+        assert resp.status_code == 404, (
+            f"Cross-user download with valid token: expected 404, got {resp.status_code}. Body: {resp.text}"
+        )
+        body = resp.text
+        assert token not in body, "404 body must not echo the token"
+        assert str(user_a.id) not in body, "404 body must not leak user_a.id"
