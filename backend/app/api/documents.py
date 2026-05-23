@@ -1,5 +1,6 @@
 from datetime import date
 from datetime import datetime, timezone
+import os
 import uuid
 
 from decimal import Decimal, InvalidOperation
@@ -39,7 +40,7 @@ async def upload_document(
         user_id=current_user.id,
         subject_profile_id=target_person.id,
         category=category,
-        original_filename=file.filename or 'unknown',
+        original_filename=os.path.basename(file.filename or '') or 'unknown',
         file_type=file_type,
         mime_type=file.content_type or 'application/octet-stream',
         file_size=len(content),
