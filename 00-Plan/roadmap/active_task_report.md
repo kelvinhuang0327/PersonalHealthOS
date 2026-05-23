@@ -1,5 +1,189 @@
 # Active Task Report
 
+## P19-REPORT-DOWNLOAD-JWT-HARDENING (2026-05-23)
+
+**Final Classification: `P19_DOWNLOAD_JWT_REQUIRED_FRONTEND_CONTRACT_GAP`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `e59d09e` (P18 report) ✅ |
+| Dirty files at start | None ✅ |
+
+---
+
+### 2. Objective
+
+Close the P18 download gap by adding JWT owner-check to `GET /api/v1/reports/download/{report_id}?token=...` so that possession of a leaked token alone is insufficient to download.
+
+---
+
+### 3. Investigation
+
+**Required read-only inspection:**
+
+- `backend/app/api/reports.py` — download endpoint is token-only, no JWT dependency
+- `frontend/app/components/platform/report-export-modal.tsx` — frontend download call site
+- `frontend/lib/api.ts` — `getReportStatus` and `generateReport` implementations
+- `backend/app/core/deps.py` — `get_current_user` auth mechanism
+
+---
+
+### 4. Frontend Download Call Path (Root Cause)
+
+```
+report-export-modal.tsx
+  generate()
+    api.generateReport(...)          // POST /reports/generate  — JWT via fetch+Authorization header ✅
+    setInterval → api.getReportStatus(reportId)  // GET /reports/{id} — JWT via fetch+Authorization header ✅
+      → returns { status: 'ready', download_url: '/api/v1/reports/download/{id}?token={uuid}' }
+      → setDownloadUrl(res.download_url)
+
+  render
+    <a href={downloadUrl} target="_blank" rel="noreferrer">下載報告</a>
+    ↑
+    BROWSER-NATIVE ANCHOR NAVIGATION — no Authorization header sent
+```
+
+File: [frontend/app/components/platform/report-export-modal.tsx](frontend/app/components/platform/report-export-modal.tsx#L27-L82)
+
+---
+
+### 5. Why JWT Cannot Be Added Without Frontend Change
+
+`get_current_user` (backend/app/core/deps.py:17) uses:
+```python
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/api/v1/auth/login')
+```
+
+`OAuth2PasswordBearer` reads **only** from the `Authorization: Bearer <token>` HTTP header. There is no cookie fallback, no query-parameter fallback.
+
+When the browser follows `<a href="/api/v1/reports/download/{id}?token=..."  target="_blank">`:
+- The browser opens a new tab and performs a plain GET request
+- **No `Authorization` header is sent** — browsers never send custom headers on anchor navigation
+- Adding `current_user: Depends(get_current_user)` would raise HTTP 401 for every download
+
+**Effect of adding `Depends(get_current_user)` today:**
+```
+GET /api/v1/reports/download/{report_id}?token={token}
+→ FastAPI: no Authorization header
+→ OAuth2PasswordBearer raises HTTP 401 Unauthorized
+→ Browser shows login challenge or error page
+→ All downloads broken
+```
+
+---
+
+### 6. Required Frontend Fix (Out of Scope for P19)
+
+The frontend `<a href>` must be replaced with a `fetch + blob + createObjectURL` pattern:
+
+```typescript
+// In report-export-modal.tsx — NOT IMPLEMENTED (frontend/app/** is governance-forbidden)
+const handleDownload = async () => {
+  const token = getToken()  // JWT from localStorage
+  const res = await fetch(downloadUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) return setStatus('failed')
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `health_report.pdf`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+```
+
+This change is in `frontend/app/components/platform/report-export-modal.tsx` which is in `frontend/app/**` — prohibited by governance. Work **STOPPED** per P19 instructions before making any unsafe backend change.
+
+---
+
+### 7. Current Security Posture (P18 + P19)
+
+| Vector | Status |
+|---|---|
+| User B queries user A's report status via `GET /reports/{id}` | ✅ Blocked by P18 (404) |
+| User B obtains user A's download token via status endpoint | ✅ Blocked by P18 |
+| User B downloads user A report with guessed/brute-forced token | ✅ Blocked — UUID entropy (122-bit) |
+| User B downloads via leaked token (network/history/log) | ⚠️ Still possible — DOWNLOAD_GAP |
+| Token expiry | ✅ 1-hour window (expires_at check) |
+
+---
+
+### 8. Files Changed
+
+None. No code changes made. Documentation-only.
+
+---
+
+### 9. Test Results
+
+No new tests added (no code changes made).
+
+Prior regression suites:
+- P18 tests: 8/8 PASS (unmodified)
+- backend-smoke P12+P13: 10/10 PASS (unmodified)
+
+---
+
+### 10. Path Forward for P20
+
+To fully close the download gap, the following two-file change must be scoped:
+
+| File | Required Change |
+|---|---|
+| `frontend/app/components/platform/report-export-modal.tsx` | Replace `<a href>` with `fetch+blob+createObjectURL` |
+| `backend/app/api/reports.py` | Add `current_user: Depends(get_current_user)` + ownership check to `download_report` |
+
+Both changes must be made atomically or the download will break. Governance authorization for `frontend/app/**` modification required before P20 can proceed.
+
+---
+
+### 11. Commit
+
+| Hash | Message |
+|---|---|
+| _(this commit)_ | docs(report): P19 report download JWT frontend contract gap |
+
+---
+
+### 12. CTO Summary (10 lines)
+
+P19 investigated closing the report download gap by requiring JWT ownership on the download endpoint. Investigation found a hard frontend contract incompatibility: `report-export-modal.tsx` renders the download URL as `<a href target="_blank">`, which is browser-native anchor navigation — browsers never send `Authorization` headers on anchor clicks. FastAPI's `OAuth2PasswordBearer` reads only from the `Authorization: Bearer` header (no cookie, no query-param fallback). Adding `Depends(get_current_user)` to the download endpoint would 401 every download attempt, breaking the feature entirely. The required fix — replacing `<a href>` with `fetch+blob+createObjectURL` in `frontend/app/components/platform/report-export-modal.tsx` — is in `frontend/app/**`, which is governance-forbidden for P19. No unsafe backend change was made. Current posture: user B cannot obtain the download token (blocked by P18), UUID token is 122-bit (unguessable), and the 1-hour expiry limits the leak window. Gap remains only exploitable through token exfiltration. Full closure requires authorized scope for `frontend/app/**` in P20.
+
+---
+
+### 13. Next 24h Prompt
+
+```
+Resuming PersonalHealthOS on main (HEAD: see git log).
+P13–P19 COMPLETE. Auth hardening stack status:
+  P13–P18 — all backend auth isolation complete
+  P19 — STOPPED: download JWT gap requires frontend/app/** change
+
+P20 PLAN — Atomic download hardening (backend + frontend together):
+
+Requires explicit governance authorization:
+  YES modify frontend/app/components/platform/report-export-modal.tsx
+
+If authorized:
+  1. Replace <a href> with fetch+blob+createObjectURL in report-export-modal.tsx
+  2. Add Depends(get_current_user) + ownership check to download_report() in reports.py
+  3. Add regression tests for JWT-protected download
+  4. Confirm no existing tests broken
+
+Governance: main, no new branches, no push.
+```
+
+---
+
 ## P18-REPORT-DOWNLOAD-AUTHORIZATION-HARDENING (2026-05-23)
 
 **Final Classification: `P18_REPORT_STATUS_AUTH_HARDENED_DOWNLOAD_GAP`**
