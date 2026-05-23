@@ -1,7 +1,7 @@
 from datetime import date
 from uuid import UUID
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class ProfileUpsertRequest(BaseModel):
@@ -10,9 +10,9 @@ class ProfileUpsertRequest(BaseModel):
     gender: Optional[str] = Field(default=None, max_length=20)
     height_cm: Optional[float] = Field(default=None, ge=50, le=250)
     weight_kg: Optional[float] = Field(default=None, ge=20, le=500)
-    allergies: Optional[str] = None
-    family_history: Optional[str] = None
-    chronic_conditions: Optional[str] = None
+    allergies: Optional[str] = Field(default=None, max_length=2000)
+    family_history: Optional[str] = Field(default=None, max_length=2000)
+    chronic_conditions: Optional[str] = Field(default=None, max_length=2000)
 
 
 class ProfileResponse(ProfileUpsertRequest):
@@ -29,5 +29,5 @@ class AccountResponse(BaseModel):
 
 
 class AccountUpdateRequest(BaseModel):
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     account_settings: Optional[dict] = None

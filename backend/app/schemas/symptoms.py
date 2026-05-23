@@ -12,7 +12,7 @@ class SymptomCreateRequest(BaseModel):
     duration_minutes: Optional[int] = Field(default=None, ge=1, le=10080)
     severity: int = Field(ge=1, le=5)
     duration_category: Optional[str] = Field(default=None, max_length=30)
-    note: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=2000)
     estimated_start_date: Optional[date] = None
     estimated_duration_days: Optional[int] = Field(default=None, ge=1, le=36500)
     temporal_source: Optional[str] = Field(default=None, max_length=40)
@@ -30,7 +30,7 @@ class SymptomUpdateRequest(BaseModel):
     occurred_at: Optional[datetime] = None
     duration_minutes: Optional[int] = Field(default=None, ge=1, le=10080)
     severity: Optional[int] = Field(default=None, ge=1, le=5)
-    note: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=2000)
     estimated_start_date: Optional[date] = None
     estimated_duration_days: Optional[int] = Field(default=None, ge=1, le=36500)
     temporal_source: Optional[str] = Field(default=None, max_length=40)

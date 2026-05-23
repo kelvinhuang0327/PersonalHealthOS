@@ -9,7 +9,7 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(max_length=1024)
 
 
 class UserResponse(BaseModel):

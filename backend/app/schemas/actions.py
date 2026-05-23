@@ -24,36 +24,36 @@ class ActionOutcomeRead(BaseModel):
 
 class HealthActionCreate(BaseModel):
     person_id: Optional[UUID] = None
-    source_type: str = 'manual'
-    source_id: Optional[str] = None
+    source_type: str = Field(default='manual', max_length=60)
+    source_id: Optional[str] = Field(default=None, max_length=120)
     title: str = Field(..., max_length=240)
-    description: Optional[str] = None
-    category: Optional[str] = None
-    action_type: str = 'lifestyle'
-    priority: str = 'medium'
-    frequency: str = 'daily'
-    status: str = 'todo'
+    description: Optional[str] = Field(default=None, max_length=2000)
+    category: Optional[str] = Field(default=None, max_length=60)
+    action_type: str = Field(default='lifestyle', max_length=60)
+    priority: str = Field(default='medium', max_length=30)
+    frequency: str = Field(default='daily', max_length=60)
+    status: str = Field(default='todo', max_length=30)
     due_date: Optional[datetime] = None
     confidence: Optional[float] = None
-    evidence_level: Optional[str] = None
-    guideline_source: Optional[str] = None
-    rule_id: Optional[str] = None
+    evidence_level: Optional[str] = Field(default=None, max_length=60)
+    guideline_source: Optional[str] = Field(default=None, max_length=200)
+    rule_id: Optional[str] = Field(default=None, max_length=120)
 
 
 class HealthActionUpdate(BaseModel):
     person_id: Optional[UUID] = None
     title: Optional[str] = Field(None, max_length=240)
-    description: Optional[str] = None
-    category: Optional[str] = None
-    priority: Optional[str] = None
-    frequency: Optional[str] = None
-    status: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=2000)
+    category: Optional[str] = Field(None, max_length=60)
+    priority: Optional[str] = Field(None, max_length=30)
+    frequency: Optional[str] = Field(None, max_length=60)
+    status: Optional[str] = Field(None, max_length=30)
     due_date: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     snoozed_until: Optional[datetime] = None
-    snooze_reason: Optional[str] = None
-    reminder_status: Optional[str] = None
-    impact_status: Optional[str] = None
+    snooze_reason: Optional[str] = Field(None, max_length=500)
+    reminder_status: Optional[str] = Field(None, max_length=30)
+    impact_status: Optional[str] = Field(None, max_length=30)
 
 
 class HealthActionRead(BaseModel):

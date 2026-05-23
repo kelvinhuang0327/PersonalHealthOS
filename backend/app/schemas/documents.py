@@ -1,7 +1,7 @@
 from typing import Optional, Any
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ParsedItemResponse(BaseModel):
@@ -19,9 +19,9 @@ class ParsedItemResponse(BaseModel):
 
 
 class ParsedItemUpdate(BaseModel):
-    value: Optional[str] = None
-    unit: Optional[str] = None
-    reference_range: Optional[str] = None
+    value: Optional[str] = Field(default=None, max_length=500)
+    unit: Optional[str] = Field(default=None, max_length=50)
+    reference_range: Optional[str] = Field(default=None, max_length=100)
 
 
 class DocumentResponse(BaseModel):

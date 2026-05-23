@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -216,7 +216,7 @@ def get_intelligent_notifications(
 # ---------------------------------------------------------------------------
 
 class _SnoozeBody(BaseModel):
-    hours: Optional[int] = 24
+    hours: Optional[int] = Field(default=24, ge=1, le=168)
     snoozed_until: Optional[str] = None  # ISO-8601; overrides hours when set
 
 
