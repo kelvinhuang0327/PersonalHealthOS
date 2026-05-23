@@ -1,5 +1,25 @@
 # Active Task Report
 
+## P37-AI-HEALTH-RESPONSE-AUDIT (2026-05-24)
+
+**Final Classification: `P37_AI_HEALTH_SMOKE_VERIFIED`**
+
+### Summary
+- Audited: `api/ai_summary.py` (2 routes), `api/health_score.py` (3 routes), `api/ai_modules.py` (4 routes), plus schemas for ai_summary, health_score, health_analysis, trend_analysis, ai_modules
+- **No C.GAP found** — both `AISummary` and `HealthScore` ORM have `user_id` column; neither `AISummaryResponse` nor `HealthScoreResponse` declares it; `from_attributes=True` only serializes declared fields
+- `narrative_json` and `score_detail` JSON blobs contain only AI-generated health content — no user_id embedded
+- `AIModuleResponse`/`AIModuleEvaluationResponse` — no ORM at all, pure structured AI output, no user_id
+- 13 regression tests added → 13/13 PASS
+- runtime-smoke: 113 passed, 2 skipped
+- Commits: `6987495` (tests), *(C2 pending)*
+
+### Next: P38 — Remaining API Surface Final Audit
+- Check any remaining routes not covered by P32–P37
+- Candidates: notification, recommendation, person_profile, admin endpoints
+- Find files: `find backend/app/api -maxdepth 1 -type f | sort`
+
+---
+
 ## P36-LAB-RISK-RESPONSE-AUDIT (2025-07-27)
 
 **Final Classification: `P36_LAB_RISK_SMOKE_VERIFIED`**
