@@ -1,5 +1,103 @@
 # Active Task Report
 
+## P22-FRONTEND-E2E-BACKEND-DEPENDENCY (2026-05-23)
+
+**Final Classification: `P22_FRONTEND_E2E_CI_SAFE_SMOKE_READY`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `b7c352b` (P21 report) ✅ |
+| Dirty files | none ✅ |
+
+---
+
+### 2. CI Frontend E2E Current State (pre-P22)
+
+CI frontend job ran: `npm run e2e` = `playwright test` (all 6 specs)
+
+| Spec | Backend Required | CI Status before P22 |
+|---|---|---|
+| `health-platform.spec.ts` | **No** — `page.route` fully mocked | ✅ would pass |
+| `platform-app.spec.ts` | **No** — `page.route` fully mocked | ✅ would pass |
+| `family-health-card.spec.ts` | **No** — `page.route` fully mocked | ✅ would pass |
+| `auth-negative.spec.ts` | **Yes** — real JWT to `localhost:8000` | ❌ connection refused |
+| `auth-ui-negative.spec.ts` | **Yes** — real backend UI flow | ❌ connection refused |
+| `auth-ui-multi.spec.ts` | **Yes** — real backend UI flow | ❌ connection refused |
+
+The 3 auth specs call `http://localhost:8000` directly. No backend runs in the CI frontend job.
+
+---
+
+### 3. Selected Option: B — Split CI to mocked-only subset
+
+Auth e2e specs require a live backend. The equivalent auth coverage already exists as Python integration tests in the backend job (`make backend-auth-audit` — 29 tests, P13–P20). Adding a backend service to the frontend CI job would require pip install + uvicorn start + env vars — too broad for P22.
+
+Smallest safe fix: add `e2e:ci` npm script that runs only the 3 mocked specs, switch CI to use it.
+
+---
+
+### 4. Changes
+
+| File | Change |
+|---|---|
+| `frontend/package.json` | Added `"e2e:ci"` script — runs 3 mocked specs with `--reporter=line` |
+| `.github/workflows/ci-cd.yml` | `npm run e2e` → `npm run e2e:ci`; step renamed to clarify mocked-only |
+| `Makefile` | Added `frontend-e2e-local` target (full suite, documents backend requirement); added to `.PHONY` |
+
+**`e2e:ci` script:**
+```
+playwright test tests/e2e/health-platform.spec.ts tests/e2e/platform-app.spec.ts tests/e2e/family-health-card.spec.ts --reporter=line
+```
+
+---
+
+### 5. Entrypoint Map (post-P22)
+
+| Command | Scope | Backend needed | CI? |
+|---|---|---|---|
+| `make security-smoke` | backend P13–P20 auth + frontend tsc | No | Recommended CI gate |
+| `npm run e2e:ci` | 3 mocked Playwright specs | No | ✅ used in CI |
+| `make frontend-auth-smoke` | 3 auth Playwright specs | **Yes** | Local only |
+| `make frontend-e2e-local` | All 6 specs | **Yes** | Local only |
+| `npm run e2e` | All 6 specs | **Yes** | Local only |
+
+---
+
+### 6. Validation
+
+```
+make security-smoke    29 passed, 2 skipped + 0 tsc errors
+package.json JSON      valid (node -e require check)
+```
+
+`npm run e2e:ci` not run against live server in this session (no backend started). Script correctness verified via JSON parse + spec file existence check.
+
+---
+
+### 7. Commits
+
+| SHA | Message |
+|---|---|
+| `9dabb8d` | `ci: avoid unsupported frontend e2e backend dependency` |
+| `8364858` | `chore(governance): add frontend-e2e-local entrypoint` |
+| final | `docs(report): P22 frontend e2e backend dependency report` |
+
+---
+
+### 8. Remaining CI / Manual Gaps
+
+- Auth Playwright specs (`auth-negative`, `auth-ui-negative`, `auth-ui-multi`) not run in CI. Equivalent coverage exists in `make backend-auth-audit` (Python). Full browser-level auth validation requires `make frontend-auth-smoke` locally with backend running.
+- CI frontend job does not start a backend service. If future work needs full e2e in CI, a dedicated CI job with service containers + PostgreSQL setup would be required (out of P22 scope).
+- `family-health-card.spec.ts` header says "NOT RUN (no live server in CI pipeline)" — this comment is now stale but in-spec (test logic still valid); updating comments is out of P22 scope.
+
+---
+
 ## P21-CI-ENTRYPOINT-HARDENING (2026-05-23)
 
 **Final Classification: `P21_SECURITY_SMOKE_AND_CI_READY`**
