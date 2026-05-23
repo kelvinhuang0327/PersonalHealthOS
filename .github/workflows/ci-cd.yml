@@ -64,7 +64,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: PYTHONPATH=. pytest -q
+        run: PYTHONPATH=. python -m pytest -q
 
   deploy:
     if: github.ref == 'refs/heads/main'
