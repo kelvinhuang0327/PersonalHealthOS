@@ -34,8 +34,6 @@ class DocumentResponse(BaseModel):
     file_type: str
     mime_type: str
     file_size: int
-    storage_bucket: str
-    storage_key: str
     parse_status: str
     confirmed_data: Optional[dict[str, Any]] = None
     confirmed_at: Optional[datetime] = None
