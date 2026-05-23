@@ -1,5 +1,67 @@
 # Active Task Report
 
+## P30-SCHEMA-VALIDATION-BOUNDARY-HARDENING (2026-05-23)
+
+**Final Classification: `P30_SCHEMA_VALIDATION_HARDENED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+- Branch: `main` | HEAD before: `8c36e51` | Status: clean ✅
+
+### 2. Full Schema Audit (18 schema files + inline API classes)
+
+All 18 files in `backend/app/schemas/` and 3 inline `BaseModel` classes in
+`backend/app/api/` were audited. Files classified as:
+
+- **SAFE A**: `auth.py` (existing), `symptoms.py`, `ai_modules.py`, `ai_summary.py`,
+  `health_score.py`, `external_metrics.py` (all response/read-only)
+- **RESPONSE ONLY** (no user input): `dashboard.py`, `decision.py`, `health_analysis.py`,
+  `health_score.py`, `insights.py`, `risk_alerts.py`, `timeline.py`, `trend_analysis.py`
+- **GAPS IDENTIFIED**: `persons.py`, `metrics.py`, `auth.py` (change-password),
+  `actions.py`, `health_assistant.py` inline classes, `external_metrics.py` query param
+
+### 3. Gaps Identified & Fixed
+
+| Schema / File | Class / Field | Gap | Fix Applied |
+|---|---|---|---|
+| `schemas/persons.py` | `PersonCreateRequest.allergies` | No `max_length` (DB write) | `Field(max_length=2000)` |
+| `schemas/persons.py` | `PersonCreateRequest.family_history` | No `max_length` (DB write) | `Field(max_length=2000)` |
+| `schemas/persons.py` | `PersonCreateRequest.chronic_conditions` | No `max_length` (DB write) | `Field(max_length=2000)` |
+| `schemas/persons.py` | `PersonUpdateRequest` (same 3 fields) | Same | Same fix |
+| `schemas/metrics.py` | `MetricCreateRequest.note` | No `max_length` (DB write) | `Field(max_length=2000)` |
+| `schemas/auth.py` | `ChangePasswordRequest.current_password` | No `max_length` (bcrypt DoS risk) | `Field(max_length=1024)` |
+| `schemas/actions.py` | `HealthActionCreate.confidence` | No `ge/le` range | `Field(ge=0, le=1)` |
+| `api/health_assistant.py` | `_SnoozeBody.snoozed_until` | No `max_length` | `Field(max_length=40)` |
+| `api/health_assistant.py` | `_FamilyRelationshipBody.related_profile_id` | No `max_length` | `Field(max_length=36)` |
+| `api/external_metrics.py` | `metric` Query param | No `max_length` | `Query(max_length=60)` |
+
+### 4. UNKNOWN D (deferred — deeper review needed)
+
+| Schema | Field | Reason |
+|---|---|---|
+| `documents.py` | `DocumentConfirmRequest.confirmed_data: dict[str, Any]` | Arbitrary confirmed report data; size-limiting requires understanding all consumers |
+| `profile.py` | `AccountUpdateRequest.account_settings: Optional[dict]` | App-controlled settings dict; keys are not user-driven free text |
+
+### 5. Test Coverage (20 tests, 100% pass)
+
+File: `backend/tests/test_schema_validation_p30.py`
+
+- `TestPersonFieldConstraints` — 7 tests (create + update per-field rejection + valid accepted)
+- `TestMetricNoteConstraint` — 2 tests
+- `TestChangePasswordConstraint` — 2 tests
+- `TestActionConfidenceConstraint` — 5 Pydantic tests (boundary + None)
+- `TestHealthAssistantInlineSchemas` — 4 Pydantic tests
+
+### 6. Regression
+Full suite: **833 passed, 2 skipped, 0 failed**
+
+### 7. Commits
+- `43a318a` — `fix(validation): harden remaining schema boundary constraints (P30)`
+- `716a618` — `test(validation): add P30 schema boundary regression coverage`
+
+---
+
 ## P29-PRODUCTION-CONFIG-RUNTIME-SMOKE (2026-05-23)
 
 **Final Classification: `P29_PRODUCTION_CONFIG_RUNTIME_SMOKE_READY`**
