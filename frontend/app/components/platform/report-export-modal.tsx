@@ -42,6 +42,32 @@ export function ReportExportModal() {
     }
   }
 
+  const handleDownload = async () => {
+    if (!downloadUrl) return
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    // Construct absolute URL: downloadUrl is /api/v1/... ; strip /api/v1 from base
+    const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1').replace(/\/api\/v1\/?$/, '')
+    const fullUrl = downloadUrl.startsWith('http') ? downloadUrl : `${apiBase}${downloadUrl}`
+    try {
+      const res = await fetch(fullUrl, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) {
+        setStatus('failed')
+        return
+      }
+      const blob = await res.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = 'health_report.pdf'
+      a.click()
+      URL.revokeObjectURL(objectUrl)
+    } catch {
+      setStatus('failed')
+    }
+  }
+
   return (
     <>
       <Button variant="outline" onClick={() => setOpen(true)}>匯出報告</Button>
@@ -74,14 +100,13 @@ export function ReportExportModal() {
 
             <div className="mt-4">
               {status === 'ready' && downloadUrl ? (
-                <a
-                  href={downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  onClick={() => void handleDownload()}
                   className="inline-flex rounded-xl bg-emerald-600 px-3 py-2 text-sm font-medium text-white"
                 >
                   下載報告
-                </a>
+                </button>
               ) : (
                 <Button onClick={() => void generate()} disabled={status === 'generating' || sections.length === 0}>
                   {status === 'generating' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -96,3 +121,4 @@ export function ReportExportModal() {
     </>
   )
 }
+
