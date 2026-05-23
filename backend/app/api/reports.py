@@ -166,7 +166,12 @@ def generate_report(
     report_id = str(uuid4())
     token = str(uuid4())
     expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
-    _REPORT_STATE[report_id] = {'status': 'generating', 'token': token, 'expires_at': expires_at}
+    _REPORT_STATE[report_id] = {
+        'status': 'generating',
+        'token': token,
+        'expires_at': expires_at,
+        'owner_user_id': str(current_user.id),
+    }
 
     person = target_person
     if payload.person_id and payload.person_id != str(target_person.id):
@@ -184,6 +189,7 @@ def generate_report(
         'token': token,
         'expires_at': expires_at,
         'file_path': str(file_path),
+        'owner_user_id': str(current_user.id),
     }
     return ReportGenerateResponse(report_id=report_id, status='generating')
 
@@ -195,7 +201,9 @@ def get_report_status(
 ):
     state = _REPORT_STATE.get(report_id)
     if not state:
-        return ReportStatusResponse(status='failed')
+        raise HTTPException(status_code=404, detail='Report not found')
+    if str(state.get('owner_user_id')) != str(current_user.id):
+        raise HTTPException(status_code=404, detail='Report not found')
     if state['status'] != 'ready':
         return ReportStatusResponse(status=state['status'])
     if datetime.now(timezone.utc) > state['expires_at']:
