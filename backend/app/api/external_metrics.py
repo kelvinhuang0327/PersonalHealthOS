@@ -63,7 +63,7 @@ def list_external_metrics(
 
 @router.get('/trends', response_model=ExternalTrendResponse)
 def external_trends(
-    metric: str = Query(default='steps'),
+    metric: str = Query(default='steps', max_length=60),
     days: int = Query(default=30, ge=1, le=365),
     target_person: PersonProfile = Depends(get_target_person),
     current_user: User = Depends(get_current_user),

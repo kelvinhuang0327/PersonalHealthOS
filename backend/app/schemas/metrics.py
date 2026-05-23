@@ -14,7 +14,7 @@ class MetricCreateRequest(BaseModel):
     weight_kg: Optional[float] = Field(default=None, ge=20, le=500)
     sleep_hours: Optional[float] = Field(default=None, ge=0, le=24)
     steps: Optional[int] = Field(default=None, ge=0, le=200000)
-    note: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=2000)
 
 
 class MetricResponse(MetricCreateRequest):

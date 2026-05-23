@@ -217,7 +217,7 @@ def get_intelligent_notifications(
 
 class _SnoozeBody(BaseModel):
     hours: Optional[int] = Field(default=24, ge=1, le=168)
-    snoozed_until: Optional[str] = None  # ISO-8601; overrides hours when set
+    snoozed_until: Optional[str] = Field(default=None, max_length=40)  # ISO-8601; overrides hours when set
 
 
 def _get_log_or_404(
@@ -510,7 +510,7 @@ from app.services.family_health_context_service import (  # noqa: E402
 
 
 class _FamilyRelationshipBody(BaseModel):
-    related_profile_id: str
+    related_profile_id: str = Field(max_length=36)
     relationship_type: str
     permission_level: str = "read_only"
 

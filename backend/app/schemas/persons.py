@@ -12,9 +12,9 @@ class PersonCreateRequest(BaseModel):
     gender: Optional[str] = Field(default=None, max_length=20)
     height_cm: Optional[float] = Field(default=None, ge=50, le=250)
     weight_kg: Optional[float] = Field(default=None, ge=20, le=500)
-    allergies: Optional[str] = None
-    family_history: Optional[str] = None
-    chronic_conditions: Optional[str] = None
+    allergies: Optional[str] = Field(default=None, max_length=2000)
+    family_history: Optional[str] = Field(default=None, max_length=2000)
+    chronic_conditions: Optional[str] = Field(default=None, max_length=2000)
 
 
 class PersonUpdateRequest(BaseModel):
@@ -24,9 +24,9 @@ class PersonUpdateRequest(BaseModel):
     gender: Optional[str] = Field(default=None, max_length=20)
     height_cm: Optional[float] = Field(default=None, ge=50, le=250)
     weight_kg: Optional[float] = Field(default=None, ge=20, le=500)
-    allergies: Optional[str] = None
-    family_history: Optional[str] = None
-    chronic_conditions: Optional[str] = None
+    allergies: Optional[str] = Field(default=None, max_length=2000)
+    family_history: Optional[str] = Field(default=None, max_length=2000)
+    chronic_conditions: Optional[str] = Field(default=None, max_length=2000)
     is_default: Optional[bool] = None
 
 

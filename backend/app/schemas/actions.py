@@ -34,7 +34,7 @@ class HealthActionCreate(BaseModel):
     frequency: str = Field(default='daily', max_length=60)
     status: str = Field(default='todo', max_length=30)
     due_date: Optional[datetime] = None
-    confidence: Optional[float] = None
+    confidence: Optional[float] = Field(default=None, ge=0, le=1)
     evidence_level: Optional[str] = Field(default=None, max_length=60)
     guideline_source: Optional[str] = Field(default=None, max_length=200)
     rule_id: Optional[str] = Field(default=None, max_length=120)
