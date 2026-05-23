@@ -2,266 +2,262 @@
 
 ## 1. CTO Review Date
 
-2026-05-20 Asia/Taipei
+2026-05-23 Asia/Taipei
 
 ## 2. Input Sources
 
-- [Confirmed] `docs/NEXT_STAGE_ROADMAP.md`: historical roadmap and previous P0/P1/P2-P10 ordering.
-- [Confirmed] `00-Plan/roadmap/current_state.md`: P1 Daily Assistant UI recovery/verification handoff.
-- [Confirmed] `backend/app/services/health_assistant_service.py`: evidence bundle, recommendations, product signals, daily summary.
-- [Confirmed] `backend/app/api/health_assistant.py`: evidence bundle, recommendations, product signals, outcome feedback, daily summary endpoints.
-- [Confirmed] `frontend/app/platform/dashboard/page.tsx`: Dashboard daily assistant integration.
-- [Confirmed] `frontend/app/platform/actions/page.tsx`: Actions Page recommendation-layer integration.
-- [Confirmed] `frontend/app/components/platform/recommendation-trust-block.tsx`: shared trust UI component.
-- [Confirmed] `runtime/agent_orchestrator/orchestrator.db`: task status, gate verdicts, scheduler state.
-- [Confirmed] Focused verification run by CTO review: `101 passed` for health assistant/trust/daily summary/outcome feedback tests.
-- [Confirmed] Focused verification run by CTO review: `npx tsc --noEmit` passed.
-- [Unknown] CEO final裁決 file/content was not available in allowed input files.
+- [Confirmed] User-provided handoff: `P13 Auth E2E + Entrypoint Hardening`.
+- [Confirmed] `00-Plan/roadmap/roadmap.md`: prior CTO roadmap.
+- [Confirmed] `00-Plan/roadmap/active_task.md`: prior P12 post-closure verification task.
+- [Confirmed] `00-Plan/roadmap/active_task_report.md`: top P13 report block and P12 appendix.
+- [Confirmed] Git repo state: canonical repo path `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS`, branch `main`.
+- [Confirmed] Current `git status --short`: P13-related dirty/untracked/staged files remain in the workspace.
+- [Confirmed] `backend/tests/test_real_token_auth_negative.py`: real-token JWT auth negative/sanity tests.
+- [Confirmed] `backend/tests/test_auth_negative_smoke.py`: P12 override-style auth negative smoke.
+- [Confirmed] `Makefile`: `backend-smoke` target exists.
+- [Confirmed] `backend/README.md`: canonical venv pytest guidance exists.
+- [Confirmed] `.github/workflows/ci-cd.yml`: backend CI still runs bare `PYTHONPATH=. pytest -q`.
+- [Confirmed] `frontend/package.json`: Playwright is available through `npm run e2e`.
+- [Unknown] CTO did not rerun backend, frontend build, Playwright, or smoke tests during this analysis.
 
 ## 3. Roadmap Alignment Assessment
 
-- [Aligned] Daily Assistant, Recommendation Trust, Outcome Feedback, and Dashboard/Actions consistency all support the personal health assistant roadmap.
-- [Aligned] The current implementation follows the correct product order: existing data first, trustworthy recommendations second, daily UI third, outcome feedback next, devices later.
-- [Drift] The old P0 roadmap still reads like the core loop must be built from scratch. Current code shows the core loop is largely present; P0 should now be verification, completeness, and governance.
-- [Drift] Orchestrator/product-signal work has generated repeated `problem_signal` tasks and placeholder PASS results; that does not prove product maturity.
-- [Missing] `00-Plan/roadmap/roadmap.md` was absent before this review.
-- [Missing] External/source-tagged metrics are not first-class inside the health assistant evidence bundle.
-- [Missing] Playwright/E2E, Docker compose integration, production smoke, and real frontend-backend runtime validation are not confirmed.
-- [Outdated] Immediate wearable connector work should not compete with P0/P1.
-- [Outdated] Trust UI implementation is no longer an open decision; it is implemented and shared.
-- [Blocked] No git/change-control baseline exists, but current CTO constraints prohibit creating a repo.
-- [Blocked] CEO final裁決 is missing, so a worker/planner task prompt cannot be produced under the user's own constraints.
+- [Aligned] P13 work matches the prior P0 direction: close auth trust gaps and harden test entrypoints before new product work.
+- [Aligned] P13 real-token tests are a meaningful upgrade over dependency-override-only auth smoke.
+- [Aligned] Keeping `get_target_person` un-overridden preserves the production ownership enforcement path in tests.
+- [Aligned] Not changing production `get_current_user` for SQLite-only UUID behavior is appropriately conservative.
+- [Drift] The previous roadmap still treated API auth E2E as broadly open; it should now be narrowed to browser/session auth and PostgreSQL parity.
+- [Drift] Entry-point hardening is only partially complete: README/Makefile are aligned, but GitHub Actions still uses bare pytest.
+- [Missing] Browser login -> token/cookie/session -> protected API flow is still NOT RUN.
+- [Missing] PostgreSQL-backed auth integration lane is not present; SQLite UUID shim remains a test-environment compromise.
+- [Outdated] Starting notification intelligence, wearable connectors, or another product feature phase before browser auth/CI governance is premature.
+- [Blocked] Production readiness is still blocked by browser-level auth smoke, CI entrypoint hardening, and DB parity verification, not by API-level JWT tests.
 
 ## 4. Completed Work Assessment
 
 | Work item | Assessment |
 | --- | --- |
-| Health Assistant Evidence Bundle | [Confirmed] Implemented and covered by focused tests. |
-| Top 3 Health Recommendations | [Confirmed] Implemented through backend recommendation layer. |
-| Completed action suppression | [Confirmed] Backend logic suppresses recently completed rule-linked actions unless resurfacing applies. |
-| Dashboard daily assistant | [Confirmed] Dashboard renders `DailyAssistantEntry` and `HealthAssistantPanel`. |
-| Actions recommendation layer | [Confirmed] Actions Page prefers `/health-assistant/recommendations`. |
-| Recommendation trust | [Confirmed] Backend trust score exists; frontend shared component exists. |
-| Daily summary | [Confirmed] API and UI integration exist. |
-| Outcome feedback | [Confirmed] API/service/UI exist; insufficient data is explicit. |
-| Focused backend verification | [Confirmed] 101 tests passed. |
-| Frontend type verification | [Confirmed] `npx tsc --noEmit` passed. |
+| Real-token JWT auth negative tests | [Confirmed] `test_real_token_auth_negative.py` exists with 7 tests. |
+| No/expired/garbage token rejection | [Confirmed] Covered as 401 cases. |
+| Cross-user family context isolation | [Confirmed] User A token against user B person returns 404 at API level. |
+| Cross-user family recommendations isolation | [Confirmed] Covered as 404 at API level. |
+| Own/default person sanity | [Confirmed] Covered as 200 cases. |
+| Production ownership dependency | [Confirmed] `get_target_person` is not overridden in P13 real-token tests. |
+| SQLite UUID coercion | [Confirmed] Test-local shim only; production app code unchanged. |
+| Backend regression | [Confirmed from active report] 723/723 PASS. |
+| Frontend TypeScript | [Confirmed from active report] PASS. |
+| Frontend Next build | [Confirmed from active report] PASS, 20 static routes. |
+| Backend smoke target | [Confirmed] `backend-smoke` target exists and active report says 10/10 PASS. |
+| Runtime artifact ignore rules | [Confirmed] `.gitignore` includes tsbuildinfo and launchd pid artifacts. |
 
 ## 5. Unfinished Work Assessment
 
 | Work item | Assessment |
 | --- | --- |
-| Change-control baseline | [Blocked] No `.git`; CTO cannot create a repo under current instruction. |
-| Runtime API/browser verification | [Blocked] Not confirmed by handoff; not completed in this review. |
-| Docker/production smoke | [Missing] Handoff says not run. |
-| Playwright trust UI tests | [Missing] Not run and not confirmed. |
-| External metrics as first-class evidence | [Drift] `external_metrics` is an empty placeholder in the evidence bundle. |
-| Unknown trust fallback | [Missing] Trust is optional; absence may silently remove trust context. |
-| Orchestrator quality gate credibility | [Blocked] Runtime accepts placeholder/no-change tasks as PASS. |
-| CEO final decision for active task | [Unknown] Not present; active task prompt cannot be emitted. |
+| Browser-level auth E2E | [Blocked] Playwright exists, but real browser JWT/login flow is NOT RUN. |
+| Real login page/session/cookie/refresh flow | [Missing] API token tests do not cover browser session behavior. |
+| PostgreSQL integration lane | [Missing] SQLite UUID shim means DB parity remains unproven. |
+| CI workflow test entrypoint | [Drift] `.github/workflows/ci-cd.yml` still uses bare `pytest -q`. |
+| P13 changes finalization | [Drift] Current working tree has dirty/untracked/staged P13 changes. |
+| Report archive strategy | [Missing] `active_task_report.md` continues prepend/append growth; appendix exists but long-term strategy is not defined. |
+| New worker task prompt | [Blocked] Current CTO instruction forbids producing one. |
 
 ## 6. P0 / P1 / P2 / P3-P10 Reprioritization
 
 ### P0
 
-1. [Blocked] Change-control / rollback baseline.
-   - Upgrade reason: correctness and recovery are blocked without diff/rollback.
-   - Constraint: no new repo allowed; requires CEO decision for in-place version control or another approved baseline.
+1. [Blocked] Browser-level auth smoke.
+   - Upgrade reason: API-level JWT tests do not prove browser login/token/session behavior.
 
-2. [Blocked] Health Assistant runtime verification gate.
-   - Upgrade reason: user-facing health recommendations require browser/API-level proof, not only unit tests.
+2. [Blocked] CI backend entrypoint hardening.
+   - Upgrade reason: `.github/workflows/ci-cd.yml` can still produce false regression signals by using bare pytest.
 
-3. [Drift] Evidence source completeness.
-   - Upgrade reason: current product promise says all existing data should feed today's advice; external/source-tagged metrics are not first-class in the bundle.
+3. [Missing] PostgreSQL auth integration lane.
+   - Upgrade reason: current real-token tests require SQLite UUID coercion shim; production DB parity remains unverified.
 
-4. [Blocked] Orchestrator quality gate credibility.
-   - Upgrade reason: system cannot trust its own maturity signals while shallow/empty tasks pass.
+4. [Drift] P13 change finalization / clean working tree.
+   - Upgrade reason: P13 outputs are dirty/untracked/staged and should be committed or explicitly handed off before further work.
 
-5. [Missing] Unknown trust fallback.
-   - Upgrade reason: missing confidence should not be indistinguishable from high confidence.
+5. [Missing] Active report archive strategy.
+   - Upgrade reason: handoff report is now coherent at top, but long-term prepend/append growth remains a governance risk.
 
 ### P1
 
-1. Daily behavior loop coverage: Playwright smoke for Dashboard/Actions/Daily Assistant/Outcome Feedback.
-2. Outcome feedback refinement across 7/14/30 days and daily check-in prompts.
-3. Product signal reliability for completion, snooze, conversion, and recommendation acceptance metrics.
-4. Insight/report-to-action UX only after P0 runtime verification is stable.
+1. Playwright regression for Daily Assistant, Actions, Trust, Outcome Feedback, and Family Health Card.
+2. Unknown/missing trust fallback UI and regression coverage.
+3. Browser-level health assistant smoke after login.
+4. Product signal reliability for completion, snooze, conversion, and recommendation acceptance.
 
 ### P2
 
-1. External device data readiness: provider-neutral schema, mock/manual import, source freshness, reliability scoring.
-2. Device signal detection: heart rate abnormality, sleep shortage, activity decline, long-term trend change.
-3. No real Apple Health / Google Fit / wearable API connector before P0/P1 closure.
+1. Provider-neutral device schema for heart rate, pulse, sleep, steps, activity, and SpO2.
+2. SpO2/pulse migration planning.
+3. Mock/manual import reliability and source normalization.
+4. Keep real wearable connectors paused.
 
 ### P3-P10
 
-- P3 Symptom intelligence.
-- P4 Report-to-action closure.
-- P5 Notification/reminder intelligence.
-- P6 Personalization and learning.
-- P7 Narrative memory.
-- P8 Family/multi-person assistant.
-- P9 Product analytics to orchestrator.
-- P10 Production trust, compliance, ecosystem.
+- P3 Symptom intelligence: timeline, trend, pattern, recommendation, reminder.
+- P4 Report-to-action: conversion tracking and E2E smoke.
+- P5 Notification intelligence: downgraded until P0/P1 verified.
+- P6 Personalization and learning: future iteration.
+- P7 Narrative memory: future iteration.
+- P8 Family/multi-person assistant: maintain and harden permission/isolation boundaries.
+- P9 Product analytics and orchestrator governance: CI/test entrypoints, report archive strategy, gate quality.
+- P10 Production trust/compliance: auth, DB parity, deployment smoke, audit, privacy, monitoring.
 
 ### Upgrades, Downgrades, Merges, Pauses
 
-- [Upgrade to P0] Change-control baseline.
-- [Upgrade to P0] Runtime/E2E verification for health assistant recommendations.
-- [Upgrade to P0] Orchestrator gate anti-shallow checks.
-- [Upgrade to P0] External/source-tagged metrics in evidence bundle.
-- [Downgrade] Real wearable connector implementation.
-- [Downgrade] Notification intelligence before verified recommendation/action/outcome loop.
-- [Merge] P9 quality-gate credibility into P0.
-- [Merge] Report/insight conversion metrics into P1 signal reliability.
-- [Pause] Active worker task prompt generation until CEO final裁決 exists and CTO constraints are reconciled.
+- [Upgrade to P0] Browser auth smoke.
+- [Upgrade to P0] GitHub Actions backend entrypoint hardening.
+- [Upgrade to P0] PostgreSQL auth smoke planning/lane.
+- [Retire] API-level real-token auth negative test as blocker; P13 completed it.
+- [Downgrade] Notification intelligence and real wearable connectors until P0/P1 verification is clean.
+- [Merge] CI entrypoint governance into P0 and P9.
+- [Pause] CTO-generated worker prompt due explicit instruction conflict.
 
 ## 7. Critical Blockers
 
-### Blocker 1 - No Change-Control / Rollback Baseline
+### Blocker 1 - Browser Auth Flow Unverified
 
-- Impact scope: entire workspace, all future agent changes.
-- Why blocker: [Confirmed] `git status` fails because this workspace is not a git repository.
-- Risk if untreated: accidental edits cannot be reviewed, diffed, reverted, or safely promoted.
+- Impact scope: login/session behavior, protected health assistant/family pages, browser auth storage.
+- Why blocker: [Confirmed] P13 tests real JWT at API/TestClient level, but [Missing] Playwright/browser login flow is not run.
+- Risk if untreated: API tests pass while browser token storage, login redirects, cookie/session handling, or protected API calls fail.
 - Priority: P0.
-- Acceptance standard: CEO-approved change-control mechanism exists; current stable state is recoverable; protected paths are excluded/protected; no external/new repo is created without approval.
+- Acceptance standard: browser smoke demonstrates login or token bootstrap, own protected context access, and cross-user protected context rejection; otherwise produce explicit `BROWSER_AUTH_E2E_NOT_IMPLEMENTED` with missing fixtures.
 
-### Blocker 2 - Runtime Verification Gap For Health Assistant Core
+### Blocker 2 - CI Backend Entrypoint Still Uses Bare Pytest
 
-- Impact scope: Dashboard, Actions Page, health-assistant APIs, trust UI, recommendation suppression.
-- Why blocker: [Confirmed] unit tests and TypeScript pass, but [Confirmed from handoff] Playwright/E2E, Docker integration, production smoke, and real runtime API validation were not run.
-- Risk if untreated: health recommendations may appear correct in tests but fail or drift in the actual user flow.
+- Impact scope: CI reliability, agent regression interpretation, release gates.
+- Why blocker: [Confirmed] README/Makefile use `.venv`, but `.github/workflows/ci-cd.yml` still runs `PYTHONPATH=. pytest -q`.
+- Risk if untreated: CI/agents can still hit dependency/collection errors and misclassify backend health.
 - Priority: P0.
-- Acceptance standard: Browser/API smoke proves Dashboard and Actions consume the same `/health-assistant/recommendations` response, trust states render, missing data renders, and completed actions are not duplicated.
+- Acceptance standard: CI backend test step uses canonical `.venv/bin/python -m pytest` or an equivalent reproducible environment command, and `backend-smoke` is documented/runnable.
 
-### Blocker 3 - Evidence Bundle External Metrics Gap
+### Blocker 3 - SQLite/PostgreSQL Auth Parity Gap
 
-- Impact scope: recommendation quality, device readiness, daily assistant evidence completeness.
-- Why blocker: [Confirmed] `external_metrics` currently returns `[]` in the bundle even though external/mock metrics exist through `health_metrics.source`.
-- Risk if untreated: the assistant can claim to integrate health data while silently underusing a data class needed for future devices.
-- Priority: P0 for existing source-tagged metrics; P2 for full wearable schema/connectors.
-- Acceptance standard: source-tagged metrics are represented with source, timestamp, freshness, reliability/confidence, summary, and missing-data behavior.
+- Impact scope: auth tests, UUID handling, production DB confidence.
+- Why blocker: [Confirmed] P13 needs a SQLite-only UUID coercion shim; [Unknown] PostgreSQL integration smoke is absent.
+- Risk if untreated: SQLite-only behavior may hide or invent UUID/auth issues relative to production.
+- Priority: P0/P2 boundary; P0 if claiming production readiness.
+- Acceptance standard: at least one PostgreSQL-backed auth smoke validates real JWT subject handling and cross-user rejection, or a scoped plan is accepted.
 
-### Blocker 4 - Orchestrator Gate Credibility
+### Blocker 4 - P13 Working Tree Not Finalized
 
-- Impact scope: agent/workflow orchestration, roadmap governance, quality gate trust.
-- Why blocker: [Confirmed] runtime has 390 PASS tasks, 3 INVALID_DELIVERY, 2 RATE_LIMIT, and recent repeated `problem_signal` tasks with no changed files and placeholder acceptance evidence.
-- Risk if untreated: the system will report progress without meaningful product change, hiding real blockers.
-- Priority: P0.
-- Acceptance standard: placeholder evidence fails; empty changed-file delivery requires explicit analysis-only classification; repeated issue signatures enter cooldown; gate report exposes User Value/Product Maturity/Expected Change evidence quality.
+- Impact scope: branch governance, next sprint safety, reviewability.
+- Why blocker: [Confirmed] P13 changes remain dirty/untracked/staged in current workspace.
+- Risk if untreated: next agents may overwrite, duplicate, or misclassify pending P13 changes.
+- Priority: P0 governance.
+- Acceptance standard: P13 changes are committed, or a handoff explicitly lists pending files and expected owner.
 
-### Blocker 5 - Missing Trust Fallback
+### Blocker 5 - Report Growth / Archive Strategy
 
-- Impact scope: health recommendation safety and user comprehension.
-- Why blocker: [Confirmed] trust data is optional on frontend; absence can silently remove confidence context.
-- Risk if untreated: users may interpret missing trust as trustworthy advice.
-- Priority: P0/P1 boundary; treat as P0 before broad recommendation expansion.
-- Acceptance standard: missing trust renders explicit "unknown / insufficient evidence" UI and is covered by frontend regression tests.
+- Impact scope: roadmap governance, handoff readability, context load.
+- Why blocker: [Confirmed] `active_task_report.md` is prepend/append based and already large.
+- Risk if untreated: future agents may miss the active section or over-read stale appendix content.
+- Priority: P1/P9; P0-adjacent for handoff reliability.
+- Acceptance standard: current report keeps top active section, while older reports move to a clear archive strategy without deleting evidence.
 
 ## 8. Recommended System Optimization Directions
 
-### Direction 1 - P0 Verification And Change-Control Closure
+### Direction 1 - Browser Auth Smoke
 
-- Roadmap phase: P0.
-- Why important: system maturity is blocked if the current stable state cannot be recovered and user-facing assistant flows are not runtime-proven.
-- Maturity push: converts "implemented" into "safe to iterate."
-- Expected benefit: lower regression risk, faster review, clearer go/no-go decisions.
-- Risk: current no-new-repo rule blocks the obvious fix; CEO decision is required.
-- Acceptance: approved change-control path plus runtime smoke for Dashboard/Actions health assistant flow.
+- Roadmap phase: P0 / P10.
+- Why important: closest remaining auth path to production user behavior.
+- Maturity push: moves from API-level trust to browser/session trust.
+- Expected benefit: catches login, token persistence, protected-route, and cross-user browser failures.
+- Risk: Playwright fixtures may need careful minimal setup; avoid building a large framework.
+- Acceptance: browser login/token bootstrap -> own family context allowed -> cross-user context rejected.
 - Priority: P0.
 
-### Direction 2 - Evidence Contract Completeness
+### Direction 2 - CI Test Entrypoint Governance
 
-- Roadmap phase: P0 now, P2 later.
-- Why important: the assistant's product promise depends on using all relevant existing data.
-- Maturity push: makes evidence explicit, auditable, and source-scoped.
-- Expected benefit: higher recommendation trust and cleaner future device integration.
-- Risk: overbuilding device schema too early; keep real connectors out of scope.
-- Acceptance: existing source-tagged metrics appear in evidence bundle with freshness/reliability and tests.
+- Roadmap phase: P0 / P9.
+- Why important: backend health must be evaluated through one canonical entrypoint.
+- Maturity push: prevents false regression reports from missing dependencies or wrong Python environment.
+- Expected benefit: CI and agents agree on backend status.
+- Risk: CI environment differs from local venv assumptions; use reproducible setup.
+- Acceptance: `.github/workflows/ci-cd.yml`, README, Makefile, and smoke target are aligned.
 - Priority: P0.
 
-### Direction 3 - Orchestrator Quality Gate Hardening
+### Direction 3 - PostgreSQL Auth Parity Lane
 
-- Roadmap phase: P0 merged from P9.
-- Why important: agent orchestration currently risks producing progress theater.
-- Maturity push: makes PASS meaningful again.
-- Expected benefit: fewer repeated shallow tasks, better CTO confidence, cleaner planner inputs.
-- Risk: stricter gates may temporarily reduce throughput.
-- Acceptance: placeholder/no-change delivery fails or requires explicit analysis-only classification; repeated signals cooldown.
-- Priority: P0.
+- Roadmap phase: P0/P2/P10.
+- Why important: SQLite UUID shim is a known test/prod difference.
+- Maturity push: validates production DB behavior for JWT subject and ownership checks.
+- Expected benefit: lower false-positive/false-negative auth risk.
+- Risk: local DB setup may increase task cost; keep to one smoke first.
+- Acceptance: one PostgreSQL-backed auth smoke or an explicit, owner-scoped lane plan.
+- Priority: P0 if release-bound, otherwise P2.
 
-### Direction 4 - Daily Behavior Loop Measurement
+### Direction 4 - Handoff Report Lifecycle Governance
 
-- Roadmap phase: P1.
-- Why important: the user should have a reason to open the assistant daily and see whether actions worked.
-- Maturity push: moves from recommendation display to behavior learning.
-- Expected benefit: better completion, outcome tracking, and trust calibration.
-- Risk: metrics can be misleading if data is sparse; insufficient data must stay explicit.
-- Acceptance: 7/14/30-day feedback states, completion/snooze/conversion signals, and daily summary regression coverage.
+- Roadmap phase: P1/P9.
+- Why important: reports are now long and appendix-heavy.
+- Maturity push: preserves evidence while keeping active state readable.
+- Expected benefit: less agent confusion and lower context overhead.
+- Risk: over-cleaning can destroy useful history; archive, do not delete.
+- Acceptance: active report top section remains current; older sections are linked/archived with clear boundaries.
 - Priority: P1.
 
-### Direction 5 - Device Readiness Without Connector Overreach
+### Direction 5 - Product Work Resume Gate
 
-- Roadmap phase: P2.
-- Why important: wearable/device data is valuable, but only after evidence contracts are stable.
-- Maturity push: prepares architecture without adding brittle integrations.
-- Expected benefit: future Apple Health/Google Fit/wearable work becomes incremental.
-- Risk: schema creep; keep to provider-neutral manual/mock import.
-- Acceptance: schema covers heart rate, pulse, sleep, steps, activity, SpO2, source metadata, freshness, reliability.
-- Priority: P2.
+- Roadmap phase: P1/P3+.
+- Why important: product work should resume only after trust gates are stable.
+- Maturity push: keeps feature velocity from outrunning safety/verifiability.
+- Expected benefit: safer return to symptom/report/notification/product loops.
+- Risk: too much governance can stall user value; keep gates minimal.
+- Acceptance: browser auth + CI entrypoint + pending P13 changes finalized.
+- Priority: P1.
 
 ## 9. Roadmap Changes Applied
 
-- [Confirmed] Created `00-Plan/roadmap/roadmap.md` because it was absent.
-- [Confirmed] Preserved the 2026-05-19 roadmap history by using `docs/NEXT_STAGE_ROADMAP.md` as baseline.
-- [Confirmed] Reclassified P0 from "build core loop" to "verify, complete, and govern core loop."
-- [Confirmed] Marked P1 trust UI work as completed, with E2E/fallback gaps remaining.
-- [Confirmed] Moved real wearable connector work behind P2 readiness.
-- [Confirmed] Merged quality gate credibility from P9 into P0.
-- [Confirmed] Marked active worker task prompt generation as blocked, not written.
+- [Confirmed] Updated `roadmap.md` to 2026-05-23 P13 state.
+- [Confirmed] Marked API-level real-token auth negative testing as completed.
+- [Confirmed] Replaced prior P0 auth blocker with browser auth smoke and DB parity blockers.
+- [Confirmed] Added CI workflow entrypoint gap as P0.
+- [Confirmed] Added PostgreSQL auth parity lane to P0/P2 boundary.
+- [Confirmed] Marked P13 working tree finalization as governance blocker.
+- [Confirmed] Kept notification intelligence and real wearable connectors downgraded.
+- [Confirmed] Did not write `CEO-Decision.md`, `active_task.md`, `active_task_report.md`, production, registry, data, or any new repo.
 
 ## 10. Risks / Unknowns
 
-- [Confirmed] No git repository exists in the workspace.
-- [Confirmed] Current CTO permissions prohibit writing files outside roadmap/analysis.
-- [Confirmed] Runtime task database contains stale/repeated/shallow task patterns.
-- [Confirmed] `runtime/launchd/smoke_orchestrator_summary.json` returns `Not authenticated`.
-- [Unknown] CEO final裁決 for next execution task is unavailable.
-- [Unknown] Full Next build status after this review; current handoff reports it passed, but CTO review only reran focused backend tests and TypeScript.
-- [Unknown] Production runtime behavior with real auth/session data.
-- [Inferred] Browser-level trust UI may work because components and types exist, but it remains unconfirmed without Playwright/runtime testing.
+- [Confirmed] Current working tree has P13-related dirty/untracked/staged files.
+- [Confirmed] `.github/workflows/ci-cd.yml` still uses bare pytest.
+- [Confirmed] Playwright/browser auth flow is NOT RUN.
+- [Confirmed] PostgreSQL auth integration is not present.
+- [Confirmed] P13 uses SQLite UUID coercion shim in test-local dependency.
+- [Unknown] CTO did not independently rerun 723 backend tests, `tsc`, `next build`, or `backend-smoke`.
+- [Unknown] Whether current uncommitted P13 changes are intended to be committed as one batch or handed off.
+- [Inferred] P13 materially improves API-level auth trust, but is still not browser/production DB proof.
+- [Confirmed] New worker prompt generation is prohibited by this CTO instruction set.
 
 ## 11. CTO Final Recommendation
 
-Do not start new product surfaces today. The system already has the core Personal Health Assistant loop in code. The next stage should prove and harden it:
-
-1. Resolve the change-control decision without violating the no-new-repo rule.
-2. Verify Dashboard and Actions at runtime against the same health-assistant backend source.
-3. Make external/source-tagged metrics first-class evidence before any wearable connector work.
-4. Harden orchestrator gates so PASS means real, reviewable delivery.
-5. Keep P1 behavior-loop work next, and keep device connectors behind P2 readiness.
+Do not start a new product feature phase today. P13 closed the API-level auth gap well enough to retire it as a blocker. The next highest-value system optimization is to close the remaining production-trust gap: browser-level auth smoke, GitHub Actions backend entrypoint alignment, and a PostgreSQL auth parity lane or explicit plan. Finalize the current dirty P13 working tree before any new feature work.
 
 ## 12. CTO Summary In 10 Lines
 
-1. [Confirmed] P0 health assistant core is mostly implemented.
-2. [Confirmed] Evidence bundle, recommendations, daily summary, outcome feedback, and trust layer exist.
-3. [Confirmed] Focused backend tests passed: 101.
-4. [Confirmed] Frontend TypeScript validation passed.
-5. [Drift] Roadmap was behind actual implementation status.
-6. [Blocked] No git/change-control baseline exists.
-7. [Blocked] Runtime/E2E verification is still missing.
-8. [Blocked] Orchestrator gates allow shallow/no-change PASS patterns.
-9. [P0] Today should focus on verification, evidence completeness, and governance.
-10. [Blocked] No worker task prompt is emitted because CEO final裁決 is unavailable and CTO constraints forbid it.
+1. [Confirmed] P13 added 7 real-token JWT auth tests.
+2. [Confirmed] Cross-user family context/recommendation access is rejected at API level.
+3. [Confirmed] `get_target_person` production ownership check remains un-overridden.
+4. [Confirmed] Backend 723/723 PASS is reported in `active_task_report.md`.
+5. [Confirmed] TypeScript, Next build, and `backend-smoke` PASS are reported.
+6. [Drift] GitHub Actions still uses bare pytest.
+7. [Missing] Browser login/token/session auth flow is not run.
+8. [Missing] PostgreSQL auth integration lane is absent.
+9. [P0] Next focus: browser auth smoke + CI entrypoint governance.
+10. [Blocked] No new worker task prompt is emitted because CTO is forbidden to generate one.
 
 ## Active Task Prompt Decision
 
-[Blocked] No "今日第一個可直接交給 Planner / Worker 執行的任務 prompt" is produced or written in this review.
+[Blocked] No "今日第一個可直接交給 Planner / Worker 執行的任務 prompt" is produced or written by this CTO review.
 
 Reason:
 
-- [Confirmed] The user explicitly restricted CTO to updating only `00-Plan/roadmap/roadmap.md` and `00-Plan/roadmap/CTO-Analysis.md`.
-- [Confirmed] The user also explicitly said "嚴禁產出新的 worker task prompt."
-- [Unknown] CEO final裁決 is not available.
+- [Confirmed] The instruction says CTO can update only `00-Plan/roadmap/roadmap.md` and `00-Plan/roadmap/CTO-Analysis.md`.
+- [Confirmed] The instruction explicitly says "嚴禁產出新的 worker task prompt."
+- [Confirmed] `00-Plan/roadmap/active_task.md` already exists but is not modified.
 
 Final classification for this analysis: `CTO_ROADMAP_UPDATED_WITH_RISKS`

@@ -1,3 +1,230 @@
+# Active Task Report — P13-AUTH-E2E-ENTRYPOINT-HARDENED (2026-05-23)
+
+## P13-AUTH-E2E-ENTRYPOINT-HARDENED (2026-05-23)
+
+**Final Classification: `P13_AUTH_E2E_ENTRYPOINT_HARDENED`**
+
+---
+
+### Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| Dirty files at start | Known P12 artifacts only (`.gitignore` M, plan files M, 3 artifact D entries from P12 `git rm --cached`, `test_auth_negative_smoke.py` ??). No scope conflict. |
+
+---
+
+### 1. Auth Token Fixture Probe
+
+| Item | Finding |
+|---|---|
+| `create_access_token` | **Exists** — `backend/app/core/security.py:18` |
+| `get_current_user` | Decodes JWT via `jose.jwt.decode` using `settings.jwt_secret_key` / `settings.jwt_algorithm` |
+| Existing tests with real JWT | **None** — all prior tests used `dependency_overrides[get_current_user]` |
+| Auth fixture available? | **YES** — `create_access_token` is importable; real tokens can be minted in tests |
+
+---
+
+### 2. Real-Token Auth Negative Smoke — PASS
+
+**New file:** `backend/tests/test_real_token_auth_negative.py`
+
+**Approach:** Only `get_db` is overridden (in-memory SQLite). `get_target_person` runs as production code. `get_current_user` uses a SQLite-compatible shim that calls the same `jwt.decode` with the same keys/algorithm, then coerces `sub` string → `uuid.UUID` before the DB query (required for SQLite `UUID(as_uuid=True)`; a no-op in production PostgreSQL).
+
+**Token issuance:** `create_access_token(str(user_id))` — identical to production login endpoint.
+
+| Test | Status |
+|---|---|
+| User A real token + user B `person_id` → `/family-health-context` → 404, no data leak | ✅ PASS |
+| User A real token + user B `person_id` → `/family-recommendations` → 404, no data leak | ✅ PASS |
+| No `Authorization` header → 401 | ✅ PASS |
+| Expired JWT (exp in past) → 401 | ✅ PASS |
+| Garbage non-JWT string → 401 | ✅ PASS |
+| User A real token + own `person_id` → 200 (sanity) | ✅ PASS |
+| User A real token + no `person_id` → 200 default person (sanity) | ✅ PASS |
+
+**Result:** `7 passed in 1.72s`
+
+**SQLite UUID limitation note:** The production `get_current_user` passes the JWT `sub` string directly to `UUID(as_uuid=True)` column. PostgreSQL's psycopg2 handles implicit casting; SQLite does not. The test shim adds `uuid.UUID(user_id_str)` coercion. This is a test-infra gap, not a security gap — `get_target_person` ownership enforcement runs unshimmed in both test environments.
+
+---
+
+### 3. Test Entrypoint Hardening — PASS
+
+**Problem:** `pytest -q` without `.venv` activation → 46 collection errors (`ModuleNotFoundError: No module named 'sqlalchemy'`).
+
+**Changes:**
+
+| File | Change |
+|---|---|
+| `backend/README.md` | Replaced bare `pytest -q` with canonical `.venv/bin/python -m pytest -q`; added warning box; documented `make backend-test` as CI equivalent |
+| `Makefile` (root) | Added `backend-smoke` target: runs only auth negative tests (`test_auth_negative_smoke.py` + `test_real_token_auth_negative.py`) without full DB setup |
+
+**Canonical test command (hardened):**
+```bash
+# From repo root
+make backend-test
+# or directly
+cd backend && .venv/bin/python -m pytest -q
+# auth smoke only
+make backend-smoke
+```
+
+---
+
+### 4. Full Validation Run
+
+| Check | Command | Result |
+|---|---|---|
+| Backend pytest | `backend/.venv/bin/python -m pytest -q` | **723 passed, 0 failed** (716 prior + 7 new real-token tests) |
+| Frontend TypeScript | `cd frontend && npx tsc --noEmit` | **Exit 0, 0 errors** |
+| Frontend Next Build | `cd frontend && npx next build` | **Success** — 20 static routes, First Load JS 95.3 kB |
+
+---
+
+### 5. Files Changed This Sprint
+
+| File | Action |
+|---|---|
+| `backend/tests/test_real_token_auth_negative.py` | **NEW** — 7 real-token auth negative tests |
+| `backend/README.md` | Updated Tests section with hardened entrypoint instructions |
+| `Makefile` | Added `backend-smoke` target; updated `.PHONY` |
+| `00-Plan/roadmap/active_task_report.md` | This block prepended |
+
+---
+
+### 6. Known Limitations
+
+1. **SQLite UUID coercion in `get_current_user`:** Production code (`deps.py`) passes JWT `sub` as string to `UUID(as_uuid=True)` column; works in PostgreSQL, fails in SQLite. Fixed by test shim. Application code not changed (out of scope).
+2. **Playwright E2E still NOT_RUN:** Real-browser login → token → cross-user probe flow. Out of scope for this sprint.
+3. **FastAPI `on_event` deprecation:** 4 warnings per run, pre-existing, not introduced here.
+4. **`backend-test` Makefile re-creates venv on every run:** `python3 -m venv .venv` is idempotent but slow. No change made (out of scope).
+
+---
+
+--- # Appendix: P12 Report ---
+
+## P12-POST-CLOSURE-VERIFICATION (2026-05-21)
+
+**Final Classification: `P12_POST_CLOSURE_VERIFIED`**
+
+---
+
+### Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| Dirty files at start | `M 00-Plan/roadmap/CEO-Decision.md`, `M 00-Plan/roadmap/CTO-Analysis.md`, `M 00-Plan/roadmap/active_task.md`, `M 00-Plan/roadmap/roadmap.md`, `M frontend/tsconfig.tsbuildinfo`, `M runtime/launchd/pids/backend.pid`, `M runtime/launchd/pids/frontend.pid` — all known artifacts, no scope conflict |
+
+---
+
+### A. Backend Regression Rerun — PASS
+
+**Command:** `cd backend && source .venv/bin/activate && pytest -q`
+
+| Metric | Result |
+|---|---|
+| Total tests | 716 (713 prior + 3 new auth negative smoke) |
+| PASS | 716 |
+| FAIL | 0 |
+| Skipped | 0 |
+| Warnings | 4 (FastAPI `on_event` deprecation — pre-existing) |
+
+**Summary line:** `716 passed, 4 warnings in 5.82s`
+
+> Note: Running pytest without `.venv` activation produces 46 collection errors (`ModuleNotFoundError: No module named 'sqlalchemy'`). The canonical invocation requires `.venv` activation — this is the same environment that produced the claimed 713 PASS.
+
+---
+
+### B. Frontend TypeScript — PASS
+
+**Command:** `cd frontend && npx tsc --noEmit`
+
+**Result:** Exit code 0, zero errors.
+
+---
+
+### C. Frontend Next Build — PASS
+
+**Node version:** v20.19.5  
+**npm version:** 10.8.2  
+**Command:** `cd frontend && npx next build`
+
+Build succeeded. Route table (all static):
+
+| Route | Size | First Load JS |
+|---|---|---|
+| / | 358 B | 81.4 kB |
+| /dashboard | 325 B | 81.4 kB |
+| /health-insights | 2.4 kB | 105 kB |
+| /login | 2.98 kB | 84.1 kB |
+| /register | 2.84 kB | 83.9 kB |
+| … (20 routes total, all ○ Static) | | |
+
+First Load JS shared: 95.2 kB.
+
+---
+
+### D. Minimal API Auth Negative Smoke — PASS
+
+**Auth fixture probe:**
+- `TestClient`: present in multiple test files ✅
+- `Authorization` / `access_token` / `create_access_token` / `auth_headers`: **NOT present** in test suite
+- Existing tests use `app.dependency_overrides[get_current_user]` pattern (no raw JWT in tests)
+
+**Decision:** Auth fixture exists (via dependency_overrides pattern). New negative smoke test written.
+
+**Test file:** `backend/tests/test_auth_negative_smoke.py`
+
+**Access control mechanism verified:**
+`get_target_person` in `backend/app/core/deps.py` enforces:
+```python
+.filter(PersonProfile.id == person_uuid, PersonProfile.owner_user_id == current_user.id)
+```
+If no match → HTTP 404. This is the isolation boundary tested.
+
+**Tests written (3):**
+1. `test_cross_user_family_context_returns_404` — User A token + user B's `person_id` → `/family-health-context` → 404, no data leak ✅
+2. `test_cross_user_family_recommendations_returns_404` — Same for `/family-recommendations` → 404, no data leak ✅
+3. `test_own_person_id_still_accessible` — Sanity: user A's own `person_id` → 200 ✅
+
+**Result:** `3 passed in 1.50s`
+
+**Full regression after adding test:** `716 passed, 4 warnings in 5.82s` (0 regressions)
+
+---
+
+### E. Artifact Hygiene + Report Integrity — PASS
+
+**E1. Artifact Hygiene:**
+
+| File | Action Taken |
+|---|---|
+| `frontend/tsconfig.tsbuildinfo` | Added to `.gitignore`; `git rm --cached` ✅ |
+| `runtime/launchd/pids/backend.pid` | Added to `.gitignore`; `git rm --cached` ✅ |
+| `runtime/launchd/pids/frontend.pid` | Added to `.gitignore`; `git rm --cached` ✅ |
+
+Physical files confirmed intact after `git rm --cached`. No runtime state was deleted.
+
+**E2. Report Integrity:** This block inserted at top of `active_task_report.md`. Prior content preserved below appendix separator.
+
+---
+
+### Known Limitations / Unknown / Inferred
+
+1. **venv invocation**: `pytest -q` without `.venv` activation fails with 46 collection errors. The 713 PASS claim and this session's 716 PASS both require explicit venv. CI/CD should pin to `.venv/bin/pytest` or equivalent.
+2. **Token-based E2E**: No real JWT token is issued or verified in tests — auth isolation is tested via `dependency_overrides`. A Playwright-level E2E with a real token flow (login → get JWT → cross-user probe) remains unverified.
+3. **Playwright E2E**: Written (spec exists) but not run. Browser E2E status unchanged from P11 handoff.
+4. **FastAPI `on_event` deprecation**: 4 warnings in all test runs. Pre-existing, not P12-introduced.
+
+---
+
+--- # Appendix: Prior Sprint Reports ---
+
 # Active Task Report — P12_PRODUCTION_TRUST_CLOSURE_READY
 
 Generated: 2026-05-22  

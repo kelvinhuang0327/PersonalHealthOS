@@ -2,141 +2,175 @@
 
 ## 1. CEO Review Date
 
-2026-05-20 Asia/Taipei
+2026-05-23 Asia/Taipei
 
 ## 2. Reviewed Inputs
 
-- [Confirmed] `00-Plan/roadmap/current_state.md` — P1 Daily Assistant UI Recovery handoff.
-- [Confirmed] `00-Plan/roadmap/CTO-Analysis.md` — CTO 2026-05-20 review.
-- [Confirmed] `00-Plan/roadmap/roadmap.md` — CTO-consolidated roadmap.
-- [Confirmed] Product positioning补充: AI 個人健康小助手, integrates symptoms/history/reports/metrics/actions/outcomes/future devices.
+- [Confirmed] `00-Plan/roadmap/roadmap.md` updated 2026-05-23 by CTO.
+- [Confirmed] `00-Plan/roadmap/CTO-Analysis.md` 2026-05-23 by CTO.
+- [Confirmed] User-provided handoff "工程交接報告 — P13 Auth E2E + Entrypoint Hardening" (referenced inside CTO docs).
+- [Confirmed] Git state: canonical repo `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` on `main`, HEAD `de78305`.
+- [Confirmed] Working tree dirty: `.gitignore`, `Makefile`, 5 roadmap docs, 3 staged deletions (`frontend/tsconfig.tsbuildinfo`, `runtime/launchd/pids/backend.pid`, `runtime/launchd/pids/frontend.pid`), 2 untracked test files (`test_auth_negative_smoke.py`, `test_real_token_auth_negative.py`).
+- [Confirmed] Product positioning: AI personal health assistant integrating symptoms / history / reports / metrics / actions / outcomes / family / future devices.
 
 ## 3. Yesterday Work Value Assessment
 
 | Item | Value | Note |
 | --- | --- | --- |
-| Shared `RecommendationTrustBlock` consolidated | [Confirmed] Real value | 消除 trust UI drift, 統一 backend-driven 契約 |
-| Dashboard/Actions trust 同源 | [Confirmed] Real value | 防止未來 divergence |
-| Backend 101 tests PASS | [Confirmed] Real value | 但僅 unit-level |
-| `tsc --noEmit` / `next build` PASS | [Confirmed] Real value | type/build 層級 |
-| Runtime / E2E / Docker / smoke | [Risk] 未跑 | 不能宣稱 UI 成熟 |
-| 整體 sprint | [Inferred] 推進 "safe to iterate"，非新用戶價值 | verification sprint by design |
+| `test_real_token_auth_negative.py` (7 tests, real JWT decode path) | [Confirmed] Real value | API-level cross-user rejection now evidence-based |
+| `get_target_person` ownership 未在測試中 override | [Confirmed] Real value | production enforcement path preserved |
+| `test_auth_negative_smoke.py` (override-style) | [Confirmed] Real value | fallback coverage |
+| `Makefile` `backend-smoke` target | [Confirmed] Real value | canonical reproducible entrypoint |
+| `.gitignore` rules for runtime artifacts | [Confirmed] Real value | pre-flight cleanup foundation |
+| Backend 723/723 PASS / tsc / next build / backend-smoke | [Inferred] Real value | reported in active_task_report.md, not independently rerun |
+| **All P13 changes NOT YET COMMITTED** | [Risk] Critical governance gap | HEAD still at P12 `de78305`, dirty tree blocks next agent |
+| SQLite UUID coercion shim | [Risk] Test-local only | PostgreSQL behavior unverified |
+| Browser auth flow | [Risk] Never run | API trust ≠ browser session trust |
+| CI workflow `.github/workflows/ci-cd.yml` | [Risk] Still bare `pytest -q` | CI/agent regression interpretation divergent |
 
-結論: 昨日推進的是「可迭代性」而非「產品成熟度」。仍需 P0 用戶價值推進。
+結論: P13 內容是實質推進, 但「未 commit」使這份推進對下一輪 agent 不可見。最高優先必須是 **將 P13 變更轉為 git history evidence**, 之後才能在乾淨基礎上做 browser auth smoke。
 
 ## 4. CTO Judgment Review
 
 **判斷: 部分採納 (Partially Approved)**
 
 ### 採納
-- [Confirmed] Runtime verification 為 P0 缺口。
-- [Confirmed] `external_metrics: []` 為產品定位最直接落差，列 P0。
-- [Confirmed] Unknown trust fallback 列 P0/P1 邊界, CEO 同意納入 P0。
-- [Confirmed] 真實 wearable connector 降為 P2。
-- [Confirmed] Notification intelligence 降級。
+- [Confirmed] API-level real-token auth smoke 退役為 blocker (P13 已完成)。
+- [Confirmed] Browser auth smoke 為下一個信任缺口。
+- [Confirmed] CI entrypoint hardening 為 governance debt。
+- [Confirmed] PostgreSQL parity 為真實 gap。
+- [Confirmed] 不啟新 feature phase。
+- [Confirmed] Wearable / notification 維持降級。
 
-### 不採納
-- [Rejected] CTO 把「change-control / git baseline」列 P0 Blocker 並要求 CEO 裁決。
-  - CEO 裁決: 嚴禁新增 repo (本日明確指示)。
-  - 替代方案: 採用 snapshot tarball 備份至 `runtime/snapshots/`, 排程後續任務處理, 不阻塞今日交付。
-- [Rejected as P0] Orchestrator gate credibility 阻塞用戶價值推進。
-  - CEO 裁決: 移至 P9 governance 子軌道, 與用戶交付並行, 不阻塞 P0。
+### 修正
+- [Rejected as 5 parallel P0s] CTO 再次列 5 個 P0, 過寬。CEO 收斂為「single sprint with 2 sub-acceptance」。
+- [Reordered] **P13 commit finalization 必須先於 browser smoke**, 否則 dirty tree 阻塞 pre-flight。
+- [Downgrade] CI workflow hardening 推至明日 P0, 今日不擠。
+- [Downgrade] PostgreSQL parity 改為 **P2 plan**, 非 P0 (需 Postgres 環境, 非 1 day scope)。
+- [Move] Report archive strategy 至 P1 governance, 加註「保留歷史, 切 archive 目錄」。
 
-### 過度悲觀 / 樂觀
-- [Risk] CTO 把 5 個項目同列 P0, 過寬, 今日無法全做; CEO 收斂為「最高優先單一方向」+ 2 個並行小項。
-- [Inferred] CTO 對 evidence bundle external_metrics 的判斷貼近產品定位, 採納。
+### 過度樂觀 / 遺漏
+- [Risk] CTO 未獨立重跑 backend 723 PASS / next build / backend-smoke, 完全依賴 active_task_report.md 自報。CEO 不要求今日重跑 (避免 scope creep), 但 worker 報告須明示「依賴上一輪自報」。
+- [Risk] CTO 未檢查 `D ` 是 `git rm` 還是 `git rm --cached`; 若為前者則 daemon pid 檔被刪可能影響本機。Worker pre-flight 必須確認。
 
 ## 5. Roadmap Gap Assessment
 
 | Gap | 行動 |
 | --- | --- |
-| P0 列入 change-control | [Retire-for-now], 改 snapshot 策略 |
-| P0 列入 orchestrator gate | 降為 P9 子軌, 不阻塞 P0 |
-| external_metrics 為空 | 維持 P0, 今日聚焦 |
-| Unknown trust fallback | 維持 P0 |
-| Runtime smoke | 維持 P0 但用輕量 curl/手動而非 Playwright |
-| Playwright | 移至 P1 |
+| 5 並列 P0 過寬 | 收斂為「single sprint, 2 sub-acceptance」 |
+| P13 未 commit | 列為 sprint 第一項 (governance unblock) |
+| Browser auth smoke | 列為 sprint 第二項 |
+| CI workflow | 明日 P0 候選, 今日不動 |
+| PostgreSQL parity | 降為 P2 plan, 非 P0 |
+| Report archive | 移 P1 |
+| `D ` staging 意圖未明 | Worker pre-flight 用 `git diff --cached --stat` 確認 |
+| Backend 723 自報 | 不要求今日重跑, 報告須註明來源 |
 
 ## 6. CEO Priority Decision
 
-### P0 (今日 / 本週)
-1. **Evidence Bundle external_metrics 第一級化** (今日焦點)
-2. Unknown trust fallback UX + regression test
-3. Health Assistant runtime smoke (curl + 手動瀏覽器)
+### P0 (今日 single sprint, 名稱: `P13-FINALIZE-AND-BROWSER-AUTH-SMOKE`)
+
+依賴序 (A 必先於 B):
+
+**A. P13 Working Tree Finalization (governance unblock)**
+- 確認 dirty/staged/untracked 清單與 P13 邏輯吻合
+- 按邏輯分組做 2–3 個 commit:
+  - C1: `feat(auth): P13 real-token JWT negative smoke + override smoke` (兩個測試檔)
+  - C2: `chore(governance): backend-smoke target, .gitignore artifact rules, README/Makefile entrypoint`
+  - C3: `docs(roadmap): P13 closure — roadmap.md, CTO-Analysis.md, CEO-Decision.md, active_task.md, active_task_report.md`
+- 驗收: HEAD 前進至少 1 步, `git status --short` clean (或剩 CEO 本次新增的 docs)
+
+**B. Browser Auth Negative Smoke (Playwright minimal)**
+- 利用 frontend 既有 `npm run e2e` (Playwright)
+- 第一步: grep 確認是否已有 login helper / auth fixture
+- 若 fixture 存在: 寫 1 個 minimal browser test, user A 登入後嘗試讀 user B family page → 預期 redirect / 403 / 404 / 無資料洩漏
+- 若 fixture 不存在: 輸出 `BROWSER_AUTH_E2E_NOT_IMPLEMENTED` + 缺哪個 helper + 對應 Next route, **不強推新測試 framework**
+- 驗收: 1 個 PASS, 或 NOT_IMPLEMENTED + 詳細 gap report
+
+### P0 (明日候選, 不擠今日)
+- CI workflow `.github/workflows/ci-cd.yml` 改用 `.venv/bin/python -m pytest` 或等價 reproducible 指令
 
 ### P1
-1. Playwright 對 Dashboard/Actions/Trust/Outcome Feedback 的瀏覽器級回歸
-2. Outcome feedback 7/14/30 日窗口精修
-3. Product signal 可靠性 (completion / snooze / conversion / acceptance)
-4. Report/insight-to-action UX (限 P0 完成後)
+1. Playwright regression for Daily Assistant / Actions / Trust / Outcome / Family Health Card
+2. Unknown / missing trust fallback UI + regression
+3. Report archive strategy (`active_task_report.md` 切 archive 目錄, 保留歷史)
+4. Product signal reliability (completion / snooze / conversion / acceptance)
 
 ### P2
-1. Provider-neutral external metrics schema (heart rate / pulse / sleep / steps / activity / SpO2)
-2. Mock / manual import layer with source / freshness / reliability
-3. Device signal detection
-4. 不接 Apple Health / Google Fit / 真實 wearable API
+1. PostgreSQL auth parity lane plan (owner / scope / test target / 環境設置)
+2. Provider-neutral device schema (HR / pulse / sleep / steps / activity / SpO2)
+3. SpO2/pulse migration planning
+4. Mock/manual import reliability + source normalization
+5. 真實 wearable connectors 維持 paused
 
 ### P3–P10
-- P3 症狀智慧 (timeline, severity, pattern, → recommendation, → reminder)
-- P4 報告到行動閉環
-- P5 通知智慧化 (降級, 等 P0/P1 verified)
+- P3 症狀智慧 (timeline / severity / pattern / → recommendation / → reminder)
+- P4 報告到行動閉環 + conversion tracking + E2E smoke
+- P5 通知智慧化 (降級)
 - P6 個人化與學習
 - P7 敘事記憶
-- P8 家庭 / 多人健康助手
-- P9 產品分析 + orchestrator gate 硬化 (合併自原 P0)
-- P10 生產合規與生態
+- P8 家庭 / 多人健康助手 (permission/isolation 持續硬化)
+- P9 Orchestrator governance + CI entrypoint + report archive
+- P10 生產合規 (auth / DB parity / deployment smoke / audit / privacy / monitoring)
 
 ### Retired / Paused
-- [Retired-for-now] 新增 git repo (CEO 否決)
+- [Retired] API-level real-token auth negative smoke (P13 已完成)
+- [Retired] "No git repo" 阻塞
 - [Paused] 真實 wearable 連接器
 - [Paused] Notification intelligence
+- [Paused] CTO 自行產出 worker prompt (instruction 禁止)
 
 ## 7. Today Focus Direction
 
-**單一焦點: Evidence Bundle `external_metrics` 第一級化**
+**單一焦點: P13 Finalize + Browser Auth Negative Smoke**
 
-- Roadmap phase: P0
-- 為什麼重要: 產品定位是「整合所有個人健康資料」, 但目前 evidence bundle 對 `external_metrics` 回傳 `[]`, 等於對使用者承諾的「整合所有資料」未兌現。
-- 對系統成熟度的實質推進: 把已存在的 source-tagged metrics 從隱性資料升為顯性 evidence, recommendation/trust 取得更多輸入, 為 P2 wearable schema 鋪路。
+- Roadmap phase: P0 / P10 extension
+- 為什麼重要:
+  - P13 程式碼未 commit, dirty tree 阻塞下一輪 agent
+  - Browser auth 是真實用戶面對的層, API auth trust 不等於 session trust
+- 系統成熟度推進:
+  - 把 P13 從「working tree evidence」升為「git history evidence」
+  - 把 "claimed API auth trust" 升為 "evidenced browser auth boundary"
 - 預期收益:
-  - Recommendation 信號來源更完整
-  - Trust score 計算輸入更豐富
-  - 為 P2 device readiness 預留契約
+  - HEAD 移至 P13 closure commit, 下輪 agent 不需處理 dirty
+  - 一個 browser-level negative test 證明真實 session/JWT flow, 或精確列出缺失 fixture
 - 風險:
-  - 過度設計 schema → 限制只暴露現有 `health_metrics.source` 欄位
-  - 無 git rollback → worker 動工前必須建 snapshot tarball
-- 驗收:
-  - `/health-assistant/evidence-bundle` 對有 source-tagged metrics 的 user 回傳非空 `external_metrics`
-  - 每筆含 source / timestamp / freshness / reliability / summary
-  - Backend unit tests 全綠 (含新增測試)
-  - `npx tsc --noEmit` 全綠
-- 是否採納 CTO 建議: 採納 (對應 CTO Direction 2 / Blocker 3)
+  - Playwright 啟動本地 dev server 可能因 port 衝突失敗 → 允許 NOT_IMPLEMENTED partial
+  - Commit 包山包海會難 review → 強制 2–3 commit 邏輯切分
+- 驗收: 子驗收 A `clean tree + HEAD 前進`, 子驗收 B `PASS 或 NOT_IMPLEMENTED + gap detail`
+- 是否採納 CTO: 部分採納; 採納 Direction 1 (browser auth smoke); 推遲 Direction 2 (CI) 至明日; 降級 Direction 3 (PostgreSQL) 至 P2 plan
 
 ## 8. Risks / Blind Spots
 
-- [Risk] 無 git → worker 任何動作前必須 `cp -r backend/app /tmp/backend.app.snapshot.YYYYMMDD-HHMM`。
-- [Risk] `health_metrics.source` 欄位實際存在性未經本輪驗證; worker 第一步須 grep 驗證, 缺失即停工回報。
-- [Unknown] `external_metrics` 是否已有 service 骨架; worker 須先讀 `backend/app/services/health_assistant_service.py` 確認。
-- [Risk] 任務 scope 蔓延; 今日只動 backend evidence bundle, frontend 不改, 若 worker 擴大 scope 須立即停止。
-- [Inferred] Runtime smoke / unknown trust fallback 今日不啟動, 等 external_metrics 落地後排下一輪。
+- [Risk] Working tree 內 `D ` staging 意圖未明; worker pre-flight 必須用 `git diff --cached --stat` 確認是 `git rm --cached` 而非 `git rm` 實體刪除。
+- [Risk] 若 `runtime/launchd/pids/*.pid` 實體被刪, 本機 daemon 狀態可能受影響; 嚴禁 worker 主動刪除任何 `runtime/**` 實體檔案。
+- [Risk] CTO 未獨立重跑 backend 723 PASS; 今日 sprint 不要求重跑, 但報告須註明「依賴 active_task_report.md 自報, 未本輪 rerun」。
+- [Risk] Playwright `npm run e2e` 需要 dev server 啟動; 若 port 衝突或環境不足, NOT_IMPLEMENTED 為合法 partial 結果。
+- [Unknown] Playwright fixture 是否已有 login helper / token bootstrap; worker 第一步 grep, 不存在則只輸出 gap, 不建框架。
+- [Risk] Commit message 若一次包山包海, 未來 revert / cherry-pick 困難; 強制邏輯切分。
+- [Inferred] CEO/CTO/Roadmap 三檔的 modification 是 P13 governance 一部分, 應與 P13 一起 commit (C3 docs commit)。
+- [Risk] 本輪 CEO 新增的 CEO-Decision.md + active_task.md modification 若在 worker 動工後寫入, 會再次造成 dirty; 因此 CEO 必須先寫完 docs, 再讓 worker 動。
+- [Unknown] PostgreSQL parity 真實成本未估; 列 P2 plan 不視為承諾。
+- [Risk] Report archive 移 P1 後若一直推遲, `active_task_report.md` 持續膨脹; 下次 CTO review 應 escalate。
 
 ## 9. CEO Final Decision
 
 **CEO_DECISION_PARTIALLY_APPROVED**
 
-採納 CTO 對 evidence completeness / runtime verification / unknown trust / wearable downgrade 的判斷。
-否決 CTO 對 change-control 與 orchestrator gate 列 P0 阻塞的判斷; 改以 snapshot 策略與 P9 子軌處理。
-今日單一可執行任務: Evidence Bundle external_metrics 第一級化, 寫入 `00-Plan/roadmap/active_task.md`。
+採納 CTO 對 P13 已關 API-level auth blocker、browser auth 為下一缺口、PostgreSQL parity 真實存在的判斷。
+否決「5 並列 P0」結構, 改為「single sprint with 2 sub-acceptance, 依賴序」。
+今日單一 task 寫入 `00-Plan/roadmap/active_task.md`。
+CI hardening 推至明日 P0; PostgreSQL parity 降至 P2 plan; Report archive 移至 P1。
 
 ## 10. CEO 摘要 (10 行內)
 
-1. 昨日為 verification sprint, 推進「可迭代性」非新用戶價值。
-2. CTO 分析方向正確, 但 P0 過寬, 需收斂。
-3. CEO 否決新增 git repo, 以 snapshot tarball 替代。
-4. Orchestrator gate 降為 P9 子軌, 不阻塞用戶交付。
-5. 今日 P0 焦點: Evidence Bundle `external_metrics` 第一級化。
-6. 對應產品定位「整合所有個人健康資料」最直接落差。
-7. Scope 限制: 只暴露現有 `health_metrics.source`, 不引入新欄位。
-8. Worker 動工前必須建 snapshot, 第一步驗證 schema 存在。
-9. Runtime smoke / unknown trust fallback 排下一輪。
-10. Final: CEO_DECISION_PARTIALLY_APPROVED。
+1. P13 真實推進 API auth 信任邊界, 但所有產出未 commit。
+2. HEAD 仍在 P12 `de78305`, dirty tree 是當前最大 governance 阻塞。
+3. CTO 方向正確但 5 並列 P0 過寬, CEO 收斂為單一 sprint。
+4. 今日聚焦: P13 finalize → browser auth negative smoke。
+5. Commit 分 2–3 個邏輯組 (tests / governance / docs)。
+6. Browser smoke 允許 NOT_IMPLEMENTED partial; 不強推新 framework。
+7. CI workflow hardening 明日 P0, 今日不擠。
+8. PostgreSQL parity 降為 P2 plan, 非 P0 阻塞。
+9. Report archive 移 P1, 不今日動。
+10. Final: **CEO_DECISION_PARTIALLY_APPROVED**。
