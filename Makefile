@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke frontend-auth-smoke frontend-e2e-local local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke frontend-auth-smoke frontend-e2e-local local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
 
 up:
 	docker compose up -d --build
@@ -41,6 +41,15 @@ config-smoke:
 		tests/test_config_security_guard.py \
 		tests/test_runtime_config_startup_guard.py
 
+# P23–P30 input validation, boundary, injection, and schema boundary regression
+# No DB required. All tests use in-memory SQLite.
+validation-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q \
+		tests/test_input_validation_hardening.py \
+		tests/test_input_validation_boundary.py \
+		tests/test_injection_smoke.py \
+		tests/test_schema_validation_p30.py
+
 # Health endpoint contract smoke + full security regression — no running server required
 # /health and /health/live are DB-independent (always 200).
 # /health/ready accepts 200 (DB up) or 503 (DB down); never 500.
@@ -48,6 +57,7 @@ runtime-smoke:
 	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v tests/test_runtime_smoke.py
 	$(MAKE) security-smoke
 	$(MAKE) config-smoke
+	$(MAKE) validation-smoke
 
 # Targeted Playwright auth E2E tests
 # Requires:
