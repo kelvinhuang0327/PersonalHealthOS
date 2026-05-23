@@ -1,5 +1,122 @@
 # Active Task Report
 
+## P24-BOUNDARY-INPUT-VALIDATION (2026-05-23)
+
+**Final Classification: `P24_BOUNDARY_INPUT_VALIDATION_HARDENED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `fbe83cc` (P23 report) ✅ |
+| Dirty files | none ✅ |
+
+---
+
+### 2. Threat Model (OWASP A03 / A08 — Boundary Layer)
+
+P23 closed obvious DB-write schema gaps. P24 targets the boundary layer:
+- `Form(...)` fields with no length constraint written to DB
+- `list[str]` request fields with no count or per-item length bound
+- `Query(...)` parameters with no string length bound
+- Optional text fields passed into AI prompt pipelines without truncation guard
+
+---
+
+### 3. Boundary Validation Inventory
+
+| Endpoint | Input | Type | Current Validation | Risk | Class |
+|---|---|---|---|---|---|
+| `POST /documents/upload` | `category` | Form | none | DB write, unbounded | **GAP C** |
+| `POST /reports/generate` | `include_sections` | Body list | no count/item bound | 25 items loop CPU + unbounded strings | **GAP C** |
+| `POST /reports/generate` | `person_id` | Body str | none | no UUID format check | **PARTIAL B** |
+| `POST /ai-modules/*` | `AIModuleRequest.focus` | Body str | none | passed to AI prompt pipeline | **GAP C** |
+| `GET /documents/lab-history` | `metric` | Query str | none | Python filter (not SQL-inject risk, still unbounded) | **PARTIAL B** |
+| `POST /documents/upload` | file/content-type/size | File | `validate_upload()` enforces all | already protected | **SAFE A** |
+| All `days/limit/ge/le` query params | int | Query | `ge/le` constraints | already protected | **SAFE A** |
+| `POST /ai-modules/evaluate/{module_name}` | path | Path str | explicit allowlist check | already protected | **SAFE A** |
+| `health_assistant` query params | `days/period_type` | Query | `ge/le` + `pattern=` regex | already protected | **SAFE A** |
+
+---
+
+### 4. Fixes Applied
+
+#### `backend/app/api/documents.py`
+- `category: Form(...)` → `Form(..., min_length=1, max_length=60)` — prevents empty/oversized category written to `MedicalDocument.category`
+- `metric: Query(default=None)` → `Query(default=None, max_length=120)` — bounds lab history filter query param
+
+#### `backend/app/api/reports.py` — `ReportGenerateRequest`
+- `include_sections: list[str]` → `list[Annotated[str, Field(max_length=60)]]` with `Field(max_length=20)` — prevents oversized section lists (>20 items) and per-item oversized strings (>60 chars)
+- `person_id: Optional[str] = None` → `Field(default=None, max_length=36)` — UUID-length bound
+
+#### `backend/app/schemas/ai_modules.py` — `AIModuleRequest`
+- `focus: Optional[str] = None` → `Field(default=None, max_length=200)` — prevents oversized focus strings from entering AI prompt pipeline
+
+---
+
+### 5. Test Results
+
+| Test File | Tests | Result |
+|---|---|---|
+| `test_input_validation_boundary.py` | 11 | ✅ 11 passed |
+| `test_input_validation_hardening.py` | 19 | ✅ 19 passed (no regression) |
+| `make security-smoke` (all auth + tsc) | 29+2skip+tsc | ✅ EXIT:0 |
+
+#### P24 Test Coverage
+
+| Test | Assertion |
+|---|---|
+| `test_sections_too_many_rejected` | 25 items → 422 |
+| `test_section_item_too_long_rejected` | item >60 chars → 422 |
+| `test_person_id_too_long_rejected` | person_id >36 chars → 422 |
+| `test_valid_single_section_accepted` | `["score"]` → 202 |
+| `test_category_too_long_rejected` | Form >60 chars → 422 |
+| `test_category_empty_rejected` | Form `""` → 422 |
+| `test_focus_too_long_rejected` | focus >200 chars → ValidationError |
+| `test_focus_valid_accepted` | valid focus → schema OK |
+| `test_focus_none_valid` | `focus=None` → schema OK |
+| `test_metric_query_too_long_rejected` | metric >120 chars → 422 |
+| `test_metric_query_valid_accepted` | `?metric=glucose` → 200 |
+
+---
+
+### 6. Commits
+
+| SHA | Message |
+|---|---|
+| `07f8a7c` | `fix(validation): harden boundary input constraints` |
+| `61a8c86` | `test(validation): add boundary input rejection regression (11 tests)` |
+
+---
+
+### 7. Known Limitations / Out-of-scope
+
+- File upload content validation (MIME detection beyond extension/type allowlist) — would require content-scanning library — out of scope
+- Report `include_sections` items are matched by string equality; unknown section names are silently ignored (no 422 for unknown section names) — by design, not a security gap
+- `person_id` is not validated as a UUID format (only length-bounded); invalid UUIDs are silently ignored by the DB query — low-risk, documented
+- Dynamic payloads in `narrative-memory/generate`, `personalization-profile/sync` not audited — UNKNOWN, deferred
+
+---
+
+### 8. Completed Security Hardening Stack
+
+| Phase | Classification | Focus |
+|---|---|---|
+| P17 | `P17_BACKEND_AUTHORIZATION_AUDIT_VERIFIED` | auth middleware coverage |
+| P18 | `P18_REPORT_STATUS_AUTH_HARDENED_DOWNLOAD_GAP` | report status auth |
+| P19 | `P19_DOWNLOAD_JWT_REQUIRED_FRONTEND_CONTRACT_GAP` | download JWT doc |
+| P20 | `P20_REPORT_DOWNLOAD_AUTHORIZATION_CLOSED` | download auth closure |
+| P21 | `P21_SECURITY_SMOKE_AND_CI_READY` | Makefile smoke target |
+| P22 | `P22_FRONTEND_E2E_CI_SAFE_SMOKE_READY` | frontend e2e CI safe |
+| P23 | `P23_INPUT_VALIDATION_HARDENED` | Pydantic schema constraints |
+| **P24** | **`P24_BOUNDARY_INPUT_VALIDATION_HARDENED`** | **boundary Form/Query/list/focus** |
+
+---
+
 ## P23-INPUT-VALIDATION-SCHEMA-HARDENING (2026-05-23)
 
 **Final Classification: `P23_INPUT_VALIDATION_HARDENED`**
