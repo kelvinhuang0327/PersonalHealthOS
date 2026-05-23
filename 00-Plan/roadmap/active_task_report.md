@@ -1,5 +1,157 @@
 # Active Task Report
 
+## P26-RATE-LIMIT-BRUTE-FORCE-AUDIT (2026-05-23)
+
+**Final Classification: `P26_RATE_LIMIT_SMOKE_VERIFIED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `a3d69f8` (P25 report) ✅ |
+| Dirty files | none ✅ |
+
+---
+
+### 2. Audit Scope
+
+Rate-limit / brute-force protection audit — verifying that:
+- `InMemoryRateLimitMiddleware` is correctly implemented
+- Health endpoints are exempt from throttling
+- Middleware behavior is covered by regression tests
+- Config knobs are correctly documented
+- Rate limiting remains **opt-in** (`RATE_LIMIT_ENABLED=true` env var)
+
+No auth changes. No DB changes. No new dependencies. No production behavior enabled.
+
+---
+
+### 3. Rate-Limit Inventory
+
+#### Middleware — `backend/app/core/rate_limit.py`
+
+| Property | Value |
+|---|---|
+| Class | `InMemoryRateLimitMiddleware(BaseHTTPMiddleware)` |
+| Bucket key | `{client_ip}:{path}` — per-IP per-path |
+| Window algorithm | Sliding window (deque, time-based) |
+| Health exemption | `path.startswith('/health')` → bypassed |
+| 429 body | `{'detail': 'Rate limit exceeded'}` — no internal leak |
+| Storage | Thread-safe in-process `defaultdict(deque)` with `Lock` |
+| External dependency | None (`slowapi` is NOT installed and NOT used) |
+
+#### Config — `backend/app/core/config.py`
+
+| Setting | Default | Env Var |
+|---|---|---|
+| `rate_limit_enabled` | `False` | `RATE_LIMIT_ENABLED` |
+| `rate_limit_requests` | `120` | `RATE_LIMIT_REQUESTS` |
+| `rate_limit_window_seconds` | `60` | `RATE_LIMIT_WINDOW_SECONDS` |
+
+`.env.example` shows `RATE_LIMIT_ENABLED=true` — production intent is documented.
+
+#### Wiring — `backend/app/main.py`
+
+```python
+if settings.rate_limit_enabled:
+    app.add_middleware(InMemoryRateLimitMiddleware,
+        requests=settings.rate_limit_requests,
+        window_seconds=settings.rate_limit_window_seconds)
+```
+
+Middleware is conditionally mounted at startup — clean opt-in behavior.
+
+---
+
+### 4. Classification
+
+| Item | Classification |
+|---|---|
+| Middleware implementation (`InMemoryRateLimitMiddleware`) | **SAFE A** — correct sliding window, thread-safe, no external deps |
+| `/health`, `/health/live`, `/health/ready` exempt | **SAFE A** — `startswith('/health')` bypasses throttling |
+| 429 body safe (`detail` only, no internals) | **SAFE A** — confirmed |
+| Per-path bucket isolation | **SAFE A** — confirmed: exhausting path A does not affect path B |
+| `rate_limit_enabled=False` default | **PARTIAL B** — middleware exists but opt-in; correct for dev/test |
+| No existing rate-limit smoke test | **GAP C** → **FIXED** — `test_rate_limit_smoke.py` added |
+| `slowapi` not installed | **SAFE A** — not needed; custom middleware is self-contained |
+| Default threshold `120 req/60s` per IP per path | **PARTIAL B** — adequate for general use; auth endpoints (login, register) share this global threshold, not a stricter per-route limit |
+
+#### Remaining known limitation (out of scope for P26)
+- `InMemoryRateLimitMiddleware` is **global**, not per-route. Auth endpoints (`POST /api/v1/auth/login`, `POST /api/v1/auth/register`) are throttled at the same `120 req/60s` rate as all other endpoints. A per-route stricter limit (e.g., `10 req/60s` for login) would require route-level decorator support or a dedicated auth-route bucket override — this is a future hardening task, not P26 scope.
+- In-memory storage does not persist across restarts and is not shared across multiple worker processes. Suitable for single-process deployment; multi-worker deployments would need Redis-backed storage.
+
+---
+
+### 5. Fixes Applied
+
+| Commit | SHA | Description |
+|---|---|---|
+| C1 | `d3f73f5` | `test(security): add rate-limit smoke regression` |
+
+#### C1 — `backend/tests/test_rate_limit_smoke.py` (7 tests)
+
+| Test | Assertion |
+|---|---|
+| `test_health_get_exempt_when_enabled` | `/health` → 200 ×5, never 429 |
+| `test_health_live_exempt_when_enabled` | `/health/live` → 200 ×5, never 429 |
+| `test_health_ready_exempt_when_enabled` | `/health/ready` → 200 ×5, never 429 |
+| `test_non_health_route_limited` | 3 allowed → 4th is 429 (threshold=3) |
+| `test_429_body_is_safe` | `{detail: 'Rate limit exceeded'}`, no traceback/error/store keys |
+| `test_disabled_mode_no_interference` | No middleware → 200 ×10 |
+| `test_different_paths_tracked_separately` | Path A exhausted → Path B still returns 200 |
+
+All tests use a minimal self-contained FastAPI app — no DB, no auth, no running server.
+
+---
+
+### 6. Regression Gate
+
+| Gate | Result |
+|---|---|
+| `test_rate_limit_smoke.py` (7 tests) | **7/7 PASS** |
+| `make runtime-smoke` (health + security chain) | **EXIT:0** — 29 passed, 2 skipped |
+
+---
+
+### 7. Files Changed
+
+| File | Change |
+|---|---|
+| `backend/tests/test_rate_limit_smoke.py` | **CREATED** — 140 lines, 7 tests |
+| `00-Plan/roadmap/active_task_report.md` | **UPDATED** — P26 block prepended |
+
+---
+
+### 8. Rate Limiting Status After P26
+
+- **Remains opt-in** — `RATE_LIMIT_ENABLED=false` by default
+- **Production activation**: set `RATE_LIMIT_ENABLED=true` in environment
+- **Default production threshold**: 120 requests / 60 seconds per IP per path
+- **Health endpoints**: always exempt (verified by tests)
+- **Middleware contract**: verified by 7-test regression suite
+
+---
+
+### 9. Final Status
+
+```
+P26_RATE_LIMIT_SMOKE_VERIFIED
+HEAD: d3f73f5
+make runtime-smoke: EXIT:0
+InMemoryRateLimitMiddleware: VERIFIED — exempt, throttling, safe 429, path isolation
+Rate limiting: remains opt-in (RATE_LIMIT_ENABLED=true to activate)
+Known gap: global threshold only, no per-route stricter limit for auth endpoints
+Next: P27 — TBD
+```
+
+---
+
+---
+
 ## P25-DEPLOYMENT-SMOKE-RUNTIME-READINESS (2026-05-23)
 
 **Final Classification: `P25_RUNTIME_HEALTH_ENDPOINT_HARDENED`**
