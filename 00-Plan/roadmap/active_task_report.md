@@ -1,5 +1,67 @@
 # Active Task Report
 
+## P31-VALIDATION-SMOKE-GATE-CONSOLIDATION (2026-05-23)
+
+**Final Classification: `P31_RUNTIME_SMOKE_VALIDATION_GATE_READY`**
+
+---
+
+### 1. Branch Governance Pre-flight
+- Branch: `main` | HEAD before: `35fb405` | Status: clean ✅
+
+### 2. Smoke Coverage Audit (P23–P30)
+
+| Test File | Tests | Prior Target | Classification |
+|---|---|---|---|
+| `test_input_validation_hardening.py` (P23) | 19 | none | **B — MISSING** |
+| `test_input_validation_boundary.py` (P24) | 11 | none | **B — MISSING** |
+| `test_injection_smoke.py` (P27) | 7 | none | **B — MISSING** |
+| `test_schema_validation_p30.py` (P30) | 20 | none | **B — MISSING** |
+| `test_config_security_guard.py` (P28) | — | `config-smoke` | **A — INCLUDED** |
+| `test_runtime_config_startup_guard.py` (P29) | — | `config-smoke` | **A — INCLUDED** |
+| `test_runtime_smoke.py` | 3 | `runtime-smoke` (stage 1) | **A — INCLUDED** |
+| `test_auth_negative_smoke.py` | — | `security-smoke` | **A — INCLUDED** |
+| `test_real_token_auth_negative.py` | — | `security-smoke` | **A — INCLUDED** |
+
+### 3. Files Changed
+
+- `Makefile` — added `validation-smoke` target; added as stage 4 of `runtime-smoke`; updated `.PHONY`
+
+### 4. New / Updated Makefile Targets
+
+**`validation-smoke` (new):**
+```
+cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q \
+    tests/test_input_validation_hardening.py \
+    tests/test_input_validation_boundary.py \
+    tests/test_injection_smoke.py \
+    tests/test_schema_validation_p30.py
+```
+
+**`runtime-smoke` (updated — stage 4 added):**
+```
+1. test_runtime_smoke.py       (health endpoint contracts)
+2. security-smoke              (auth audit + frontend tsc)
+3. config-smoke                (P28/P29 secret guard)
+4. validation-smoke            (P23/P24/P27/P30 schema/injection)
+```
+
+### 5. Validation Results
+
+| Target | Result |
+|---|---|
+| `make validation-smoke` | 57 passed, 0 failed ✅ |
+| `make runtime-smoke` | all stages pass (3 + 29 + 15 + 57 = 104 tests) ✅ |
+
+### 6. Known Limitations
+- `frontend-tsc` step in `security-smoke` requires Node.js — if tsc is unavailable the gate fails. This is pre-existing behavior, not introduced by P31.
+- `validation-smoke` only covers P23/P24/P27/P30. P25 (health endpoint runtime), P26 (rate-limit smoke), P28/P29 (config guard) remain in their own dedicated targets which are already part of `runtime-smoke`.
+
+### 7. Commit
+- `75214b8` — `chore(governance): add validation-smoke to runtime gate (P31)`
+
+---
+
 ## P30-SCHEMA-VALIDATION-BOUNDARY-HARDENING (2026-05-23)
 
 **Final Classification: `P30_SCHEMA_VALIDATION_HARDENED`**
