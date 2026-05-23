@@ -1,5 +1,118 @@
 # Active Task Report
 
+## P23-INPUT-VALIDATION-SCHEMA-HARDENING (2026-05-23)
+
+**Final Classification: `P23_INPUT_VALIDATION_HARDENED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `83465e0` (P22 report) ✅ |
+| Dirty files | none ✅ |
+
+---
+
+### 2. Threat Model (OWASP A03 / A08)
+
+Authenticated users can submit request bodies. Without field-level Pydantic
+constraints, malformed or oversized payloads reach the DB write path — causing
+either application errors (500) or unexpected data storage. Pydantic constraints
+are the correct enforcement layer: they fire before any service code runs and
+return 422 automatically.
+
+---
+
+### 3. Validation Surface Audit
+
+| Schema | Field(s) | Previous State | Risk | Fix |
+|---|---|---|---|---|
+| `auth.LoginRequest` | `password` | bare `str` | C — bcrypt DoS via unbounded input | `max_length=1024` |
+| `symptoms.SymptomCreateRequest` | `note` | `Optional[str]` | C — unbounded → DB | `max_length=2000` |
+| `symptoms.SymptomUpdateRequest` | `note` | `Optional[str]` | C — unbounded → DB | `max_length=2000` |
+| `profile.ProfileUpsertRequest` | `allergies` | `Optional[str]` | C — unbounded → DB | `max_length=2000` |
+| `profile.ProfileUpsertRequest` | `family_history` | `Optional[str]` | C — unbounded → DB | `max_length=2000` |
+| `profile.ProfileUpsertRequest` | `chronic_conditions` | `Optional[str]` | C — unbounded → DB | `max_length=2000` |
+| `profile.AccountUpdateRequest` | `email` | bare `str` | C — no format validation | `Optional[EmailStr]` |
+| `actions.HealthActionCreate` | `description` | `Optional[str]` | C — unbounded → DB | `max_length=2000` |
+| `actions.HealthActionCreate` | `category/action_type/priority/frequency/status` | bare `str` | C — unbounded → DB | `max_length=30–60` |
+| `actions.HealthActionCreate` | `source_id/evidence_level/guideline_source/rule_id` | `Optional[str]` | C — unbounded → DB | `max_length=60–200` |
+| `actions.HealthActionUpdate` | `description/category/priority/frequency/status` | `Optional[str]` | C — unbounded → DB | `max_length=30–2000` |
+| `actions.HealthActionUpdate` | `snooze_reason/reminder_status/impact_status` | `Optional[str]` | C — unbounded → DB | `max_length=30–500` |
+| `documents.ParsedItemUpdate` | `value/unit/reference_range` | `Optional[str]` | C — unbounded → DB | `max_length=50–500` |
+| `health_assistant._SnoozeBody` | `hours` | `Optional[int]` no bounds | C — negative/huge values | `ge=1, le=168` |
+
+**Schemas already SAFE (no changes):**
+- `auth.RegisterRequest` — `EmailStr` + `password min/max` ✅
+- `metrics.MetricCreateRequest` — all numeric with `ge`/`le` ✅
+- `persons.PersonCreateRequest/Update` — `display_name`, `relationship`, `gender`, numeric bounds ✅
+- `symptoms.SymptomCreateRequest` — `severity`, `duration_minutes`, `confidence_score` bounds ✅
+- `health_score.HealthScoreCalculateRequest` — `days ge/le` ✅
+- `ai_modules.AIModuleRequest` — `days`, `max_items` ge/le ✅
+- `health_assistant._FamilyRelationshipBody` — field validators ✅
+
+---
+
+### 4. Commits
+
+| SHA | Type | Description |
+|---|---|---|
+| `dd8ddb0` | `fix(validation)` | Harden Pydantic constraints across schema surface |
+| `0a0e116` | `test(validation)` | P23 schema rejection regression suite (19 tests) |
+
+---
+
+### 5. Test Results
+
+```
+19 passed, 0 failed
+make security-smoke → EXIT:0  (29 auth tests + tsc — all pass)
+```
+
+Test file: `backend/tests/test_input_validation_hardening.py`
+
+| Test | Asserts |
+|---|---|
+| `test_login_password_too_long` | `password * 1025 → 422` |
+| `test_login_password_at_max_accepted` | `password * 1024 → not 422` |
+| `test_create_note_too_long` | `note * 2001 → 422` |
+| `test_update_note_too_long` | `note * 2001 → 422` |
+| `test_create_valid_with_note` | `note * 200 → 200` |
+| `test_allergies_too_long` | `allergies * 2001 → 422` |
+| `test_family_history_too_long` | `family_history * 2001 → 422` |
+| `test_chronic_conditions_too_long` | `chronic_conditions * 2001 → 422` |
+| `test_account_email_invalid` | `"not-an-email" → 422` |
+| `test_profile_valid` | valid upsert → 200 |
+| `test_create_description_too_long` | `description * 2001 → 422` |
+| `test_create_category_too_long` | `category * 61 → 422` |
+| `test_create_priority_too_long` | `priority * 31 → 422` |
+| `test_update_snooze_reason_too_long` | `snooze_reason * 501 → 422` |
+| `test_create_valid_action` | valid action → 201 |
+| `test_update_value_too_long` | `value * 501 → ValidationError` |
+| `test_update_unit_too_long` | `unit * 51 → ValidationError` |
+| `test_update_reference_range_too_long` | `reference_range * 101 → ValidationError` |
+| `test_update_valid` | valid ParsedItemUpdate → passes |
+
+---
+
+### 6. P17–P23 Completed Stack
+
+| Task | Classification | HEAD |
+|---|---|---|
+| P17 | `P17_BACKEND_AUTHORIZATION_AUDIT_VERIFIED` | `7d36258` |
+| P18 | `P18_REPORT_STATUS_AUTH_HARDENED_DOWNLOAD_GAP` | `e59d09e` |
+| P19 | `P19_DOWNLOAD_JWT_REQUIRED_FRONTEND_CONTRACT_GAP` | `b37cab2` |
+| P20 | `P20_REPORT_DOWNLOAD_AUTHORIZATION_CLOSED` | `b26cf25` |
+| P21 | `P21_SECURITY_SMOKE_AND_CI_READY` | `b7c352b` |
+| P22 | `P22_FRONTEND_E2E_CI_SAFE_SMOKE_READY` | `83465e0` |
+| P23 | `P23_INPUT_VALIDATION_HARDENED` | `0a0e116` |
+
+---
+
 ## P22-FRONTEND-E2E-BACKEND-DEPENDENCY (2026-05-23)
 
 **Final Classification: `P22_FRONTEND_E2E_CI_SAFE_SMOKE_READY`**
