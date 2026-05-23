@@ -7,7 +7,8 @@
     "build": "NODE_ENV=production next build",
     "start": "next start -p 3000",
     "lint": "next lint",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:ci": "playwright test tests/e2e/health-platform.spec.ts tests/e2e/platform-app.spec.ts tests/e2e/family-health-card.spec.ts --reporter=line"
   },
   "dependencies": {
     "@radix-ui/react-tooltip": "^1.2.8",

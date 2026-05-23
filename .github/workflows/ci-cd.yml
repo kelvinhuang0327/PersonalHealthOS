@@ -37,8 +37,11 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: E2E
-        run: npm run e2e
+      # Runs only fully-mocked specs (no backend required).
+      # Auth E2E specs (auth-negative, auth-ui-negative, auth-ui-multi) require
+      # a live backend and are validated locally via: make frontend-auth-smoke
+      - name: E2E (mocked specs — no backend required)
+        run: npm run e2e:ci
         env:
           NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000/api/v1
 
