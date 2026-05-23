@@ -1,4 +1,174 @@
-# Active Task Report — P13-AUTH-E2E-ENTRYPOINT-HARDENED (2026-05-23)
+# Active Task Report — P13-FINALIZE-AND-BROWSER-AUTH-SMOKE (2026-05-23)
+
+## P13-FINALIZE-AND-BROWSER-AUTH-SMOKE (2026-05-23)
+
+**Final Classification: `P13_FINALIZED_BROWSER_AUTH_NOT_IMPLEMENTED`**
+
+---
+
+### Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| Dirty files at start | `.gitignore` M, `Makefile` M, 5 roadmap docs M, `D frontend/tsconfig.tsbuildinfo`, `D runtime/launchd/pids/backend.pid`, `D runtime/launchd/pids/frontend.pid`, `?? backend/tests/test_auth_negative_smoke.py`, `?? backend/tests/test_real_token_auth_negative.py` — all P13 expected artifacts, no scope conflict |
+| Staged diff at start | 3 deletions (`git diff --cached --stat`) — all confirmed `git rm --cached` (index-only) |
+
+---
+
+### A1 — Staging Intent Confirmation
+
+Physical files verified present on disk before any commit:
+- `frontend/tsconfig.tsbuildinfo` — 126,055 bytes, mtime 2026-05-23 ✅
+- `runtime/launchd/pids/backend.pid` — 5 bytes, mtime 2026-05-22 ✅
+- `runtime/launchd/pids/frontend.pid` — 5 bytes, mtime 2026-05-22 ✅
+
+**Verdict: `git rm --cached` (index-only removal). Physical files intact. Safe to proceed.**
+
+---
+
+### A2 — P13 Test File Authenticity Confirmation
+
+| File | Docstring confirmation |
+|---|---|
+| `test_real_token_auth_negative.py` | "P13 Real-Token Auth Negative Smoke" — uses real `jwt.decode`, real `create_access_token`, production `get_target_person`. 7 tests. ✅ |
+| `test_auth_negative_smoke.py` | "P12 Auth Negative Smoke — cross-user family context isolation" — override-style via `app.dependency_overrides`. 5 tests. ✅ |
+
+**Verdict: Both files confirmed P13 auth tests. Content matches task description.**
+
+---
+
+### A3 — Commit List
+
+| Commit | Hash | Files | Message |
+|---|---|---|---|
+| C1 | `0a73f1a` | 2 | `feat(auth): P13 real-token JWT negative smoke + override smoke` |
+| C2 | `eeadbf7` | 5 | `chore(governance): backend-smoke target + artifact ignore rules + entrypoint alignment` |
+| C3 | `b484c56` | 5 | `docs(roadmap): P13 closure — roadmap + CTO + CEO + active task + report` |
+
+C2 includes: `Makefile`, `.gitignore`, `D frontend/tsconfig.tsbuildinfo`, `D runtime/launchd/pids/backend.pid`, `D runtime/launchd/pids/frontend.pid`
+
+---
+
+### A Acceptance Check
+
+```
+git log --oneline -5:
+  b484c56 docs(roadmap): P13 closure — roadmap + CTO + CEO + active task + report
+  eeadbf7 chore(governance): backend-smoke target + artifact ignore rules + entrypoint alignment
+  0a73f1a feat(auth): P13 real-token JWT negative smoke + override smoke
+  de78305 docs: update active_task_report — P12 production trust closure (713 PASS)
+  d41d13c fix(orchestrator): _open_db respects ORCHESTRATOR_PROFILE_PATH env var
+
+git status --short: (empty) ✅
+
+Physical files post-commit:
+  frontend/tsconfig.tsbuildinfo — present ✅
+  runtime/launchd/pids/backend.pid — present ✅
+  runtime/launchd/pids/frontend.pid — present ✅
+```
+
+**Sub-acceptance A: PASS**
+
+---
+
+### B1 — Playwright Fixture Probe
+
+```
+frontend/tests/
+  e2e/
+    family-health-card.spec.ts
+    health-platform.spec.ts
+    platform-app.spec.ts
+```
+
+Grep results for `test.use|login|authenticate|storageState|access_token` — **0 matches**
+
+Playwright config (`playwright.config.ts`):
+- `testDir: ./tests/e2e`
+- `baseURL: http://127.0.0.1:3010`
+- No `globalSetup`, no `storageState`, no auth bootstrap
+
+All existing specs use:
+- `localStorage.setItem('token', 'e2e-token')` — hardcoded mock token
+- `page.route('**/api/v1/**', ...)` — full API interception
+- No real login flow, no real credential exchange
+
+---
+
+### B2 — Branch Decision: `BROWSER_AUTH_E2E_NOT_IMPLEMENTED`
+
+#### Missing Fixtures (precise gap list)
+
+| Missing Component | Description |
+|---|---|
+| **Login helper / auth fixture** | No function that navigates to login page, submits real credentials, and captures a token or `storageState` snapshot |
+| **Token bootstrap** | No mechanism to call `/api/v1/auth/token` or `/api/v1/auth/login` with test user credentials and store the JWT for subsequent requests |
+| **`storageState` setup** | No `playwright/.auth/user.json` or equivalent; no `test.use({ storageState: ... })` in any spec |
+| **Multi-user isolation fixture** | No fixture that creates two distinct authenticated sessions (user A session vs. user B session) |
+
+#### Next.js Routes Involved
+
+| Route | Path |
+|---|---|
+| Login page | `/platform/login` (App Router: `frontend/app/platform/login/`) and `pages/login.tsx` |
+| Family context page | `/platform/settings/family` (App Router: `frontend/app/platform/settings/family/`) |
+| Family context API | `GET /api/v1/family-health-context?person_id=<pid>` and `GET /api/v1/family-recommendations?person_id=<pid>` |
+
+#### Recommended Test Assertion Points (when implemented)
+
+1. **Setup**: Create two real users (user A, user B) via API; obtain real JWT for user A via `POST /api/v1/auth/token`
+2. **Browser action**: Navigate to `/platform/settings/family?profile=<userB_person_id>` while authenticated as user A
+3. **Assertion options** (any of):
+   - Response status 404 from backend API call (user B's person not found for user A)
+   - Redirect to `/platform/login` or error page
+   - DOM assertion: user B's `display_name` / health data NOT present in page content
+4. **Negative confirmation**: Page must not render any user B health data (blood pressure, symptoms, risk alerts)
+
+#### Implementation Prerequisites (for future P14)
+
+```typescript
+// Required: tests/e2e/fixtures/auth.ts
+import { test as base, Page } from '@playwright/test'
+
+export const test = base.extend({
+  authenticatedPage: async ({ page }, use) => {
+    // 1. POST /api/v1/auth/token with test credentials
+    // 2. localStorage.setItem('token', realJWT)
+    // 3. yield page to test
+    await use(page)
+  }
+})
+```
+
+**No new npm packages required** — Playwright's built-in `page.request.post()` is sufficient for token acquisition.
+
+---
+
+### Known Limitations / Unknown / Inferred
+
+| Category | Detail |
+|---|---|
+| **Inferred** | All existing Playwright specs use mock tokens — real auth flow has never been E2E tested at browser level |
+| **Unknown** | Whether the `/platform/login` App Router page (`frontend/app/platform/login/`) is the active login route vs. `pages/login.tsx` (Pages Router) |
+| **Known limitation** | Backend test suite (723 PASS) validates auth isolation at HTTP level; browser-level isolation gap is purely at the Playwright fixture layer |
+| **Known limitation** | `webServer` in playwright.config.ts uses `next start` (production build) — any auth fixture must work with the built app, not dev mode |
+
+---
+
+### Final Classification
+
+**`P13_FINALIZED_BROWSER_AUTH_NOT_IMPLEMENTED`**
+
+- Sub-acceptance A: **PASS** — 3 commits (C1/C2/C3) above `de78305`, clean working tree, all 3 physical files intact
+- Sub-acceptance B: **`BROWSER_AUTH_E2E_NOT_IMPLEMENTED`** with complete gap detail (missing fixtures, routes, assertion points, implementation guide)
+
+---
+
+---
+
+## APPENDIX: P13-AUTH-E2E-ENTRYPOINT-HARDENED (2026-05-23)
 
 ## P13-AUTH-E2E-ENTRYPOINT-HARDENED (2026-05-23)
 
