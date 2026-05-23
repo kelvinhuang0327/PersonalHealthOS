@@ -1,5 +1,90 @@
 # Active Task Report
 
+## P32-RESPONSE-SCHEMA-LEAKAGE-AUDIT (2026-05-23)
+
+**Final Classification: `P32_RESPONSE_LEAKAGE_HARDENED`**
+
+---
+
+### 1. Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- HEAD at start: `1748d94` (P31 docs commit) ✅
+- Working tree: clean ✅
+
+### 2. Response Leakage Inventory
+
+| Endpoint / Schema | Response Model | Sensitive Fields Considered | Current Guard | Classification | Action |
+|---|---|---|---|---|---|
+| POST /auth/register | `UserResponse` | `password_hash`, `is_active` | Excluded — only `id` + `email` | A. SAFE | Regression test added |
+| POST /auth/login | `TokenResponse` | `password_hash` | JWT only — intentional | A. SAFE | Regression test added |
+| GET /persons, POST /persons | `PersonResponse` | `password_hash`, `owner_user_id` | `password_hash` excluded; `owner_user_id` is own UUID only | B. PARTIAL | Regression test: confirms own-UUID invariant |
+| POST /documents/upload, GET /documents | `DocumentResponse` | `storage_bucket`, `storage_key` | **Both included — internal infra fields** | **C. GAP** | **Fixed: both fields removed from schema** |
+| GET /profile/me | `ProfileResponse` | `user_id`, `password_hash` | `password_hash` excluded; `user_id` is own UUID | B. PARTIAL | Documented — not a cross-user leak |
+| GET /profile/account | `AccountResponse` | `password_hash`, `account_settings dict` | `password_hash` excluded; `account_settings` is opaque | B. PARTIAL | Documented |
+| POST /reports/generate | `ReportGenerateResponse` | `token`, `file_path` | Neither exposed — only `report_id` + `status` | A. SAFE | Schema test added |
+| GET /reports/{id} | `ReportStatusResponse` | `token`, `file_path` | No raw `token` key; no `file_path`; download_url embeds token intentionally | A. SAFE | Schema test added |
+
+### 3. Gap Found and Fixed: `DocumentResponse` — storage_bucket + storage_key
+
+**Root cause**: `DocumentResponse` in `backend/app/schemas/documents.py` declared `storage_bucket: str` and `storage_key: str`. These are internal infrastructure fields — the S3/local bucket name and the object path. Clients have no need for them; the server uses them exclusively for internal `download_file()` calls.
+
+**Fix**: Removed both fields from `DocumentResponse`. The ORM model (`MedicalDocument`) retains the columns — server-side parsing (`/parse`) still works. FastAPI `response_model` filtering now prevents these fields from appearing in any document endpoint response.
+
+**File changed**: `backend/app/schemas/documents.py`
+
+### 4. Intentional Exposures Documented
+
+- `TokenResponse.access_token` — intentional; required for client auth
+- `PersonResponse.owner_user_id` — exposed only to the authenticated owner; not a cross-user leak; documents which user owns the profile
+- `ProfileResponse.user_id` — same as above
+- `ReportStatusResponse.download_url` — embeds download token in URL; intentional; endpoint is owner-only verified
+
+### 5. Files Changed
+
+| File | Change |
+|---|---|
+| `backend/app/schemas/documents.py` | Removed `storage_bucket` and `storage_key` from `DocumentResponse` |
+| `backend/tests/test_response_leakage.py` | Created — 12 regression tests |
+
+### 6. Tests Added
+
+`backend/tests/test_response_leakage.py` — 12 tests:
+
+| Class | Test | Result |
+|---|---|---|
+| `TestAuthResponseLeakage` | `test_register_response_no_password_hash` | PASS |
+| `TestAuthResponseLeakage` | `test_register_response_fields` | PASS |
+| `TestAuthResponseLeakage` | `test_login_response_no_password_hash` | PASS |
+| `TestAuthResponseLeakage` | `test_login_response_has_access_token` | PASS |
+| `TestPersonResponseLeakage` | `test_persons_list_no_password_hash` | PASS |
+| `TestPersonResponseLeakage` | `test_persons_list_owner_uuid_is_own` | PASS |
+| `TestDocumentSchemaLeakage` | `test_document_response_no_storage_bucket_field` | PASS |
+| `TestDocumentSchemaLeakage` | `test_document_response_no_storage_key_field` | PASS |
+| `TestDocumentSchemaLeakage` | `test_document_response_omits_storage_from_orm` | PASS |
+| `TestReportSchemaLeakage` | `test_report_status_response_no_raw_token_field` | PASS |
+| `TestReportSchemaLeakage` | `test_report_status_response_no_file_path_field` | PASS |
+| `TestReportSchemaLeakage` | `test_report_status_schema_serialized_keys` | PASS |
+
+### 7. Validation Results
+
+| Target | Result |
+|---|---|
+| `pytest tests/test_response_leakage.py` | 12 passed ✅ |
+| `make runtime-smoke` | all 4 stages pass ✅ |
+
+### 8. Known Limitations / Unknowns
+
+- `AccountResponse.account_settings: dict` — opaque dict. If caller stores internal flags there, they would be exposed. However, `AccountResponse` is owner-only (`GET /profile/account`) and the dict contents are controlled by the user themselves. Classified B.PARTIAL; not fixed in this phase.
+- `DashboardOverviewV2Response` and related dashboard schemas contain multiple `list[dict[str, Any]]` fields. These are aggregated computed data; no raw ORM internal fields confirmed. Classified D.UNKNOWN — out of P32 scope; requires deeper consumer review.
+- `health_assistant.py` routes all return `dict[str, Any]` with no `response_model`. Content is LLM-orchestrated. Not audited in P32.
+
+### 9. Commits
+- `7e08118` — `fix(security): remove storage_bucket and storage_key from DocumentResponse (P32)`
+- `b6875ab` — `test(security): add response leakage regression coverage (P32)`
+
+---
+
 ## P31-VALIDATION-SMOKE-GATE-CONSOLIDATION (2026-05-23)
 
 **Final Classification: `P31_RUNTIME_SMOKE_VALIDATION_GATE_READY`**
