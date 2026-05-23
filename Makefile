@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke frontend-auth-smoke frontend-e2e-local local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke frontend-auth-smoke frontend-e2e-local local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
 
 up:
 	docker compose up -d --build
@@ -34,12 +34,20 @@ security-smoke:
 	$(MAKE) backend-auth-audit
 	$(MAKE) frontend-tsc
 
+# Config guard smoke — verifies production JWT secret guard and startup integration
+# No DB required. Runs both P28 unit tests and P29 env/startup integration tests.
+config-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q \
+		tests/test_config_security_guard.py \
+		tests/test_runtime_config_startup_guard.py
+
 # Health endpoint contract smoke + full security regression — no running server required
 # /health and /health/live are DB-independent (always 200).
 # /health/ready accepts 200 (DB up) or 503 (DB down); never 500.
 runtime-smoke:
 	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v tests/test_runtime_smoke.py
 	$(MAKE) security-smoke
+	$(MAKE) config-smoke
 
 # Targeted Playwright auth E2E tests
 # Requires:
