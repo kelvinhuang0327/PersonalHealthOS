@@ -1,5 +1,131 @@
 # Active Task Report
 
+## P28-SECRETS-PRODUCTION-CONFIG-GUARD (2026-05-23)
+
+**Final Classification: `P28_PRODUCTION_SECRET_GUARD_HARDENED`**
+
+---
+
+### 1. Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD before work | `81e2ce7` (P27 complete) ✅ |
+| Dirty files | none ✅ |
+
+---
+
+### 2. Audit Scope
+
+Full secrets / production config inventory across:
+- `backend/app/core/config.py` — all 30 `Settings` fields
+- `backend/app/main.py` — startup and middleware wiring
+- `docker-compose.prod.yml` — production environment overrides
+- `docker-compose.yml` — dev/base environment defaults
+- `backend/.env` / `.env.example` — local and example env files
+
+No frontend changes. No new pip/npm dependencies. No DB schema changes.
+
+---
+
+### 3. Config Surface Classification
+
+| Config Key | Default | Classification | Risk Level |
+|---|---|---|---|
+| `jwt_secret_key` | `'replace_me'` | **GAP C → FIXED** | CRITICAL: JWT forgeable if default reaches prod |
+| `s3_secret_key` | `'minioadmin'` | PARTIAL B | MEDIUM: MinIO/S3 access via hardcoded creds |
+| `database_url` | `postgres:postgres@localhost` | PARTIAL B | MEDIUM: dev creds in default URL |
+| `sentry_environment` | `'production'` | PARTIAL B | LOW: dev events routed to prod Sentry project if DSN set in dev |
+| `app_debug` | `False` | SAFE A | FastAPI debug disabled by default |
+| `app_env` | `'dev'` | SAFE A | Correct dev default; prod compose overrides to `'production'` |
+| `cors_allow_origins` | `http://localhost:3000,...` | SAFE A | Restrictive default; restricts cross-origin to localhost |
+| `rate_limit_enabled` | `False` | PARTIAL B | Opt-in; must be explicitly enabled for production hardening |
+| `trusted_hosts` | `'*'` | PARTIAL B | Wildcard; should be scoped in production |
+| `openai_api_key` | `''` | SAFE A | Empty default; AI features disabled until key provided |
+| `sentry_dsn` | `''` | SAFE A | Empty default; Sentry disabled until DSN provided |
+
+---
+
+### 4. GAP C Fix — JWT Secret Production Guard
+
+**Gap:** `jwt_secret_key: str = 'replace_me'` had no enforcement.  
+`docker-compose.prod.yml` sets `APP_ENV: production` via the `environment:` block.  
+An operator could deploy `docker-compose.prod.yml` while relying on the `.env`
+file for `JWT_SECRET_KEY` — if omitted, the config fell through to `'replace_me'`
+and the server started without any warning.
+
+**Fix — `backend/app/core/config.py`:**
+
+```python
+_INSECURE_JWT_PLACEHOLDERS: frozenset[str] = frozenset({
+    '', 'replace_me', 'replace_me_in_prod',
+})
+_PRODUCTION_ENVS: frozenset[str] = frozenset({'production', 'prod'})
+
+def validate_production_secrets(settings: Settings) -> None:
+    if settings.app_env.lower() in _PRODUCTION_ENVS:
+        if settings.jwt_secret_key in _INSECURE_JWT_PLACEHOLDERS:
+            raise RuntimeError(
+                "UNSAFE STARTUP: jwt_secret_key is set to a known insecure "
+                "placeholder in app_env='...'. Set JWT_SECRET_KEY environment "
+                "variable to a cryptographically random value (>= 32 bytes) "
+                "before starting in production."
+            )
+```
+
+**Fix — `backend/app/main.py`:**
+`validate_production_secrets(settings)` called as the first line of `startup_event()`.
+The server refuses to accept any requests if the guard fires.
+
+---
+
+### 5. Tests — `backend/tests/test_config_security_guard.py`
+
+15 tests, 4 classes:
+
+| Class | Tests | Scope |
+|---|---|---|
+| `TestProductionRejectsInsecurePlaceholders` | 5 | `replace_me`, `replace_me_in_prod`, empty string, `prod` alias, error message names `JWT_SECRET_KEY` |
+| `TestProductionAcceptsRealSecret` | 2 | 64-char hex secret accepted in `production` and `prod` |
+| `TestNonProductionAllowsPlaceholder` | 6 | dev / local / staging / test / development (parametrised) + default settings are safe |
+| `TestRateLimitSettingsParseable` | 2 | PARTIAL B classification: opt-in flag parses correctly |
+
+All 15 pass.
+
+---
+
+### 6. Regression Results
+
+| Suite | Before | After |
+|---|---|---|
+| Full backend | 789 passed, 2 skipped | **804 passed, 2 skipped, 0 failed** |
+| P28 guard tests | — | 15 / 15 PASSED |
+
+---
+
+### 7. Commits
+
+| Ref | Message |
+|---|---|
+| `67e8681` | `fix(config): add production guard for insecure JWT secret` |
+| `b0a0a23` | `test(config): P28 runtime security config guard regression` |
+| C3 (this report) | `docs(report): P28 secrets and production config guard report` |
+
+---
+
+### 8. Remaining PARTIAL B Items (Not Fixed in P28 — Require Ops Decisions)
+
+| Item | Recommendation |
+|---|---|
+| `s3_secret_key = 'minioadmin'` | Override via `S3_SECRET_KEY` env var in production; add to deployment runbook |
+| `rate_limit_enabled = False` | Set `RATE_LIMIT_ENABLED=true` in `docker-compose.prod.yml` for production hardening |
+| `trusted_hosts = '*'` | Set `TRUSTED_HOSTS=yourdomain.com` in production |
+| `sentry_environment = 'production'` | Override `SENTRY_ENVIRONMENT` to `local` or `dev` in local `.env` files |
+
+---
+
 ## P27-INPUT-SANITIZATION-INJECTION-AUDIT (2026-05-23)
 
 **Final Classification: `P27_INJECTION_HARDENED`**
