@@ -44,14 +44,30 @@ export function ReportExportModal() {
 
   const handleDownload = async () => {
     if (!downloadUrl) return
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    const jwtToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null
     // Construct absolute URL: downloadUrl is /api/v1/... ; strip /api/v1 from base
     const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1').replace(/\/api\/v1\/?$/, '')
     const fullUrl = downloadUrl.startsWith('http') ? downloadUrl : `${apiBase}${downloadUrl}`
+
+    // Extract report token from URL and strip it before fetch to prevent token
+    // appearing in server-side access logs (P45 hardening).
+    let fetchUrl = fullUrl
+    let reportToken: string | null = null
     try {
-      const res = await fetch(fullUrl, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
+      const parsed = new URL(fullUrl)
+      reportToken = parsed.searchParams.get('token')
+      parsed.searchParams.delete('token')
+      fetchUrl = parsed.toString()
+    } catch {
+      // URL parsing failed; fall back to original URL
+    }
+
+    const headers: Record<string, string> = {}
+    if (jwtToken) headers['Authorization'] = `Bearer ${jwtToken}`
+    if (reportToken) headers['X-Report-Download-Token'] = reportToken
+
+    try {
+      const res = await fetch(fetchUrl, { headers })
       if (!res.ok) {
         setStatus('failed')
         return
