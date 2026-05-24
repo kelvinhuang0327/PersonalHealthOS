@@ -16,14 +16,15 @@ backend-test:
 backend-smoke:
 	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v tests/test_auth_negative_smoke.py tests/test_real_token_auth_negative.py
 
-# Full P13-P20 auth/security regression (no DB required — in-memory SQLite)
-# Covers: API auth, real JWT, person_id audit, report owner hardening
+# Full P13-P20 + P44/P45 auth/security regression (no DB required — in-memory SQLite)
+# Covers: API auth, real JWT, person_id audit, report owner hardening, download token policy
 backend-auth-audit:
 	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v \
 		tests/test_auth_negative_smoke.py \
 		tests/test_real_token_auth_negative.py \
 		tests/test_person_id_authorization_audit.py \
-		tests/test_report_authorization_hardening.py
+		tests/test_report_authorization_hardening.py \
+		tests/test_report_download_token_policy.py
 
 # TypeScript typecheck only — no backend required
 frontend-tsc:
