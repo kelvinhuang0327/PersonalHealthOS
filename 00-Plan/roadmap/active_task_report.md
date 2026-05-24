@@ -1,5 +1,45 @@
 # Active Task Report
 
+## P48-CI-RUNTIME-SMOKE-ALIGNMENT (2026-05-24)
+
+**Final Classification: `P48_CI_RUNTIME_SMOKE_ALIGNED`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `a6a64c9` (P47 closure) ✅
+- Tree: clean ✅
+
+### Gap Found
+CI's `npm run build` silently skips TypeScript (`ignoreBuildErrors: true` in `next.config.mjs`). CI's `npm run lint` is ESLint only. No CI step enforced tsc before P48.
+
+### Fix Applied
+Added `npx tsc --noEmit` step to CI frontend job (`.github/workflows/ci-cd.yml`) after `npm ci`, before lint/build. Equivalent to `make frontend-tsc`.
+
+### CI vs runtime-smoke Alignment (Post-P48)
+| Area | CI | runtime-smoke |
+|------|----|---------------|
+| Backend (all stages) | ✅ 983-test full suite ⊇ 130 backend tests | ✅ |
+| frontend-tsc | ✅ `npx tsc --noEmit` (P48 added) | ✅ |
+| P47 token policy (12 tests) | ✅ full suite | ✅ |
+
+### Validation
+- `npx tsc --noEmit`: exit 0 ✅
+- `make runtime-smoke`: 130 passed, 2 skipped ✅
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `.github/workflows/ci-cd.yml` | `npx tsc --noEmit` step added to frontend job |
+| `docs/security/P48_CI_RUNTIME_SMOKE_ALIGNMENT.md` | Created |
+
+### Commits
+- C1: `ci: add frontend TypeScript typecheck to align with runtime-smoke`
+- C2: `docs(security): add P48 CI runtime-smoke alignment report`
+- C3: `docs(report): P48 CI runtime-smoke handoff report`
+
+---
+
 ## P47-TOKEN-POLICY-RUNTIME-GATE (2026-05-24)
 
 **Final Classification: `P47_TOKEN_POLICY_RUNTIME_GATE_READY`**
