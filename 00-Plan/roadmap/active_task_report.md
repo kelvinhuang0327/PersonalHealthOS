@@ -1,5 +1,45 @@
 # Active Task Report
 
+## P47-TOKEN-POLICY-RUNTIME-GATE (2026-05-24)
+
+**Final Classification: `P47_TOKEN_POLICY_RUNTIME_GATE_READY`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `8fde52f` (P46 closure) ✅
+- Tree: clean ✅
+
+### What Changed
+**`Makefile` — `backend-auth-audit` target**
+- Added `tests/test_report_download_token_policy.py` (12 tests: 5 P44 + 7 P45)
+- Updated comment to reference P44/P45
+- Propagates through: `backend-auth-audit` → `security-smoke` → `runtime-smoke` stage 2
+
+### runtime-smoke: 118 → 130
+| Stage | Before | After |
+|-------|--------|-------|
+| Stage 2 (security) | 29, 2 skip | **41, 2 skip** |
+| Total | **118** | **130** |
+
+### Targeted Test
+`test_report_download_token_policy.py`: 12/12 passed ✅
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `Makefile` | `backend-auth-audit` + `test_report_download_token_policy.py` |
+| `docs/security/P47_TOKEN_POLICY_RUNTIME_GATE.md` | Created |
+| `docs/security/P46_SMOKE_GATE_REFRESH.md` | Gap → CLOSED; table updated |
+| `docs/security/P39_SECURITY_AUDIT_CLOSURE_INDEX.md` | Stage 2 29→41; total 118→130; §13 P47 row; gap closed |
+
+### Commits
+- C1: `chore(governance): add report download token policy to runtime smoke`
+- C2: `docs(security): add P47 token policy runtime gate report`
+- C3: `docs(report): P47 token policy runtime gate handoff report`
+
+---
+
 ## P46-SMOKE-GATE-REFRESH (2026-05-24)
 
 **Final Classification: `P46_SMOKE_GATE_REFRESH_READY`**
