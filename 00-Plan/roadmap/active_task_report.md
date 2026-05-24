@@ -1,5 +1,63 @@
 # Active Task Report
 
+## P42-RATE-LIMIT-PRODUCTION-POLICY (2026-05-24)
+
+**Final Classification: `P42_RATE_LIMIT_POLICY_HARDENED`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `9bc1e81` (docs: P41 closure) ✅
+- Tree: clean ✅
+- No push / no new deps / no frontend / no auth changes ✅
+
+### Investigation Findings
+- `rate_limit_enabled` defaults to `False` — opt-in, not enforced in production
+- `InMemoryRateLimitMiddleware` is process-local; state not shared across workers
+- `validate_production_secrets` checked `jwt_secret_key` only — no rate-limit policy
+- P26 covered middleware contract; no production policy tests existed
+- Classification before fix: **PARTIAL + GAP**
+
+### Fix Applied
+Added `get_runtime_security_warnings(settings) -> list[str]` to `backend/app/core/config.py`:
+- Production + `rate_limit_enabled=False` → warns `RATE_LIMIT_DISABLED_IN_PRODUCTION`
+- Production + `rate_limit_enabled=True` → warns `IN_MEMORY_LIMITER_PROCESS_LOCAL`
+- Dev/staging/local → returns `[]` (no noise)
+- Never raises — backward-compatible
+
+### Production Policy Defined
+- Single-worker: `RATE_LIMIT_ENABLED=true` is sufficient for basic abuse protection
+- Multi-worker: in-memory limiter does not share state → gateway/WAF/Redis required
+- `/health*` permanently exempt (hardcoded in middleware)
+- No per-route throttle added (out of scope)
+
+### Test Results
+| Suite | Result |
+|-------|--------|
+| `test_rate_limit_production_policy.py` | 17/17 passed |
+| `test_rate_limit_smoke.py` | 7/7 passed |
+| `test_config_security_guard.py` | 15/15 passed |
+| `make runtime-smoke` (Stage 1–4) | 113 passed, 2 skipped |
+| Full backend suite | 966 passed, 2 skipped |
+
+### Accepted Residual Limitations
+- In-memory limiter is process-local: ACCEPTED, documented
+- No worker topology config in Settings: ACCEPTED / UNKNOWN
+- Global threshold only: ACCEPTED (no per-route throttle)
+- `get_runtime_security_warnings` not yet wired into startup logging: DEFERRED (P43)
+
+### Artifacts
+- `backend/app/core/config.py` — `get_runtime_security_warnings` helper
+- `backend/tests/test_rate_limit_production_policy.py` — 17 policy tests (NEW)
+- `docs/security/P42_RATE_LIMIT_PRODUCTION_POLICY.md` — policy report
+
+### Commits
+- C1 `8484fca`: `fix(config): expose runtime security warnings for rate limiting policy`
+- C2: `docs(security): add P42 rate limit production policy`
+- C3: `docs(report): P42 rate limit production policy handoff report`
+
+---
+
 ## P41-RISK-ENGINE-UUID-HYGIENE (2026-05-24)
 
 **Final Classification: `P41_RISK_ENGINE_UUID_HYGIENE_FIXED`**
