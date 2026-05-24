@@ -88,14 +88,13 @@ P43 added 5 tests to the config-smoke stage. P44 and P45 added 12 tests to `test
 | `test_report_download_token_policy.py` | 7 | P45 |
 | **Total** | **12** | P44+P45 |
 
-### Coverage Gap: Not in runtime-smoke
+### Coverage Gap: CLOSED by P47
 
-`test_report_download_token_policy.py` is **not included** in any Makefile smoke target:
-- Not in `backend-auth-audit`
-- Not in `security-smoke`
-- Not in `runtime-smoke`
+`test_report_download_token_policy.py` was not in any Makefile smoke target at P46 close. **P47 added it to `backend-auth-audit`** (2026-05-24).
 
-These tests run only as part of the full backend suite (`python -m pytest -q`).
+- Now included in `backend-auth-audit` ✅
+- Now included in `security-smoke` ✅
+- Now included in `runtime-smoke` stage 2 ✅
 
 **Full backend suite**: 983 passed, 2 skipped (as of P45 HEAD `cb6f19b`).
 
@@ -103,12 +102,12 @@ These tests run only as part of the full backend suite (`python -m pytest -q`).
 
 | Token policy scenario | Test | In runtime-smoke? |
 |-----------------------|------|-------------------|
-| No JWT + valid token → 401 | `TestDownloadTokenRequiresJWT` (P44) | ❌ full-suite only |
-| Cross-user JWT + token → 404 | `TestDownloadTokenRequiresJWT` (P44) | ❌ full-suite only |
-| Header token → 200 | `TestHeaderTokenDownload` (P45) | ❌ full-suite only |
-| Query token backward compat → 200 | `TestHeaderTokenDownload` (P45) | ❌ full-suite only |
-| Header preferred over query | `TestHeaderTokenDownload` (P45) | ❌ full-suite only |
-| No token → 403 | `TestHeaderTokenDownload` (P45) | ❌ full-suite only |
+| No JWT + valid token → 401 | `TestDownloadTokenRequiresJWT` (P44) | ✅ (stage 2, added P47) |
+| Cross-user JWT + token → 404 | `TestDownloadTokenRequiresJWT` (P44) | ✅ (stage 2, added P47) |
+| Header token → 200 | `TestHeaderTokenDownload` (P45) | ✅ (stage 2, added P47) |
+| Query token backward compat → 200 | `TestHeaderTokenDownload` (P45) | ✅ (stage 2, added P47) |
+| Header preferred over query | `TestHeaderTokenDownload` (P45) | ✅ (stage 2, added P47) |
+| No token → 403 | `TestHeaderTokenDownload` (P45) | ✅ (stage 2, added P47) |
 | Report status owner binding | `test_report_authorization_hardening.py` (P18/P20) | ✅ (stage 2) |
 | Cross-user report access → 404 | `test_report_authorization_hardening.py` | ✅ (stage 2) |
 
@@ -177,7 +176,7 @@ cd frontend && npx tsc --noEmit
 
 | Item | Notes |
 |------|-------|
-| `test_report_download_token_policy.py` not in runtime-smoke | Token policy gate runs only in full suite; Makefile addition deferred to P47 |
+| `test_report_download_token_policy.py` not in runtime-smoke | **CLOSED by P47** — added to `backend-auth-audit`; runtime-smoke now 130 passed |
 | `download_url` still contains `?token=` in status response | Owner-scoped; status endpoint requires JWT; frontend strips token before fetch |
 | Query token fallback still accepted by backend | Intentional backward compat; no active consumer after P45 frontend migration |
 | PostgreSQL parity untested | All tests run on SQLite in-memory (R4 fix in P41 is SQLite-verified) |
@@ -191,7 +190,8 @@ cd frontend && npx tsc --noEmit
 **Priority**: MEDIUM  
 **Rationale**: `test_report_download_token_policy.py` (12 tests covering P44/P45 download token contract) is not gated by `make runtime-smoke`. If a future agent regresses the download token behavior, it will not be caught until the full suite is run.  
 **Scope**: Add `test_report_download_token_policy.py` to `backend-auth-audit` in the Makefile. Verify `runtime-smoke` count increases from 118 to 130. Update this doc and P46.  
-**Constraints**: Makefile edit only; no backend/test code changes needed.
+**Constraints**: Makefile edit only; no backend/test code changes needed.  
+**Status**: ✅ COMPLETE (P47, 2026-05-24). runtime-smoke: 130 passed, 2 skipped.
 
 ---
 
@@ -211,6 +211,7 @@ P46_SMOKE_GATE_REFRESH_READY
 - runtime-smoke: 118 passed, 2 skipped ✅
 - 33/33 targeted tests passed ✅
 - frontend tsc: 0 errors ✅
-- Coverage gap documented: test_report_download_token_policy.py not in runtime-smoke
+- Coverage gap documented at P46; CLOSED by P47 (test_report_download_token_policy.py added to backend-auth-audit)
+- runtime-smoke after P47: 130 passed, 2 skipped ✅
 - Starting HEAD: cb6f19b | Closing HEAD: see active_task_report
 ```

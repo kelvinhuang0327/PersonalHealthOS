@@ -39,10 +39,10 @@ Status: clean (no uncommitted files)
 | Stage | Target | Coverage | Result |
 |-------|--------|----------|--------|
 | 1 — Health | `tests/test_runtime_smoke.py` | `/health`, `/api/v1/health` contract | 3 passed ✅ |
-| 2 — Security | `make security-smoke` | Auth audit (29 tests) + frontend tsc | 29 passed, 2 skipped ✅ |
+| 2 — Security | `make security-smoke` | Auth audit (41 tests) + frontend tsc | 41 passed, 2 skipped ✅ |
 | 3 — Config | `make config-smoke` | P28/P29/P43 secret guard + startup warnings (29 tests) | 29 passed ✅ |
 | 4 — Validation | `make validation-smoke` | P23/P24/P27/P30 schema/injection (57 tests) | 57 passed ✅ |
-| **Total** | | | **118 passed, 2 skipped** ✅ *(P46 update 2026-05-24: +5 P43 startup warning tests)* |
+| **Total** | | | **130 passed, 2 skipped** ✅ *(P47 update 2026-05-24: +12 P44/P45 token policy tests added to security-smoke)* |
 
 Stage 2 skips: frontend tsc skipped if Node.js/tsc unavailable (pre-existing behavior, not a regression).
 
@@ -306,7 +306,7 @@ These risks are intentionally documented and accepted. They should be revisited 
 ### P44 — Report Download Token Hardening ✅ COMPLETE
 **Priority**: LOW  
 **Rationale**: R5 — download token in URL query parameter is leakable.  
-**Outcome**: P44 added audit + 5 regression tests documenting token policy (no-JWT → 401, cross-user → 404). P45 migrated frontend to send token as `X-Report-Download-Token` header; backend accepts header (preferred) or query (compat). 12 tests in `test_report_download_token_policy.py` (not yet in runtime-smoke — see P46 gap note).  
+**Outcome**: P44 added audit + 5 regression tests documenting token policy (no-JWT → 401, cross-user → 404). P45 migrated frontend to send token as `X-Report-Download-Token` header; backend accepts header (preferred) or query (compat). 12 tests in `test_report_download_token_policy.py` — added to `backend-auth-audit` by P47 (now in runtime-smoke).  
 Commits P44: `e95d151`, `1d64399`, `389b7fa`. Commits P45: `97c6096`, `47f0148`, `51a7ca8`.
 
 ---
@@ -358,9 +358,9 @@ P39_SECURITY_AUDIT_CLOSURE_INDEX_READY
 
 - P13–P38 closure index created
 - All 17 API route files accounted for
-- runtime-smoke: 118 passed, 2 skipped (all 4 stages green) *(P46 update: P43 +5 config-smoke tests)*
+- runtime-smoke: 130 passed, 2 skipped (all 4 stages green) *(P47 update: +12 P44/P45 token policy tests; P46: +5 P43 config-smoke tests)*
 - 6 accepted gaps documented (R1–R6); R5 MITIGATED by P44+P45
-- HEAD at P39 creation: 4c9ffb1 | HEAD at P46 update: cb6f19b
+- HEAD at P39 creation: 4c9ffb1 | HEAD at P46 update: cb6f19b | HEAD at P47 update: 8fde52f
 ```
 
 ---
@@ -376,5 +376,13 @@ P39_SECURITY_AUDIT_CLOSURE_INDEX_READY
 | P42 | `P42_RATE_LIMIT_PRODUCTION_POLICY_READY` | R1+R2 rate-limit production policy + `get_runtime_security_warnings()`; no Redis dep |
 | P43 | `P43_STARTUP_SECURITY_WARNINGS_WIRED` | Wired `get_runtime_security_warnings()` into `startup_event()`; +5 config-smoke tests |
 | P44 | `P44_REPORT_DOWNLOAD_TOKEN_POLICY_AUDITED` | OPTION A (docs+tests): no-JWT→401, cross-user→404 confirmed; 5 regression tests |
-| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED` | Frontend sen| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED` | Frontend sen| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED` | Fronrep| t_download_token_policy.py` (12 tests: 5 P44 + 7 P4| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDEin | P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEonly in the full backend suite (983 passed). Ad| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED` | Frontend sen| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEAD Count After P45
-- **983 passed, 2 skipped** (baseline P39: ~800+; P40–P45 added ~180+ tests)
+| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED` | Frontend sends token via `X-Report-Download-Token` header; backend header-preferred; +7 tests |
+| P46 | `P46_SMOKE_GATE_REFRESH_READY` | Smoke counts refreshed; R5 MITIGATED; gap documented |
+| P47 | `P47_TOKEN_POLICY_RUNTIME_GATE_READY` | `test_report_download_token_policy.py` added to `backend-auth-audit`; runtime-smoke 130/2 |
+
+### P45 Token Coverage — CLOSED by P47
+
+`test_report_download_token_policy.py` (12 tests: 5 P44 + 7 P45) is now included in `backend-auth-audit` and `security-smoke` (added by P47). All token policy scenarios are gated on `make runtime-smoke`.
+
+### Full Backend Suite Count After P45
+- **983 passed, 2 skipped** (baseline P39: ~800+; P40–P47 added ~180+ tests)
