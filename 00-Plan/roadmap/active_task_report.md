@@ -1,5 +1,71 @@
 # Active Task Report
 
+## P39-SECURITY-AUDIT-CLOSURE-INDEX (2026-05-24)
+
+**Final Classification: `P39_SECURITY_AUDIT_CLOSURE_INDEX_READY`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `4c9ffb1` (docs: P38 audit report) ✅
+- Status: clean (no uncommitted files) ✅
+
+### Summary
+- **Goal**: Create canonical closure index for P13–P38 security/readiness hardening
+- **Index path**: `docs/security/P39_SECURITY_AUDIT_CLOSURE_INDEX.md`
+- **Scope**: Read-only investigation + docs creation only (no backend/test/frontend modifications)
+
+### P13–P38 Closure Classification Summary
+| Category | Count |
+|----------|-------|
+| A. CLOSED (full coverage) | 19 tasks |
+| B. CLOSED_WITH_ACCEPTED_GAP | 3 tasks (P18, P22, P26) |
+| C. DOCS_ONLY | 1 task (P19) |
+| D. INFRA | 2 tasks (P21, P31) |
+
+### C.GAPs Fixed (P13–P38)
+| Type | Count | Tasks |
+|------|-------|-------|
+| Response field leakage (user_id / storage fields) | 6 schemas | P32, P35, P38 |
+| Auth / authorization | 2 fixes | P18, P20 |
+| Config / secrets | 1 fix | P28 |
+| Injection (filename traversal) | 1 fix | P27 |
+| Validation constraints | 3 rounds | P23, P24, P30 |
+
+### runtime-smoke Result
+| Stage | Result |
+|-------|--------|
+| 1 — Health check | 3 passed ✅ |
+| 2 — Security smoke | 29 passed, 2 skipped ✅ |
+| 3 — Config smoke | 24 passed ✅ |
+| 4 — Validation smoke | 57 passed ✅ |
+| **Total** | **113 passed, 2 skipped** ✅ |
+
+### Accepted Gaps (documented in index §7)
+- R1: Rate limiter in-memory, not multi-worker shared
+- R2: Rate limit opt-in per route, not globally enforced
+- R3: AI prompt injection structural governance deferred
+- R4: `risk_engine.py` passes `str(user.id)` to `UUID(as_uuid=True)` column (SQLite compat issue)
+- R5: Report download token leakable via browser history (mitigated by UUID entropy + 1hr expiry)
+- R6: Frontend e2e auth tests not in CI (require live backend)
+
+### Recommended Next Tasks
+- **P40** (HIGH): PostgreSQL parity smoke — all tests currently run on SQLite
+- **P41** (MEDIUM): risk_engine.py UUID compatibility fix (R4)
+- **P42** (MEDIUM): Rate-limit production enablement policy (R1/R2)
+- **P43** (MEDIUM): AI prompt governance / prompt-injection policy (R3)
+- **P44** (LOW): Report download token hardening (R5)
+
+### Files Changed
+- Created: `docs/security/P39_SECURITY_AUDIT_CLOSURE_INDEX.md`
+- Updated: `00-Plan/roadmap/active_task_report.md` (this prepend)
+
+### Commits
+- `C1`: `docs(security): add P39 security audit closure index`
+- `C2`: `docs(report): P39 security audit closure report`
+
+---
+
 ## P38-REMAINING-API-SURFACE-AUDIT (2026-05-24)
 
 **Final Classification: `P38_REMAINING_API_SURFACE_FIXED`**
