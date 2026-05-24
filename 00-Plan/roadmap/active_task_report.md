@@ -1,5 +1,40 @@
 # Active Task Report
 
+## P40-POSTGRESQL-PARITY-SMOKE (2026-05-24)
+
+**Final Classification: `P40_POSTGRESQL_PARITY_VERIFIED`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `7524be4` (docs: P39 closure index) ✅
+- Tree: clean ✅
+- No push / no new deps / no frontend / no auth changes ✅
+
+### Execution Summary
+- PostgreSQL 16 already running (`health-insights-postgres-local`, healthy 2 days)
+- Local Homebrew PG also running on port 5432 (port conflict; macOS GSSAPI bypass required)
+- Created `health_insights_test` DB in local PG; applied `schema.sql` + 9 migrations
+- SQLAlchemy confirmed connected: 14 tables visible
+- 11 parity tests written and executed: **11 passed**
+- R4 probe: str UUID coerced by psycopg2 on PostgreSQL — latent type smell, not crash
+- SQLite runtime-smoke: 113 passed, 2 skipped (unchanged)
+
+### Artifacts
+- `backend/tests/test_postgresql_parity.py` — 11 parity tests (T1–T7)
+- `docs/security/P40_POSTGRESQL_PARITY_SMOKE.md` — parity report
+
+### Commits
+- C1: `test(db): add P40 PostgreSQL parity smoke (11 tests, all pass)`
+- C2: `docs(security): add P40 PostgreSQL parity smoke report`
+- C3: `docs(report): P40 PostgreSQL parity handoff report`
+
+### Next Task: P41
+Fix R4 UUID coercion: pass UUID object (not str) to `evaluate_metric_risks` /
+`evaluate_lab_item_risks` callers in `metrics.py` and `documents.py`.
+
+---
+
 ## P39-SECURITY-AUDIT-CLOSURE-INDEX (2026-05-24)
 
 **Final Classification: `P39_SECURITY_AUDIT_CLOSURE_INDEX_READY`**
