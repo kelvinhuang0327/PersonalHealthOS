@@ -35,7 +35,7 @@ security-smoke:
 	$(MAKE) frontend-tsc
 
 # Config guard smoke — verifies production JWT secret guard and startup integration
-# No DB required. Runs both P28 unit tests and P29 env/startup integration tests.
+# No DB required. Runs P28 unit tests, P29 env/startup integration tests, and P43 startup warning tests.
 config-smoke:
 	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q \
 		tests/test_config_security_guard.py \
