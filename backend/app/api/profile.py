@@ -13,7 +13,6 @@ router = APIRouter(prefix='/profile', tags=['profile'])
 def get_my_profile(target_person: PersonProfile = Depends(get_target_person)):
     return {
         'id': target_person.id,
-        'user_id': target_person.owner_user_id,
         'full_name': target_person.display_name,
         'birth_date': target_person.birth_date,
         'gender': target_person.gender,
@@ -45,7 +44,6 @@ def upsert_profile(
     db.refresh(target_person)
     return {
         'id': target_person.id,
-        'user_id': current_user.id,
         'full_name': target_person.display_name,
         'birth_date': target_person.birth_date,
         'gender': target_person.gender,

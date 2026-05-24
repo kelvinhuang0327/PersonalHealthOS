@@ -58,7 +58,6 @@ class HealthActionUpdate(BaseModel):
 
 class HealthActionRead(BaseModel):
     id: UUID
-    user_id: UUID
     person_id: Optional[UUID] = None
     source_type: str
     source_id: Optional[str] = None

@@ -19,7 +19,6 @@ class ProfileResponse(ProfileUpsertRequest):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    user_id: UUID
 
 
 class AccountResponse(BaseModel):
