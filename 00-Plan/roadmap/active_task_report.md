@@ -1,5 +1,25 @@
 # Active Task Report
 
+## P38-REMAINING-API-SURFACE-AUDIT (2026-05-24)
+
+**Final Classification: `P38_REMAINING_API_SURFACE_FIXED`**
+
+### Summary
+- Audited: 9 remaining API files (actions, analytics, auth, external_metrics, insights, persons, profile, reports, timeline) + corresponding schemas
+- **3 C.GAPs found and fixed**:
+  - `ProfileResponse.user_id: UUID` → removed from schema + removed from GET/PUT /profile/me response dicts
+  - `HealthInsightResponse.user_id: UUID` → removed from schema
+  - `HealthActionRead.user_id: UUID` → removed from schema
+- **A.SAFE** (no changes): UserResponse, AccountResponse, PersonResponse.owner_user_id (P33 design), ExternalSyncResponse/ExternalTrendResponse, TimelineResponse data dicts, ReportStatusResponse download_url, untyped outcomes list
+- 14 regression tests added → 14/14 PASS
+- Full test suite: 916+14 PASS, 2 skipped
+- runtime-smoke: 113 passed, 2 skipped
+- Commits: `2338e30` (fix), `c0b4060` (tests), *(C3 pending)*
+
+### Status: All 17 API files audited (P32–P38 complete)
+
+---
+
 ## P37-AI-HEALTH-RESPONSE-AUDIT (2026-05-24)
 
 **Final Classification: `P37_AI_HEALTH_SMOKE_VERIFIED`**
