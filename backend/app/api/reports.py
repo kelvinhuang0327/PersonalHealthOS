@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Annotated, Any, Optional
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import or_
@@ -218,15 +218,18 @@ def get_report_status(
 @router.get('/download/{report_id}')
 def download_report(
     report_id: str,
-    token: str,
     current_user: Annotated[User, Depends(get_current_user)],
+    token: Optional[str] = Query(default=None),
+    x_report_download_token: Optional[str] = Header(default=None, alias='X-Report-Download-Token'),
 ):
+    # Header takes priority; query string is the backward-compatible fallback.
+    provided_token = x_report_download_token or token
     state = _REPORT_STATE.get(report_id)
     if not state or state.get('status') != 'ready':
         raise HTTPException(status_code=404, detail='Report not ready')
     if str(state.get('owner_user_id')) != str(current_user.id):
         raise HTTPException(status_code=404, detail='Report not found')
-    if token != state.get('token'):
+    if not provided_token or provided_token != state.get('token'):
         raise HTTPException(status_code=403, detail='Invalid token')
     if datetime.now(timezone.utc) > state['expires_at']:
         raise HTTPException(status_code=403, detail='Link expired')
