@@ -1,5 +1,55 @@
 # Active Task Report
 
+## P49-FRONTEND-AUTH-E2E-CI-READINESS (2026-05-24)
+
+**Final Classification: `P49_FRONTEND_AUTH_E2E_LOCAL_GATE_DOCUMENTED`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `579a42c` (P48 closure) ✅
+- Tree: clean ✅
+
+### Conclusion: Option B — Docs Only
+
+Frontend auth e2e (`frontend-auth-smoke`) cannot safely run in CI. Blockers:
+- Needs `uvicorn app.main:app --port 8000` (backend service with env vars + DB)
+- Needs `next start` at port 3010 (after fresh `npm run build`)
+- `next start` webServer timed out locally (120s) — unreliable without freshly built frontend
+- P15 timeout=120s, P16 timeout=180s — too slow for CI
+- GitHub Actions does not share localhost across jobs without service containers
+
+### Local Validation Attempt
+`make frontend-auth-smoke` → `Error: Timed out waiting 120000ms from config.webServer`
+
+Backend was live (`curl /health` → 200). Build existed (May 23). webServer still timed out.
+
+### Canonical Local Gate
+```bash
+cd backend && uvicorn app.main:app --port 8000   # separate terminal
+cd frontend && npm run build
+make frontend-auth-smoke
+```
+
+### CI Gap
+- CI runs `npm run e2e:ci` — 3 mocked specs only (no backend needed) ✅
+- Auth e2e stays local-only — already documented in CI comment since P22 ✅
+- Auth contract covered by CI backend suite via `backend-auth-audit` (41 tests) ✅
+
+### runtime-smoke Unchanged
+130 passed, 2 skipped ✅
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `docs/security/P49_FRONTEND_AUTH_E2E_CI_READINESS.md` | Created |
+
+### Commits
+- C1: `docs(security): add P49 frontend auth e2e CI readiness report`
+- C2: `docs(report): P49 frontend auth e2e handoff report`
+
+---
+
 ## P48-CI-RUNTIME-SMOKE-ALIGNMENT (2026-05-24)
 
 **Final Classification: `P48_CI_RUNTIME_SMOKE_ALIGNED`**
