@@ -1,5 +1,52 @@
 # Active Task Report
 
+## P43-STARTUP-SECURITY-WARNINGS (2026-05-24)
+
+**Final Classification: `P43_STARTUP_SECURITY_WARNINGS_WIRED`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `21f60f6` (docs: P42 closure) ✅
+- Tree: clean ✅
+- No push / no new deps / no frontend / no auth changes ✅
+
+### Investigation
+- `log_json(logger, level, event, **payload)` exists in `app/core/logging.py` ✅
+- `get_runtime_security_warnings()` from P42 not imported or called in `main.py` ❌ (GAP)
+- Test pattern: `monkeypatch.setattr(main_module, 'settings', ...)` + direct `startup_event()` call ✅
+
+### Changes
+**`backend/app/main.py`** — added `get_runtime_security_warnings` import + warning loop in `startup_event()`:
+- Runs after `validate_production_secrets()` (fatal guard unchanged)
+- Emits `runtime_security_warning` JSON log at WARNING level for each warning code
+- Payload contains only `warning_code` and `app_env` — no secrets
+
+**Warning codes**:
+- `RATE_LIMIT_DISABLED_IN_PRODUCTION` — production + rate_limit_enabled=False
+- `IN_MEMORY_LIMITER_PROCESS_LOCAL` — production + rate_limit_enabled=True
+
+### Test Results
+| Suite | Result |
+|-------|--------|
+| `test_runtime_config_startup_guard.py` (19 tests) | 19/19 passed |
+| `test_rate_limit_production_policy.py` (17 tests) | 17/17 passed |
+| `make runtime-smoke` (Stage 1–4) | 118 passed, 2 skipped |
+| Full backend suite | 971 passed, 2 skipped |
+
+### Artifacts
+- `backend/app/main.py` — startup warning loop wired
+- `backend/tests/test_runtime_config_startup_guard.py` — 5 new tests (`TestStartupRuntimeSecurityWarnings`)
+- `docs/security/P43_STARTUP_SECURITY_WARNINGS.md` — report
+
+### Commits
+- C1 `5710698`: `fix(startup): log runtime security warnings at startup`
+- C2 `f06e321`: `test(security): assert startup emits rate-limit warnings in production`
+- C3: `docs(security): add P43 startup security warnings report`
+- C4: `docs(report): P43 startup security warnings handoff report`
+
+---
+
 ## P42-RATE-LIMIT-PRODUCTION-POLICY (2026-05-24)
 
 **Final Classification: `P42_RATE_LIMIT_POLICY_HARDENED`**
