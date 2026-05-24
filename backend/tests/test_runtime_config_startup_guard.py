@@ -36,6 +36,8 @@ TestGetSettingsCacheBehavior (2 tests)
 """
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from app.core.config import Settings, validate_production_secrets, get_settings
@@ -223,3 +225,128 @@ class TestGetSettingsCacheBehavior:
             validate_production_secrets(s)  # must not raise
         finally:
             get_settings.cache_clear()
+
+
+# ---------------------------------------------------------------------------
+# 4. startup_event() runtime security warning logging (P43)
+# ---------------------------------------------------------------------------
+
+class TestStartupRuntimeSecurityWarnings:
+    """Test that startup_event() logs non-fatal runtime security warnings.
+
+    P42 added get_runtime_security_warnings() to config.py.
+    P43 wires it into startup_event() so production rate-limit policy gaps
+    are visible in structured logs without blocking startup.
+
+    Coverage:
+      test_production_disabled_rate_limit_logs_warning
+          → production + rate_limit_enabled=False → RATE_LIMIT_DISABLED_IN_PRODUCTION logged
+      test_production_enabled_rate_limit_logs_process_local_warning
+          → production + rate_limit_enabled=True  → IN_MEMORY_LIMITER_PROCESS_LOCAL logged
+      test_dev_env_no_runtime_security_warning
+          → dev + any rate_limit value → no runtime_security_warning logged
+      test_warning_does_not_include_jwt_secret
+          → log payload must never contain the JWT secret value
+      test_warnings_are_non_fatal
+          → warnings must not raise; startup completes normally
+    """
+
+    _REAL_SECRET = 'f3a8c2d1e94b607a5b2e0d8c4f1a3e6b9d2c5f8a1e4b7d0c3f6a9e2b5d8f1a4'
+
+    def test_production_disabled_rate_limit_logs_warning(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """production + rate_limit_enabled=False → RATE_LIMIT_DISABLED_IN_PRODUCTION logged."""
+        import app.main as main_module
+
+        prod_settings = _settings(
+            app_env='production',
+            jwt_secret_key=self._REAL_SECRET,
+            rate_limit_enabled=False,
+            app_auto_create_tables=False,
+        )
+        monkeypatch.setattr(main_module, 'settings', prod_settings)
+
+        with caplog.at_level(logging.WARNING):
+            main_module.startup_event()
+
+        messages = ' '.join(r.getMessage() for r in caplog.records)
+        assert 'RATE_LIMIT_DISABLED_IN_PRODUCTION' in messages
+
+    def test_production_enabled_rate_limit_logs_process_local_warning(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """production + rate_limit_enabled=True → IN_MEMORY_LIMITER_PROCESS_LOCAL logged."""
+        import app.main as main_module
+
+        prod_settings = _settings(
+            app_env='production',
+            jwt_secret_key=self._REAL_SECRET,
+            rate_limit_enabled=True,
+            app_auto_create_tables=False,
+        )
+        monkeypatch.setattr(main_module, 'settings', prod_settings)
+
+        with caplog.at_level(logging.WARNING):
+            main_module.startup_event()
+
+        messages = ' '.join(r.getMessage() for r in caplog.records)
+        assert 'IN_MEMORY_LIMITER_PROCESS_LOCAL' in messages
+
+    def test_dev_env_no_runtime_security_warning(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """dev env must not log any runtime_security_warning records."""
+        import app.main as main_module
+
+        dev_settings = _settings(
+            app_env='dev',
+            jwt_secret_key='replace_me',
+            rate_limit_enabled=False,
+            app_auto_create_tables=False,
+        )
+        monkeypatch.setattr(main_module, 'settings', dev_settings)
+
+        with caplog.at_level(logging.WARNING):
+            main_module.startup_event()
+
+        messages = ' '.join(r.getMessage() for r in caplog.records)
+        assert 'runtime_security_warning' not in messages
+
+    def test_warning_does_not_include_jwt_secret(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Runtime security warning log records must not leak the JWT secret value."""
+        import app.main as main_module
+
+        prod_settings = _settings(
+            app_env='production',
+            jwt_secret_key=self._REAL_SECRET,
+            rate_limit_enabled=False,
+            app_auto_create_tables=False,
+        )
+        monkeypatch.setattr(main_module, 'settings', prod_settings)
+
+        with caplog.at_level(logging.WARNING):
+            main_module.startup_event()
+
+        for record in caplog.records:
+            assert self._REAL_SECRET not in record.getMessage(), \
+                "JWT secret must not appear in any startup log record"
+
+    def test_warnings_are_non_fatal(
+        self, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Runtime security warnings must not raise; startup must complete normally."""
+        import app.main as main_module
+
+        prod_settings = _settings(
+            app_env='production',
+            jwt_secret_key=self._REAL_SECRET,
+            rate_limit_enabled=False,
+            app_auto_create_tables=False,
+        )
+        monkeypatch.setattr(main_module, 'settings', prod_settings)
+
+        # Must not raise
+        main_module.startup_event()
