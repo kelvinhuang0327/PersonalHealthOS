@@ -1,5 +1,50 @@
 # Active Task Report
 
+## P41-RISK-ENGINE-UUID-HYGIENE (2026-05-24)
+
+**Final Classification: `P41_RISK_ENGINE_UUID_HYGIENE_FIXED`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `a6d909d` (docs: P40 closure) ✅
+- Tree: clean ✅
+- No push / no new deps / no frontend / no auth changes ✅
+
+### Root Cause
+`risk_engine._make_alert` received `str` UUID values from callers (`str(current_user.id)`) but passed them directly into `RiskAlert(user_id=..., UUID(as_uuid=True))`. SQLite crashed with `StatementError: 'str' object has no attribute 'hex'`; PostgreSQL silently coerced (R4 from P40 reclassified as latent type smell).
+
+### Fix Applied
+- Added `import uuid` and str→UUID coercion in `_make_alert`
+- Updated `evaluate_metric_risks` / `evaluate_lab_item_risks` type annotations to `uuid.UUID | str`
+- Callers (`metrics.py`, `documents.py`) unchanged — coercion handles them
+
+### P35 Mock Removal
+Removed 4 stale `unittest.mock.patch` blocks from `test_metrics_symptoms_response_leakage.py` that existed solely to prevent the SQLite crash. All 15 tests pass without mocks.
+
+### Test Results
+| Suite | Result |
+|-------|--------|
+| `test_risk_engine_uuid_hygiene.py` | 8/8 passed |
+| `test_metrics_symptoms_response_leakage.py` | 15/15 passed |
+| `test_postgresql_parity.py` | 11/11 passed |
+| `make runtime-smoke` (Stage 1–4) | 113 passed, 2 skipped |
+| Full backend suite | 949 passed, 2 skipped |
+
+### Artifacts
+- `backend/app/services/risk_engine.py` — str→UUID coercion fix
+- `backend/tests/test_risk_engine_uuid_hygiene.py` — 8 regression tests (NEW)
+- `backend/tests/test_metrics_symptoms_response_leakage.py` — 4 stale mocks removed
+- `docs/security/P41_RISK_ENGINE_UUID_HYGIENE.md` — security report
+
+### Commits
+- C1 `d7be418`: `fix(db): use UUID objects for risk alert persistence`
+- C2 `7592ca0`: `test(db): add risk engine UUID hygiene regression`
+- C3: `docs(security): add P41 risk engine UUID hygiene report`
+- C4: `docs(report): P41 risk engine UUID hygiene handoff report`
+
+---
+
 ## P40-POSTGRESQL-PARITY-SMOKE (2026-05-24)
 
 **Final Classification: `P40_POSTGRESQL_PARITY_VERIFIED`**
