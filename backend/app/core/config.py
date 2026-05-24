@@ -66,6 +66,35 @@ def get_settings() -> Settings:
     return Settings()
 
 
+def get_runtime_security_warnings(settings: Settings) -> list[str]:
+    """Return a list of non-fatal security warnings for the current settings.
+
+    These warnings surface known production risks without blocking startup.
+    Callers should log them at WARNING level.
+
+    Current checks:
+    - Production with rate_limit_enabled=False: rate limiting disabled.
+    - Production with rate_limit_enabled=True: in-memory limiter is
+      process-local and insufficient for multi-worker deployments.
+    """
+    warnings: list[str] = []
+    if settings.app_env.lower() in _PRODUCTION_ENVS:
+        if not settings.rate_limit_enabled:
+            warnings.append(
+                "RATE_LIMIT_DISABLED_IN_PRODUCTION: rate_limit_enabled=False in "
+                f"app_env='{settings.app_env}'. Set RATE_LIMIT_ENABLED=true or "
+                "place the app behind a gateway/WAF with request throttling."
+            )
+        else:
+            warnings.append(
+                "IN_MEMORY_LIMITER_PROCESS_LOCAL: rate_limit_enabled=True but "
+                "InMemoryRateLimitMiddleware state is not shared across workers. "
+                "For multi-worker deployments use a gateway/WAF or a "
+                "Redis-backed limiter."
+            )
+    return warnings
+
+
 def validate_production_secrets(settings: Settings) -> None:
     """Fail-fast guard: raise RuntimeError if a production environment is
     started with an insecure JWT secret placeholder.
