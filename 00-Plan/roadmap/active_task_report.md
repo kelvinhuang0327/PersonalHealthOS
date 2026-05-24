@@ -1,5 +1,54 @@
 # Active Task Report
 
+## P46-SMOKE-GATE-REFRESH (2026-05-24)
+
+**Final Classification: `P46_SMOKE_GATE_REFRESH_READY`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `cb6f19b` (P45 closure) ✅
+- Tree: clean ✅
+
+### Updated Smoke Counts
+| Stage | Before P46 (P39 doc) | After P46 (actual) |
+|-------|----------------------|---------------------|
+| Stage 3 (config-smoke) | 24 | **29** (+5 P43 tests) |
+| runtime-smoke total | 113 | **118** |
+| Full backend suite | ~800+ | **983** |
+
+### R5 Risk Status: MITIGATED
+- Before: Token in `?token=` query string → appears in server access logs
+- After P45: Frontend strips token from URL, sends via `X-Report-Download-Token` header
+- Backend accepts header (preferred) or query (backward compat)
+
+### P44/P45 Coverage Gap Documented
+- `test_report_download_token_policy.py` (12 tests) is NOT in runtime-smoke
+- Runs only in full backend suite
+- Recommended P47: add to `backend-auth-audit` Makefile target (130 runtime-smoke tests)
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `docs/security/P39_SECURITY_AUDIT_CLOSURE_INDEX.md` | Stage counts, R5, P44 recommendation, Section 13 |
+| `docs/security/P46_SMOKE_GATE_REFRESH.md` | Created |
+| `Makefile` | config-smoke comment updated (P43 reference) |
+| `00-Plan/roadmap/active_task_report.md` | This block |
+
+### Validation
+| Suite | Result |
+|-------|--------|
+| `make runtime-smoke` | 118 passed, 2 skipped ✅ |
+| Targeted 33 tests | 33/33 passed ✅ |
+| `tsc --noEmit` | 0 errors ✅ |
+
+### Commits
+- C1: `chore(governance): refresh smoke gate labels`
+- C2: `docs(security): refresh smoke gate and report token closure index`
+- C3: `docs(report): P46 smoke gate refresh handoff report`
+
+---
+
 ## P45-REPORT-DOWNLOAD-TOKEN-HEADER (2026-05-24)
 
 **Final Classification: `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED`**
