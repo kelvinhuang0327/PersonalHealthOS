@@ -10,7 +10,7 @@ from sqlalchemy import text
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.router import api_router
-from app.core.config import get_settings, validate_production_secrets
+from app.core.config import get_runtime_security_warnings, get_settings, validate_production_secrets
 from app.core.database import Base, engine
 from app.core.logging import log_json, setup_logging
 from app.core.rate_limit import InMemoryRateLimitMiddleware
@@ -79,6 +79,15 @@ async def request_logging_middleware(request: Request, call_next):
 @app.on_event('startup')
 def startup_event():
     validate_production_secrets(settings)
+    for _warning in get_runtime_security_warnings(settings):
+        _code = _warning.split(':')[0]
+        log_json(
+            logger,
+            logging.WARNING,
+            'runtime_security_warning',
+            warning_code=_code,
+            app_env=settings.app_env,
+        )
     if settings.app_auto_create_tables:
         Base.metadata.create_all(bind=engine)
     if settings.orchestrator_scheduler_autostart:
