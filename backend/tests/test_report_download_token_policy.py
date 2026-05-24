@@ -45,6 +45,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -275,3 +276,154 @@ class TestDownloadTokenBodyDoesNotLeakToken:
         assert token not in body, "404 response body must not leak the download token"
         assert report_id not in body, "404 response body must not echo the report_id"
         assert str(user_a.id) not in body, "404 response body must not leak the owner user id"
+
+
+def _seed_ready_report_with_pdf(owner_user_id: str, pdf_path: str) -> tuple[str, str]:
+    """Seed a ready report backed by a real file (for 200-path tests).
+
+    Returns (report_id, token).
+    """
+    report_id = str(uuid.uuid4())
+    token = str(uuid.uuid4())
+    _REPORT_STATE[report_id] = {
+        'status': 'ready',
+        'token': token,
+        'expires_at': datetime.now(timezone.utc) + timedelta(hours=1),
+        'file_path': pdf_path,
+        'owner_user_id': owner_user_id,
+    }
+    return report_id, token
+
+
+# ---------------------------------------------------------------------------
+# TestHeaderTokenDownload — P45
+# ---------------------------------------------------------------------------
+
+
+class TestHeaderTokenDownload:
+    """P45 — Download endpoint accepts X-Report-Download-Token header.
+
+    Token resolution order:
+    1. X-Report-Download-Token header (preferred)
+    2. query parameter ?token= (backward-compatible fallback)
+
+    If the header is present but invalid, the request is rejected (HTTP 403)
+    even when a valid query token is also present. This enforces strict header
+    preference and prevents silent fallback to a potentially stale query token.
+    """
+
+    def test_header_token_owner_jwt_succeeds(self, tmp_path):
+        """Owner JWT + X-Report-Download-Token header + no query token → 200 PDF."""
+        pdf_path = str(tmp_path / 'report.pdf')
+        Path(pdf_path).write_bytes(b'%PDF-1.4\n%%EOF\n')
+        db, user_a, _user_b = _make_two_user_db()
+        report_id, token = _seed_ready_report_with_pdf(str(user_a.id), pdf_path)
+        client_a = _client_as(db, user_a)
+
+        resp = client_a.get(
+            f'/api/v1/reports/download/{report_id}',
+            headers={'X-Report-Download-Token': token},
+            # No ?token= in URL — header is the sole token credential
+        )
+        assert resp.status_code == 200, (
+            f"Header token: expected 200, got {resp.status_code}. Body: {resp.text}"
+        )
+        assert resp.headers.get('content-type', '').startswith('application/pdf'), (
+            f"Expected PDF content-type, got {resp.headers.get('content-type')}"
+        )
+
+    def test_query_token_backward_compat_succeeds(self, tmp_path):
+        """Owner JWT + query token + no header → 200 PDF (backward-compatible path).
+
+        Confirms that removing the token from the header does not break existing
+        clients that still pass ?token= in the URL.
+        """
+        pdf_path = str(tmp_path / 'report.pdf')
+        Path(pdf_path).write_bytes(b'%PDF-1.4\n%%EOF\n')
+        db, user_a, _user_b = _make_two_user_db()
+        report_id, token = _seed_ready_report_with_pdf(str(user_a.id), pdf_path)
+        client_a = _client_as(db, user_a)
+
+        resp = client_a.get(
+            f'/api/v1/reports/download/{report_id}',
+            params={'token': token},
+            # No X-Report-Download-Token header
+        )
+        assert resp.status_code == 200, (
+            f"Query backward compat: expected 200, got {resp.status_code}. Body: {resp.text}"
+        )
+
+    def test_header_preferred_header_valid_query_invalid(self, tmp_path):
+        """Header valid + query invalid → 200 (header takes priority over query)."""
+        pdf_path = str(tmp_path / 'report.pdf')
+        Path(pdf_path).write_bytes(b'%PDF-1.4\n%%EOF\n')
+        db, user_a, _user_b = _make_two_user_db()
+        report_id, token = _seed_ready_report_with_pdf(str(user_a.id), pdf_path)
+        client_a = _client_as(db, user_a)
+
+        resp = client_a.get(
+            f'/api/v1/reports/download/{report_id}',
+            headers={'X-Report-Download-Token': token},
+            params={'token': 'wrong-query-token'},
+        )
+        assert resp.status_code == 200, (
+            f"Header preferred: expected 200, got {resp.status_code}. Body: {resp.text}"
+        )
+
+    def test_header_preferred_header_invalid_query_valid_rejected(self):
+        """Header invalid + query valid → 403 (invalid header takes priority, no silent fallback).
+
+        Prevents attackers from providing a deliberately invalid header to force
+        fallback to an observed query token they may have obtained from logs.
+        """
+        db, user_a, _user_b = _make_two_user_db()
+        report_id, token = _seed_ready_report(str(user_a.id))
+        client_a = _client_as(db, user_a)
+
+        resp = client_a.get(
+            f'/api/v1/reports/download/{report_id}',
+            headers={'X-Report-Download-Token': 'invalid-header-token'},
+            params={'token': token},  # valid query token — must NOT be used
+        )
+        assert resp.status_code == 403, (
+            f"Invalid header, valid query: expected 403, got {resp.status_code}. Body: {resp.text}"
+        )
+
+    def test_no_token_at_all_denied(self):
+        """Owner JWT + no header + no query → 403 (token is always required)."""
+        db, user_a, _user_b = _make_two_user_db()
+        report_id, _ = _seed_ready_report(str(user_a.id))
+        client_a = _client_as(db, user_a)
+
+        resp = client_a.get(f'/api/v1/reports/download/{report_id}')
+        assert resp.status_code == 403, (
+            f"No token: expected 403, got {resp.status_code}. Body: {resp.text}"
+        )
+
+    def test_cross_user_jwt_valid_header_token_denied(self):
+        """Cross-user JWT + valid header token → 404 (owner mismatch before token check)."""
+        db, user_a, user_b = _make_two_user_db()
+        report_id, token = _seed_ready_report(str(user_a.id))
+        client_b = _client_as(db, user_b)
+
+        resp = client_b.get(
+            f'/api/v1/reports/download/{report_id}',
+            headers={'X-Report-Download-Token': token},
+        )
+        assert resp.status_code == 404, (
+            f"Cross-user header token: expected 404, got {resp.status_code}. Body: {resp.text}"
+        )
+
+    def test_no_jwt_valid_header_token_denied(self):
+        """No JWT + valid header token → 401 (JWT auth runs before owner/token checks)."""
+        db, user_a, _user_b = _make_two_user_db()
+        report_id, token = _seed_ready_report(str(user_a.id))
+        client = _client_no_jwt(db)
+
+        resp = client.get(
+            f'/api/v1/reports/download/{report_id}',
+            headers={'X-Report-Download-Token': token},
+        )
+        assert resp.status_code == 401, (
+            f"No JWT, header token: expected 401, got {resp.status_code}. Body: {resp.text}"
+        )
