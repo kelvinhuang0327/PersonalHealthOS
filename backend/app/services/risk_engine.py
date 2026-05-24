@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,7 @@ def load_rules() -> dict[str, Any]:
         return json.load(fp)
 
 
-def evaluate_metric_risks(user_id: str, profile: PersonProfile | None, metric: HealthMetric) -> list[RiskAlert]:
+def evaluate_metric_risks(user_id: uuid.UUID | str, profile: PersonProfile | None, metric: HealthMetric) -> list[RiskAlert]:
     rules = load_rules()
     alerts: list[RiskAlert] = []
 
@@ -43,7 +44,7 @@ def evaluate_metric_risks(user_id: str, profile: PersonProfile | None, metric: H
     return alerts
 
 
-def evaluate_lab_item_risks(user_id: str, item: LabReportItem) -> list[RiskAlert]:
+def evaluate_lab_item_risks(user_id: uuid.UUID | str, item: LabReportItem) -> list[RiskAlert]:
     rules = load_rules()
     alerts: list[RiskAlert] = []
 
@@ -61,7 +62,9 @@ def evaluate_lab_item_risks(user_id: str, item: LabReportItem) -> list[RiskAlert
     return alerts
 
 
-def _make_alert(user_id: str, source_type: str, source_id: Any, rule_code: str, rule: dict[str, Any]) -> RiskAlert:
+def _make_alert(user_id: uuid.UUID | str, source_type: str, source_id: Any, rule_code: str, rule: dict[str, Any]) -> RiskAlert:
+    if isinstance(user_id, str):
+        user_id = uuid.UUID(user_id)
     return RiskAlert(
         user_id=user_id,
         risk_type=rule_code.lower(),
