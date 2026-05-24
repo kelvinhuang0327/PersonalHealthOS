@@ -1,5 +1,57 @@
 # Active Task Report
 
+## P44-REPORT-DOWNLOAD-TOKEN-POLICY (2026-05-24)
+
+**Final Classification: `P44_REPORT_DOWNLOAD_TOKEN_RISK_DOCUMENTED`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `2c38ebb` (P43 closure) ✅
+- Tree: clean ✅
+
+### Investigation
+- Download endpoint `GET /api/v1/reports/download/{report_id}` requires: JWT (get_current_user) + owner_user_id match + token match + expiry ✅
+- Token embedded in URL query string: `?token=<uuid>` → leaks to server-side access logs ⚠ (residual risk)
+- Frontend uses fetch+blob+createObjectURL (no browser navigation) → browser history NOT at risk ✅
+- P39 R5: token-alone attack → HTTP 401 (JWT required first) ✅
+
+### Test Gap Closed
+- **Missing**: "no JWT + valid token → 401" was not tested in any existing file
+- **Root cause**: P18 docstring said download was "token-only (no JWT auth)" — P20 silently added JWT but left no-JWT path untested
+
+### Changes
+**`backend/tests/test_report_download_token_policy.py`** — CREATED (5 tests)
+| Class | Test | Assert |
+|-------|------|--------|
+| `TestDownloadEndpointRequiresJWT` | `test_no_jwt_valid_token_denied` | 401 |
+| `TestDownloadTokenStandaloneAttack` | `test_stolen_token_no_jwt_denied` | 401 |
+| `TestDownloadTokenStandaloneAttack` | `test_cross_user_jwt_valid_token_denied` | 404 |
+| `TestDownloadTokenBodyDoesNotLeakToken` | `test_403_body_does_not_echo_token` | 403 + clean body |
+| `TestDownloadTokenBodyDoesNotLeakToken` | `test_404_body_does_not_echo_token` | 404 + clean body |
+
+### Test Results
+| Suite | Result |
+|-------|--------|
+| New + existing hardening (14) | 14/14 passed |
+| `make runtime-smoke` | 118 passed, 2 skipped |
+| Full backend suite | 976 passed, 2 skipped |
+
+### Residual Risk Accepted
+- Token in server-side access logs: LOW impact (token alone → 401, requires owner JWT)
+- Deferred mitigation: X-Report-Download-Token header (P45+)
+
+### Artifacts
+- `backend/tests/test_report_download_token_policy.py` — new (5 tests)
+- `docs/security/P44_REPORT_DOWNLOAD_TOKEN_POLICY.md` — report
+
+### Commits
+- C1 `e95d151`: `test(security): add report download token policy regression`
+- C2: `docs(security): add P44 report download token policy`
+- C3: `docs(report): P44 report download token policy handoff report`
+
+---
+
 ## P43-STARTUP-SECURITY-WARNINGS (2026-05-24)
 
 **Final Classification: `P43_STARTUP_SECURITY_WARNINGS_WIRED`**
