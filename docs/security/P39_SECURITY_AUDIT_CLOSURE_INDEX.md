@@ -40,9 +40,9 @@ Status: clean (no uncommitted files)
 |-------|--------|----------|--------|
 | 1 — Health | `tests/test_runtime_smoke.py` | `/health`, `/api/v1/health` contract | 3 passed ✅ |
 | 2 — Security | `make security-smoke` | Auth audit (29 tests) + frontend tsc | 29 passed, 2 skipped ✅ |
-| 3 — Config | `make config-smoke` | P28/P29 secret guard (24 tests) | 24 passed ✅ |
+| 3 — Config | `make config-smoke` | P28/P29/P43 secret guard + startup warnings (29 tests) | 29 passed ✅ |
 | 4 — Validation | `make validation-smoke` | P23/P24/P27/P30 schema/injection (57 tests) | 57 passed ✅ |
-| **Total** | | | **113 passed, 2 skipped** ✅ |
+| **Total** | | | **118 passed, 2 skipped** ✅ *(P46 update 2026-05-24: +5 P43 startup warning tests)* |
 
 Stage 2 skips: frontend tsc skipped if Node.js/tsc unavailable (pre-existing behavior, not a regression).
 
@@ -168,8 +168,8 @@ Stage 2 skips: frontend tsc skipped if Node.js/tsc unavailable (pre-existing beh
 | File | Task | Tests | Coverage |
 |------|------|-------|----------|
 | `test_config_security_guard.py` | P28 | 15 | `validate_production_secrets()` unit coverage |
-| `test_runtime_config_startup_guard.py` | P29 | 9 | `startup_event()` integration; env-var resolution |
-| **Subtotal** | | **24** | All config-smoke |
+| `test_runtime_config_startup_guard.py` | P29/P43 | 14 | `startup_event()` integration; env-var resolution; startup security warning emission |
+| **Subtotal** | | **29** | All config-smoke *(P46 update: +5 P43 tests)* |
 
 ### 6e. Runtime Health Tests (stage 1 of runtime-smoke)
 
@@ -231,12 +231,17 @@ These risks are intentionally documented and accepted. They should be revisited 
 **Required before**: Direct (unmocked) risk evaluation in test coverage or SQLite-parity testing  
 **Fix**: P41 — change `str(current_user.id)` to `current_user.id` in `risk_engine.py` call site
 
-### R5 — Report Download Token: Leakable via Browser History
-**Task**: P18 (documented), P20 (mitigated)  
+### R5 — Report Download Token: Leakable via Browser History ✅ MITIGATED (P44+P45)
+**Task**: P18 (documented), P20 (JWT added), P44 (audit+tests), P45 (header migration)  
 **Risk**: `download_url` includes a short-lived token as a query parameter. Token can appear in browser history, server logs, or network captures.  
-**Mitigation in place**: Token is UUID v4 (128-bit entropy). Token embedded in URL only after owner-authenticated status endpoint is called. Expires in 1 hour.  
-**Required before**: production security hardening of download mechanism  
-**Fix**: Move token to Authorization header or POST body; use single-use token invalidation
+**Mitigation in place**:
+- Frontend now extracts token from `download_url`, strips it from fetch URL, sends as `X-Report-Download-Token` header.
+- Fetch URL received by server: `/api/v1/reports/download/{id}` — no token in URL; not captured by standard access logs.
+- Backend accepts header (preferred) or query (backward-compat fallback).
+- Invalid header + valid query → 403 (no silent fallback exploitation).
+
+**Status**: MITIGATED as of P45 (2026-05-24). Commits: `97c6096` (backend), `47f0148` (frontend), `51a7ca8` (tests).  
+**Remaining**: `download_url` in status response still contains `?token=` — needed for frontend extraction; status endpoint requires owner JWT so this is owner-scoped only. Query token fallback intentionally kept for backward compat.
 
 ### R6 — Frontend E2E Auth Tests Require Live Backend (Not in CI)
 **Task**: P22  
@@ -298,11 +303,11 @@ These risks are intentionally documented and accepted. They should be revisited 
 **Scope**: Implement input sanitization at AI service boundary; add output schema validation; formalize prompt injection policy in `ai/prompts/`.  
 **Pre-requisites**: Define which endpoints accept user-controlled text into prompt templates.
 
-### P44 — Report Download Token Hardening
+### P44 — Report Download Token Hardening ✅ COMPLETE
 **Priority**: LOW  
 **Rationale**: R5 — download token in URL query parameter is leakable.  
-**Scope**: Move token to Authorization header or POST body; add single-use token invalidation.  
-**Pre-requisites**: Frontend change authorized.
+**Outcome**: P44 added audit + 5 regression tests documenting token policy (no-JWT → 401, cross-user → 404). P45 migrated frontend to send token as `X-Report-Download-Token` header; backend accepts header (preferred) or query (compat). 12 tests in `test_report_download_token_policy.py` (not yet in runtime-smoke — see P46 gap note).  
+Commits P44: `e95d151`, `1d64399`, `389b7fa`. Commits P45: `97c6096`, `47f0148`, `51a7ca8`.
 
 ---
 
@@ -353,7 +358,23 @@ P39_SECURITY_AUDIT_CLOSURE_INDEX_READY
 
 - P13–P38 closure index created
 - All 17 API route files accounted for
-- runtime-smoke: 113 passed, 2 skipped (all 4 stages green)
-- 6 accepted gaps documented (R1–R6) with recommended next tasks
-- HEAD: 4c9ffb1 (clean tree)
+- runtime-smoke: 118 passed, 2 skipped (all 4 stages green) *(P46 update: P43 +5 config-smoke tests)*
+- 6 accepted gaps documented (R1–R6); R5 MITIGATED by P44+P45
+- HEAD at P39 creation: 4c9ffb1 | HEAD at P46 update: cb6f19b
 ```
+
+---
+
+## 13. Post-P39 Supplement (P40–P45 Closure)
+
+*Added by P46 governance refresh — 2026-05-24*
+
+| Task | Final Classification | Summary |
+|------|----------------------|---------|
+| P40 | `P40_RISK_ENGINE_UUID_HYGIENE_PREP` | R4 pre-investigation; risk_engine UUID coercion documented |
+| P41 | `P41_RISK_ENGINE_UUID_HYGIENE_HARDENED` | `str(user.id)` → `user.id` fix in risk_engine.py; unmocked UUID tests |
+| P42 | `P42_RATE_LIMIT_PRODUCTION_POLICY_READY` | R1+R2 rate-limit production policy + `get_runtime_security_warnings()`; no Redis dep |
+| P43 | `P43_STARTUP_SECURITY_WARNINGS_WIRED` | Wired `get_runtime_security_warnings()` into `startup_event()`; +5 config-smoke tests |
+| P44 | `P44_REPORT_DOWNLOAD_TOKEN_POLICY_AUDITED` | OPTION A (docs+tests): no-JWT→401, cross-user→404 confirmed; 5 regression tests |
+| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED` | Frontend sen| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED` | Frontend sen| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED` | Fronrep| t_download_token_policy.py` (12 tests: 5 P44 + 7 P4| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDEin | P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEonly in the full backend suite (983 passed). Ad| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED` | Frontend sen| P45 | `P45_REPORT_DOWNLOAD_TOKEN_HEAD Count After P45
+- **983 passed, 2 skipped** (baseline P39: ~800+; P40–P45 added ~180+ tests)
