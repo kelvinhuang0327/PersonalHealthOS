@@ -48,7 +48,6 @@ from datetime import datetime, timezone
 from typing import Any
 
 import pytest
-from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -194,23 +193,20 @@ class TestMetricsResponseLeakage:
     def test_create_metric_status_201(self):
         db, user, person = _make_db_and_user()
         client = _make_client(db, user)
-        # Mock risk engine: pre-existing bug where it passes str(uuid) into UUID column on SQLite
-        with patch("app.api.metrics.evaluate_metric_risks", return_value=[]):
-            resp = client.post(
-                f"/api/v1/metrics?person_id={person.id}",
-                json=self._METRIC_PAYLOAD,
-            )
+        resp = client.post(
+            f"/api/v1/metrics?person_id={person.id}",
+            json=self._METRIC_PAYLOAD,
+        )
         assert resp.status_code in (200, 201), resp.text
 
     def test_create_metric_no_user_id(self):
         """POST /metrics response must not expose user_id."""
         db, user, person = _make_db_and_user()
         client = _make_client(db, user)
-        with patch("app.api.metrics.evaluate_metric_risks", return_value=[]):
-            resp = client.post(
-                f"/api/v1/metrics?person_id={person.id}",
-                json=self._METRIC_PAYLOAD,
-            )
+        resp = client.post(
+            f"/api/v1/metrics?person_id={person.id}",
+            json=self._METRIC_PAYLOAD,
+        )
         assert resp.status_code in (200, 201), resp.text
         body = resp.json()
         assert "user_id" not in body, (
@@ -221,11 +217,10 @@ class TestMetricsResponseLeakage:
         """POST /metrics response must pass recursive sensitive-key scan."""
         db, user, person = _make_db_and_user()
         client = _make_client(db, user)
-        with patch("app.api.metrics.evaluate_metric_risks", return_value=[]):
-            resp = client.post(
-                f"/api/v1/metrics?person_id={person.id}",
-                json=self._METRIC_PAYLOAD,
-            )
+        resp = client.post(
+            f"/api/v1/metrics?person_id={person.id}",
+            json=self._METRIC_PAYLOAD,
+        )
         assert resp.status_code in (200, 201), resp.text
         found = _find_sensitive_key(resp.json())
         assert found is None, (
@@ -277,11 +272,10 @@ class TestMetricsResponseLeakage:
         """MetricResponse must include id and subject_profile_id; must NOT include user_id."""
         db, user, person = _make_db_and_user()
         client = _make_client(db, user)
-        with patch("app.api.metrics.evaluate_metric_risks", return_value=[]):
-            resp = client.post(
-                f"/api/v1/metrics?person_id={person.id}",
-                json=self._METRIC_PAYLOAD,
-            )
+        resp = client.post(
+            f"/api/v1/metrics?person_id={person.id}",
+            json=self._METRIC_PAYLOAD,
+        )
         assert resp.status_code in (200, 201), resp.text
         body = resp.json()
         assert "id" in body, "MetricResponse must include 'id'"
