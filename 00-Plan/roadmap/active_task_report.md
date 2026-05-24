@@ -1,5 +1,61 @@
 # Active Task Report
 
+## P45-REPORT-DOWNLOAD-TOKEN-HEADER (2026-05-24)
+
+**Final Classification: `P45_REPORT_DOWNLOAD_TOKEN_HEADER_HARDENED`**
+
+### Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `389b7fa` (P44 closure) ✅
+- Tree: clean ✅
+
+### What Changed
+**`backend/app/api/reports.py`** — download endpoint now accepts `X-Report-Download-Token` header:
+- Header preferred over query string (`provided_token = x_report_download_token or token`)
+- Query `?token=` retained as backward-compatible fallback
+- Invalid header with valid query → 403 (no silent fallback)
+- No token at all → 403
+- JWT owner check unchanged and still runs first
+
+**`frontend/app/components/platform/report-export-modal.tsx`** — `handleDownload()`:
+- Extracts token from `download_url` with `URL.searchParams.get('token')`
+- Strips token from URL: `searchParams.delete('token')` → `fetchUrl` has no token
+- Sends token as `X-Report-Download-Token` header
+- JWT still sent as `Authorization: Bearer`
+
+### Token in Access Log: MITIGATED
+- Before: `GET /api/v1/reports/download/{id}?token=<uuid>` logged
+- After: `GET /api/v1/reports/download/{id}` logged (token in header, not URL)
+
+### Tests Added — `TestHeaderTokenDownload` (7 new tests)
+| Test | Assert |
+|------|--------|
+| `test_header_token_owner_jwt_succeeds` | 200 |
+| `test_query_token_backward_compat_succeeds` | 200 |
+| `test_header_preferred_header_valid_query_invalid` | 200 |
+| `test_header_preferred_header_invalid_query_valid_rejected` | 403 |
+| `test_no_token_at_all_denied` | 403 |
+| `test_cross_user_jwt_valid_header_token_denied` | 404 |
+| `test_no_jwt_valid_header_token_denied` | 401 |
+
+### Validation
+| Suite | Result |
+|-------|--------|
+| Targeted (33 tests) | 33/33 passed |
+| `tsc --noEmit` | 0 errors |
+| `make runtime-smoke` | 118 passed, 2 skipped |
+| Full backend suite | 983 passed, 2 skipped |
+
+### Commits
+- C1 `97c6096`: `fix(security): accept report download token from request header`
+- C2 `47f0148`: `fix(frontend): send report download token via header`
+- C3 `51a7ca8`: `test(security): add report download token header regression`
+- C4: `docs(security): add P45 report download token header report`
+- C5: `docs(report): P45 report download token header handoff report`
+
+---
+
 ## P44-REPORT-DOWNLOAD-TOKEN-POLICY (2026-05-24)
 
 **Final Classification: `P44_REPORT_DOWNLOAD_TOKEN_RISK_DOCUMENTED`**
