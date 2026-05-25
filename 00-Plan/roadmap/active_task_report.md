@@ -5048,3 +5048,65 @@ Exactly one occurrence of the vulnerable pattern — surgical fix confirmed.
 8. Commit `c06dce1`：僅 1 file changed，1 insertion，1 deletion。
 9. 未洩漏任何 governance docs，不開新 branch，不 force push。
 10. P50–P54 全部關閉，生產防護補完，可安全推進 roadmap 下一任務。
+
+---
+
+## P55-DAILY-RECOMMENDATION-ACTION-FEEDBACK (2026-05-25)
+
+**Final Classification: `P55_DAILY_RECOMMENDATION_ACTION_FEEDBACK_READY`**
+
+### Branch Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `e235000` (P54 closure) ✅
+
+### A. Problem Statement
+
+Users had no way to express preference on daily recommendations or tracked actions. No feedback signals were preserved. P55 adds five interaction states:
+
+1. **我會做** — implicit (action created/tracking)
+2. **完成** — existing `打卡` / `done`
+3. **稍後提醒** — existing snooze on recommendation layer; now also removes from filteredDecisionItems
+4. **沒有用** — new `not_useful` status; PATCH on ActionCard; dismiss from recommendation layer
+5. **不適合我** — new `not_applicable` status; PATCH on ActionCard; dismiss from recommendation layer
+
+System preserves feedback via localStorage (recommendation layer) and DB PATCH (action cards). No medical certainty claims.
+
+### B. Implementation
+
+| Step | File | Change |
+|------|------|--------|
+| 1 | `frontend/lib/actions.ts` | Extend `status` type: `not_useful \| not_applicable` |
+| 2 | `action-status-badge.tsx` | Badge styles for new statuses (orange, slate) |
+| 3 | `action-card.tsx` | "沒有用" + "不適合我" buttons on todo/in_progress; disclaimer after dismiss |
+| 4 | `decision-recommendation-layer.tsx` | `onDismiss?` prop threaded to `RecommendationItem`; buttons rendered conditionally |
+| 5a | `actions/page.tsx` | `RecFeedback` type, localStorage helpers, `recFeedback` state + useEffect |
+| 5b | `actions/page.tsx` | `filteredDecisionItems`, `handleSnooze` (fixed: no personId gate on setState), `handleDismissRecommendation`, `grouped.dismissed`, `DecisionRecommendationLayer` `onDismiss` prop |
+
+### C. Root Causes Debugged During Session
+
+| Issue | Root Cause | Fix |
+|-------|------------|-----|
+| 8/9 tests failing | Stale `.next` build (P52 era) — `next start` served old code without P55 buttons | `npm run build` before re-running tests |
+| Snooze didn't remove item | `setRecFeedback` gated on `if (personId)` — personId falsy at click time in test env | Move state update outside personId guard; only gate `saveRecFeedback` |
+| PATCH tests intercepted wrong button | `getByRole('button', { name: '沒有用' }).first()` grabbed recommendation layer button (onDismiss), not ActionCard PATCH button | `stubRoutes({ noRecs: true })` in PATCH tests to suppress recommendation layer |
+| PATCH route not intercepted | `api.request()` appends `?person_id=person-self` → URL had query string; pattern `**/actions/action-p55-test` didn't match | Changed pattern to `**/actions/action-p55-test**` |
+
+### D. Test Results
+
+| Suite | Result |
+|-------|--------|
+| `npx tsc --noEmit` | ✅ 0 errors |
+| `make runtime-smoke` | ✅ 130 passed / 2 skipped |
+| P52 Playwright | ✅ 11/11 |
+| **P55 Playwright** | ✅ **9/9** |
+
+### E. Commit
+
+- `853c93c` — `feat: add recommendation action feedback loop`
+
+### F. Classification
+
+`P55_DAILY_RECOMMENDATION_ACTION_FEEDBACK_READY`
+
+P50–P55 全部關閉。使用者每日建議現已具備完整回饋迴路：沒有用 / 不適合我 / 稍後提醒，系統儲存回饋但不作醫學聲明。
