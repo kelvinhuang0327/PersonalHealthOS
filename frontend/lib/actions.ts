@@ -7,7 +7,7 @@ export type HealthAction = {
   description: string;
   action_type: 'monitor' | 'habit' | 'follow_up' | 'lifestyle';
   priority: 'low' | 'medium' | 'high';
-  status: 'todo' | 'in_progress' | 'done' | 'snoozed';
+  status: 'todo' | 'in_progress' | 'done' | 'snoozed' | 'not_useful' | 'not_applicable';
   due_date?: string;
   frequency?: 'daily' | 'weekly' | 'monthly';
   streak?: number;

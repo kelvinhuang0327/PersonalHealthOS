@@ -38,10 +38,22 @@ function defaultDueDate(priority: string): string {
   return d.toISOString().split('T')[0]
 }
 
+// ── Recommendation feedback localStorage helpers ───────────────────────────
+type RecFeedback = Record<string, 'snoozed' | 'not_useful' | 'not_applicable'>
+function recFeedbackKey(personId: string) { return `rec_feedback_${personId}` }
+function loadRecFeedback(personId: string): RecFeedback {
+  if (typeof window === 'undefined') return {}
+  try { return JSON.parse(localStorage.getItem(recFeedbackKey(personId)) ?? '{}') } catch { return {} }
+}
+function saveRecFeedback(personId: string, data: RecFeedback) {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(recFeedbackKey(personId), JSON.stringify(data))
+}
+
 
 export default function ActionsPage() {
   const { actions, updateStatus, createFromDecisionItem } = useActions()
-  const { currentPerson } = usePerson()
+  const { currentPerson, personId } = usePerson()
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [assistantRecs, setAssistantRecs] = useState<any>(null)
@@ -50,6 +62,12 @@ export default function ActionsPage() {
   const [newPriority, setNewPriority] = useState<'high' | 'medium' | 'low'>('medium')
   const [newDueDate, setNewDueDate] = useState(defaultDueDate('medium'))
   const [addingAction, setAddingAction] = useState(false)
+  const [recFeedback, setRecFeedback] = useState<RecFeedback>({})
+
+  // Load persisted recommendation feedback on person change
+  useEffect(() => {
+    if (personId) setRecFeedback(loadRecFeedback(personId))
+  }, [personId])
 
   useEffect(() => {
     trackEvent('view_actions', { page: '/platform/actions' })
@@ -120,15 +138,18 @@ export default function ActionsPage() {
   const grouped = useMemo(() => {
     const isSystem = (a: (typeof actions)[0]) =>
       a.source_type === 'alert' || a.source_type === 'insight' || a.source_type === 'recommendation'
+    const isActive = (a: (typeof actions)[0]) =>
+      a.status !== 'not_useful' && a.status !== 'not_applicable'
     const byPriority = (arr: typeof actions) =>
       [...arr].sort((a, b) => {
         const o = { high: 0, medium: 1, low: 2 } as Record<string, number>
         return (o[a.priority] ?? 2) - (o[b.priority] ?? 2)
       })
 
-    const overdue     = byPriority(actions.filter((a) => a.reminder_status === 'overdue' && a.status !== 'done'))
-    const riskUp      = byPriority(actions.filter((a) => a.reminder_status === 'risk_up' && a.status !== 'done' && !overdue.includes(a)))
-    const streakBreak = byPriority(actions.filter((a) => a.reminder_status === 'streak_break' && a.status !== 'done' && !overdue.includes(a) && !riskUp.includes(a)))
+    const dismissed   = actions.filter((a) => !isActive(a))
+    const overdue     = byPriority(actions.filter((a) => a.reminder_status === 'overdue' && a.status !== 'done' && isActive(a)))
+    const riskUp      = byPriority(actions.filter((a) => a.reminder_status === 'risk_up' && a.status !== 'done' && isActive(a) && !overdue.includes(a)))
+    const streakBreak = byPriority(actions.filter((a) => a.reminder_status === 'streak_break' && a.status !== 'done' && isActive(a) && !overdue.includes(a) && !riskUp.includes(a)))
     const urgent      = [...overdue, ...riskUp]
     const todo        = byPriority(actions.filter((a) => a.status === 'todo' && !urgent.includes(a) && !streakBreak.includes(a)))
     const inProgress  = byPriority(actions.filter((a) => a.status === 'in_progress' && !urgent.includes(a)))
@@ -136,13 +157,13 @@ export default function ActionsPage() {
       (a, b) => new Date(b.completed_at ?? b.created_at).getTime() - new Date(a.completed_at ?? a.created_at).getTime()
     )
     const snoozed     = actions.filter((a) => a.status === 'snoozed')
-    const systemRec   = actions.filter((a) => isSystem(a) && a.status !== 'done')
-    const userCreated = actions.filter((a) => !isSystem(a) && a.status !== 'done')
-    const improved    = actions.filter((a) => a.impact_status === 'improved')
-    const noChange    = actions.filter((a) => a.impact_status === 'no_change')
-    const worse       = actions.filter((a) => a.impact_status === 'worse' || a.reminder_status === 'risk_up')
+    const systemRec   = actions.filter((a) => isSystem(a) && a.status !== 'done' && isActive(a))
+    const userCreated = actions.filter((a) => !isSystem(a) && a.status !== 'done' && isActive(a))
+    const improved    = actions.filter((a) => a.impact_status === 'improved' && isActive(a))
+    const noChange    = actions.filter((a) => a.impact_status === 'no_change' && isActive(a))
+    const worse       = actions.filter((a) => (a.impact_status === 'worse' || a.reminder_status === 'risk_up') && isActive(a))
 
-    return { overdue, riskUp, streakBreak, urgent, todo, inProgress, completed, snoozed, systemRec, userCreated, improved, noChange, worse }
+    return { overdue, riskUp, streakBreak, urgent, todo, inProgress, completed, snoozed, systemRec, userCreated, improved, noChange, worse, dismissed }
   }, [actions])
 
   // ── Today's Focus ─────────────────────────────────────────────────────
@@ -164,6 +185,12 @@ export default function ActionsPage() {
     return '這是目前最値得先完成的一項，完成後才有足夠資料形成回饵。'
   }, [todayFocus])
 
+  // ── Recommendation feedback filter ────────────────────────────────────────
+  const filteredDecisionItems = useMemo(
+    () => decisionItems.filter((item) => !recFeedback[item.source_id]),
+    [decisionItems, recFeedback]
+  )
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleAddFromDecision = async (item: UnifiedDecisionItem) => {
     await createFromDecisionItem(item)
@@ -174,6 +201,15 @@ export default function ActionsPage() {
   }
   const handleSnooze = (item: UnifiedDecisionItem) => {
     trackEvent('snooze_recommendation', { page: '/platform/actions', metadata: { source_id: item.source_id } })
+    const updated = { ...recFeedback, [item.source_id]: 'snoozed' as const }
+    setRecFeedback(updated)
+    if (personId) saveRecFeedback(personId, updated)
+  }
+  const handleDismissRecommendation = (item: UnifiedDecisionItem, reason: 'not_useful' | 'not_applicable') => {
+    trackEvent('dismiss_recommendation', { page: '/platform/actions', metadata: { source_id: item.source_id, reason } })
+    const updated = { ...recFeedback, [item.source_id]: reason }
+    setRecFeedback(updated)
+    if (personId) saveRecFeedback(personId, updated)
   }
 
   const handleAddAction = async () => {
@@ -217,10 +253,11 @@ export default function ActionsPage() {
 
       {/* ── 1. Recommendation Layer ───────────────────────────────────────────── */}
       <DecisionRecommendationLayer
-        decisionItems={decisionItems}
+        decisionItems={filteredDecisionItems}
         actions={actions}
         onAddAction={handleAddFromDecision}
         onSnooze={handleSnooze}
+        onDismiss={handleDismissRecommendation}
       />
 
       {/* ── 2. Page Header + Summary Stats ────────────────────────────────────── */}
@@ -432,6 +469,13 @@ export default function ActionsPage() {
           <Card className="rounded-2xl p-5 xl:col-span-3">
             <h3 className="mb-2 text-lg font-semibold">稍後提醒</h3>
             <ActionList actions={grouped.snoozed} onChangeStatus={updateStatus} />
+          </Card>
+        )}
+        {grouped.dismissed.length > 0 && (
+          <Card className="rounded-2xl p-5 xl:col-span-3 border-dashed border-slate-200">
+            <h3 className="mb-1 text-base font-semibold text-slate-500">使用者標記</h3>
+            <p className="mb-3 text-xs text-slate-400">你標記為「沒有用」或「不適合我」的項目。累積足夠回饋後，系統將優化未來建議。這為使用者回饋，不代表醫學證明。可隨時點「改回待辦」恢復追蹤。</p>
+            <ActionList actions={grouped.dismissed} onChangeStatus={updateStatus} />
           </Card>
         )}
       </div>

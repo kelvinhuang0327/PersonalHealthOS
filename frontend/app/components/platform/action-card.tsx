@@ -131,10 +131,15 @@ export function ActionCard({
       <div className="mt-3">
         <ActionFeedbackBadge action={action} compact />
       </div>
+      {(action.status === 'not_useful' || action.status === 'not_applicable') && (
+        <p className="mt-2 text-xs text-slate-400 italic">你的回饵已記錄。累積足夠歷史後，系統將會對未來建議進行候選優化。這為使用者回饵，不代表醫學證明。</p>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
-        {action.status !== 'done' ? <Button className="min-h-11 bg-emerald-500 hover:bg-emerald-600" onClick={() => onChangeStatus(action.id, 'done')}>打卡</Button> : null}
+        {action.status !== 'done' && action.status !== 'not_useful' && action.status !== 'not_applicable' ? <Button className="min-h-11 bg-emerald-500 hover:bg-emerald-600" onClick={() => onChangeStatus(action.id, 'done')}>打卡</Button> : null}
         {action.status === 'todo' ? <Button className="min-h-11 bg-amber-600 hover:bg-amber-700" onClick={() => onChangeStatus(action.id, 'in_progress')}>進行中</Button> : null}
-        {action.status !== 'snoozed' ? <Button className="min-h-11 bg-slate-600 hover:bg-slate-700" onClick={() => onChangeStatus(action.id, 'snoozed')}>稍後提醒</Button> : null}
+        {action.status !== 'snoozed' && action.status !== 'not_useful' && action.status !== 'not_applicable' ? <Button className="min-h-11 bg-slate-600 hover:bg-slate-700" onClick={() => onChangeStatus(action.id, 'snoozed')}>稍後提醒</Button> : null}
+        {(action.status === 'todo' || action.status === 'in_progress') ? <Button className="min-h-11 bg-orange-600 hover:bg-orange-700" onClick={() => onChangeStatus(action.id, 'not_useful')}>沒有用</Button> : null}
+        {(action.status === 'todo' || action.status === 'in_progress') ? <Button className="min-h-11 bg-slate-500 hover:bg-slate-600" onClick={() => onChangeStatus(action.id, 'not_applicable')}>不適合我</Button> : null}
         {action.status !== 'todo' ? <Button className="min-h-11 bg-sky-600 hover:bg-sky-700" onClick={() => onChangeStatus(action.id, 'todo')}>改回待辦</Button> : null}
         <Button className="min-h-11 bg-slate-700 hover:bg-slate-800 sm:ml-auto" onClick={() => setOpen((v) => !v)}>{open ? '收合細節' : '查看細節'}</Button>
       </div>

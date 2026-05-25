@@ -49,11 +49,13 @@ function RecommendationItem({
   existingAction,
   onAdd,
   onSnooze,
+  onDismiss,
 }: {
   item: UnifiedDecisionItem
   existingAction: HealthAction | null
   onAdd: (item: UnifiedDecisionItem) => Promise<void>
   onSnooze: (item: UnifiedDecisionItem) => void
+  onDismiss?: (item: UnifiedDecisionItem, reason: 'not_useful' | 'not_applicable') => void
 }) {
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
@@ -178,6 +180,22 @@ function RecommendationItem({
           <Clock3 className="mr-1 h-3.5 w-3.5" />
           稍後提醒
         </Button>
+        {onDismiss && (
+          <>
+            <Button
+              className="bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100 px-3 py-1.5 text-xs"
+              onClick={() => onDismiss(item, 'not_useful')}
+            >
+              沒有用
+            </Button>
+            <Button
+              className="bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100 px-3 py-1.5 text-xs"
+              onClick={() => onDismiss(item, 'not_applicable')}
+            >
+              不適合我
+            </Button>
+          </>
+        )}
       </div>
     </div>
   )
@@ -197,6 +215,8 @@ export type DecisionRecommendationLayerProps = {
   onAddAction: (item: UnifiedDecisionItem) => Promise<void>
   /** Called when user clicks "稍後提醒". */
   onSnooze: (item: UnifiedDecisionItem) => void
+  /** Called when user clicks "沒有用" or "不適合我". Persisted by caller. */
+  onDismiss?: (item: UnifiedDecisionItem, reason: 'not_useful' | 'not_applicable') => void
 }
 
 export function DecisionRecommendationLayer({
@@ -204,6 +224,7 @@ export function DecisionRecommendationLayer({
   actions,
   onAddAction,
   onSnooze,
+  onDismiss,
 }: DecisionRecommendationLayerProps) {
   if (decisionItems.length === 0) return null
 
@@ -254,6 +275,7 @@ export function DecisionRecommendationLayer({
             existingAction={findExisting(item)}
             onAdd={onAddAction}
             onSnooze={onSnooze}
+            onDismiss={onDismiss}
           />
         ))}
       </div>
