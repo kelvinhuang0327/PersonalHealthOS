@@ -20,10 +20,10 @@ export type EvidenceSource = {
 export type OutcomeFeedbackItem = {
   action_id: string
   action_title: string
-  status: 'completed' | 'tracking'
+  status: 'completed' | 'tracking' | 'not_useful' | 'not_applicable' | 'snoozed'
   completed_at: string | null
   expected_health_impact: string
-  outcome_status: 'improved' | 'unchanged' | 'deteriorated' | 'insufficient_data' | 'tracking'
+  outcome_status: 'improved' | 'unchanged' | 'deteriorated' | 'insufficient_data' | 'tracking' | 'not_useful' | 'not_applicable' | 'snoozed'
   actual_metric_change: {
     metric_type: string
     before_value: number | null
@@ -31,7 +31,7 @@ export type OutcomeFeedbackItem = {
     delta: number | null
     direction: 'improved' | 'worsened' | 'stable' | null
   } | null
-  adherence_status: 'completed' | 'tracking'
+  adherence_status: 'completed' | 'tracking' | 'dismissed' | 'snoozed'
   evidence_sources: string[]
   confidence: number
   explanation: string
@@ -49,6 +49,9 @@ export type OutcomeFeedback = {
     deteriorated_count: number
     insufficient_data_count: number
     tracking_count: number
+    not_useful_count?: number
+    not_applicable_count?: number
+    snoozed_count?: number
     total_count: number
   }
 }

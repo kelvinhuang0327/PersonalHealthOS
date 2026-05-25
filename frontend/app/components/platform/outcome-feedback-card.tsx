@@ -22,6 +22,9 @@ const STATUS_CONFIG: Record<
   deteriorated: { icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50', label: '需關注' },
   insufficient_data: { icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50', label: '資料不足' },
   tracking: { icon: Activity, color: 'text-sky-600', bg: 'bg-sky-50', label: '追蹤中' },
+  not_useful: { icon: XCircle, color: 'text-slate-400', bg: 'bg-slate-50', label: '沒有用' },
+  not_applicable: { icon: Minus, color: 'text-slate-400', bg: 'bg-slate-50', label: '不適合' },
+  snoozed: { icon: AlertCircle, color: 'text-amber-500', bg: 'bg-amber-50', label: '已延後' },
 }
 
 // ---------------------------------------------------------------------------
@@ -93,6 +96,24 @@ function SummaryBar({ summary }: { summary: OutcomeFeedback['summary'] }) {
           追蹤中 {summary.tracking_count}
         </span>
       )}
+      {(summary.not_useful_count ?? 0) > 0 && (
+        <span className="flex items-center gap-1 text-slate-400">
+          <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+          沒有用 {summary.not_useful_count}
+        </span>
+      )}
+      {(summary.not_applicable_count ?? 0) > 0 && (
+        <span className="flex items-center gap-1 text-slate-400">
+          <Minus className="h-3.5 w-3.5" aria-hidden="true" />
+          不適合 {summary.not_applicable_count}
+        </span>
+      )}
+      {(summary.snoozed_count ?? 0) > 0 && (
+        <span className="flex items-center gap-1 text-amber-500">
+          <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+          延後 {summary.snoozed_count}
+        </span>
+      )}
     </div>
   )
 }
@@ -129,6 +150,9 @@ export default function OutcomeFeedbackCard() {
   const outcomes = data?.outcomes ?? []
   const completed = outcomes.filter((o) => o.status === 'completed')
   const tracking = outcomes.filter((o) => o.status === 'tracking')
+  const dismissed = outcomes.filter(
+    (o) => o.status === 'not_useful' || o.status === 'not_applicable' || o.status === 'snoozed',
+  )
 
   return (
     <Card className="space-y-4 rounded-2xl p-5">
@@ -181,6 +205,16 @@ export default function OutcomeFeedbackCard() {
               <ChevronRight className="h-3 w-3" aria-hidden="true" />
             </button>
           )}
+        </div>
+      )}
+
+      {/* Dismissed / snoozed feedback */}
+      {dismissed.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">已回饋</p>
+          {dismissed.map((item) => (
+            <OutcomeItemRow key={item.action_id} item={item} />
+          ))}
         </div>
       )}
 
