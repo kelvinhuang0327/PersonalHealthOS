@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke frontend-auth-smoke frontend-e2e-local local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
 
 up:
 	docker compose up -d --build
@@ -51,6 +51,14 @@ validation-smoke:
 		tests/test_injection_smoke.py \
 		tests/test_schema_validation_p30.py
 
+# P58/P59 outcome feedback service + API route smoke — no DB required (in-memory SQLite)
+# Covers safe copy, confidence=0.0, actual_metric_change=null, window_days validation,
+# not_useful / not_applicable / snoozed presence and summary counts.
+outcome-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q \
+		tests/test_outcome_feedback_service.py \
+		tests/test_api_outcome_feedback_p59.py
+
 # Health endpoint contract smoke + full security regression — no running server required
 # /health and /health/live are DB-independent (always 200).
 # /health/ready accepts 200 (DB up) or 503 (DB down); never 500.
@@ -59,6 +67,7 @@ runtime-smoke:
 	$(MAKE) security-smoke
 	$(MAKE) config-smoke
 	$(MAKE) validation-smoke
+	$(MAKE) outcome-smoke
 
 # Targeted Playwright auth E2E tests
 # Requires:
