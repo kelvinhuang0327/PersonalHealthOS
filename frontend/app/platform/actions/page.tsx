@@ -17,6 +17,7 @@ import { AlertTriangle, CheckCircle2, Clock3, Plus, Target, Zap } from 'lucide-r
 import { ActionList } from '../../components/platform/action-list'
 import { ActionFeedbackBadge } from '../../components/platform/action-feedback-badge'
 import { ActionFeedbackCard } from '../../components/platform/action-feedback-card'
+import RecommendationHistoryCard from '../../components/platform/recommendation-history-card'
 import { DecisionRecommendationLayer } from '../../components/platform/decision-recommendation-layer'
 import { StateCard } from '../../components/platform/state-card'
 import { UpcomingActionsBanner } from '../../components/platform/upcoming-actions-banner'
@@ -28,6 +29,7 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { useActions } from '../../providers/action-context'
 import { usePerson } from '../../providers/person-context'
 import { api } from '../../../lib/api'
+import type { OutcomeFeedback } from '../../../lib/api'
 import { trackEvent } from '../../../lib/analytics'
 import type { UnifiedDecisionItem } from '../../../lib/decision-support'
 
@@ -57,6 +59,7 @@ export default function ActionsPage() {
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [assistantRecs, setAssistantRecs] = useState<any>(null)
+  const [historyData, setHistoryData] = useState<OutcomeFeedback | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newPriority, setNewPriority] = useState<'high' | 'medium' | 'low'>('medium')
@@ -96,6 +99,8 @@ export default function ActionsPage() {
     api.getDashboard().then(setDashboardData).catch(() => setDashboardData(null)).finally(() => setLoading(false))
     // Also fetch health-assistant recommendations (same backend source as Dashboard panel)
     api.getRecommendations().then(setAssistantRecs).catch(() => setAssistantRecs(null))
+    // Fetch 30-day outcome feedback for recommendation history timeline (P62)
+    api.getOutcomeFeedback(30).then((d) => setHistoryData(d as OutcomeFeedback)).catch(() => setHistoryData(null))
   }, [])
 
   // ── Decision items from backend (single source of truth) ─────────────────
@@ -523,6 +528,14 @@ export default function ActionsPage() {
             ))}
           </div>
         </Card>
+      )}
+
+      {/* ── 5. Recommendation History Timeline (P62) ─────────────────────────── */}
+      {historyData && (
+        <RecommendationHistoryCard
+          outcomes={historyData.outcomes ?? []}
+          summary={historyData.summary}
+        />
       )}
     </div></ErrorBoundary>
   )
