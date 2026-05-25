@@ -200,7 +200,7 @@ export default function NarrativeMemoryCard() {
   // Fetch cross-period reasoning once on mount (period-independent)
   useEffect(() => {
     api.getCrossPeriodReasoning()
-      .then((res) => setCrossPeriod(res.reasoning))
+      .then((res) => setCrossPeriod(res.reasoning ?? null))
       .catch(() => {/* silently skip — cross-period is supplementary */})
   }, [])
 
