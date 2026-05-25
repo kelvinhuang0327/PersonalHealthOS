@@ -229,10 +229,22 @@ _PRIORITY_ORDER = {'high': 0, 'medium': 1, 'low': 2}
 _STATUS_ORDER = {'in_progress': 0, 'todo': 1, 'snoozed': 2, 'done': 3}
 
 
+_INACTIVE_STATUSES: frozenset[str] = frozenset({'done', 'not_useful', 'not_applicable'})
+
+
 def get_prioritized_actions(db: Session, user_id: str, person_id: str | None = None) -> list[HealthAction]:
-    """Return active (non-done) actions sorted by decision engine priority."""
+    """Return active (non-dismissed, non-done, non-future-snoozed) actions sorted by decision engine priority."""
     actions = list_actions(db, user_id, person_id)
-    active = [a for a in actions if a.status != 'done']
+    now = datetime.now(timezone.utc)
+
+    def _is_active(a: HealthAction) -> bool:
+        if a.status in _INACTIVE_STATUSES:
+            return False
+        if a.status == 'snoozed' and a.snoozed_until is not None and a.snoozed_until > now:
+            return False
+        return True
+
+    active = [a for a in actions if _is_active(a)]
 
     def sort_key(a: HealthAction) -> tuple:
         status_rank = _STATUS_ORDER.get(a.status, 9)

@@ -39,6 +39,12 @@ type ActionContextValue = {
    * Best-effort — callers should keep localStorage as fallback.
    */
   dismissFromDecisionItem: (item: UnifiedDecisionItem, reason: 'not_useful' | 'not_applicable') => Promise<void>
+  /**
+   * Snooze a recommendation from the decision layer with server-side persistence.
+   * Creates a new snoozed action (snoozed_until = +3 days), or patches an existing one.
+   * Best-effort — callers should keep localStorage as fallback.
+   */
+  snoozeFromDecisionItem: (item: UnifiedDecisionItem) => Promise<void>
   updateStatus: (id: string, status: HealthAction['status']) => Promise<void>
   deleteAction: (id: string) => Promise<void>
   refreshActions: () => Promise<void>
@@ -50,6 +56,7 @@ const ActionContext = createContext<ActionContextValue>({
   createFromSource: async () => {},
   createFromDecisionItem: async () => ({ existed: false }),
   dismissFromDecisionItem: async () => {},
+  snoozeFromDecisionItem: async () => {},
   updateStatus: async () => {},
   deleteAction: async () => {},
   refreshActions: async () => {},
@@ -337,6 +344,88 @@ export function ActionProvider({ children }: { children: ReactNode }) {
         trackEvent('dismiss_recommendation_action', {
           page: '/platform/actions',
           metadata: { source_id: item.source_id, reason, mode: 'create' },
+        })
+        await refreshActions()
+      },
+
+      snoozeFromDecisionItem: async (item: UnifiedDecisionItem): Promise<void> => {
+        if (!personId) return
+        const snoozedUntil = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+        // Dedup: if an active action with the same source_id already exists, patch it.
+        const existing = actions.find(
+          (a) =>
+            a.source_id === item.source_id &&
+            a.status !== 'done' &&
+            a.status !== 'not_useful' &&
+            a.status !== 'not_applicable' &&
+            a.status !== 'snoozed'
+        )
+        if (existing) {
+          // Optimistic update
+          setActions((prev) => {
+            const updated = prev.map((a) =>
+              a.id === existing.id ? { ...a, status: 'snoozed' as const, snoozed_until: snoozedUntil } : a
+            )
+            writeCache(personId, updated)
+            return updated
+          })
+          await api.updateAction(existing.id, { status: 'snoozed', snoozed_until: snoozedUntil })
+          trackEvent('snooze_recommendation_action', {
+            page: '/platform/actions',
+            metadata: { action_id: existing.id, source_id: item.source_id, mode: 'patch' },
+          })
+          await refreshActions()
+          return
+        }
+        // No existing action — create one to record the snooze server-side.
+        const now = new Date()
+        const payload: HealthAction = {
+          id: `act_${now.getTime()}_${Math.random().toString(36).slice(2, 8)}`,
+          person_id: personId,
+          source_type: (item.source_type as HealthAction['source_type']) ?? 'recommendation',
+          source_id: item.source_id,
+          title: item.title,
+          description: item.description || (Array.isArray(item.why_now) ? item.why_now[0] : '') || '',
+          action_type: 'lifestyle',
+          priority: (item.priority as HealthAction['priority']) ?? 'medium',
+          status: 'snoozed',
+          snoozed_until: snoozedUntil,
+          frequency: 'daily',
+          streak: 0,
+          impact_status: 'no_change',
+          reminder_status: 'none',
+          confidence: item.confidence,
+          evidence_level: item.evidence_level as 'A' | 'B' | 'C' | undefined,
+          guideline_source: item.guideline_source ?? undefined,
+          rule_id: item.source_id,
+          category: item.category,
+          created_at: now.toISOString(),
+        }
+        // Optimistic insert
+        setActions((prev) => {
+          const updated = [payload, ...prev]
+          writeCache(personId, updated)
+          return updated
+        })
+        await api.createAction({
+          source_type: payload.source_type,
+          source_id: payload.source_id,
+          title: payload.title,
+          description: payload.description,
+          category: payload.category,
+          action_type: payload.action_type,
+          priority: payload.priority,
+          frequency: payload.frequency,
+          status: payload.status,
+          snoozed_until: snoozedUntil,
+          confidence: payload.confidence,
+          evidence_level: payload.evidence_level,
+          guideline_source: payload.guideline_source,
+          rule_id: payload.rule_id,
+        })
+        trackEvent('snooze_recommendation_action', {
+          page: '/platform/actions',
+          metadata: { source_id: item.source_id, mode: 'create' },
         })
         await refreshActions()
       },

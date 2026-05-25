@@ -186,3 +186,93 @@ class TestFeedbackStatusPatch:
         _run(action, {'status': 'not_applicable'}, NOW)
         assert action.status == 'not_applicable'
 
+
+# ─── P57: get_prioritized_actions filter ─────────────────────────────────────
+
+from unittest.mock import patch as _patch  # noqa: E402 — already imported above
+
+from app.services.action_service import get_prioritized_actions  # noqa: E402
+
+
+class FakePrioritizedAction:
+    """Minimal stand-in for HealthAction used by get_prioritized_actions."""
+
+    def __init__(
+        self,
+        status: str = 'todo',
+        priority: str = 'medium',
+        reminder_status: str = 'none',
+        snoozed_until: datetime | None = None,
+    ) -> None:
+        self.status = status
+        self.priority = priority
+        self.reminder_status = reminder_status
+        self.snoozed_until = snoozed_until
+
+
+FUTURE = NOW + timedelta(days=3)
+PAST = NOW - timedelta(days=1)
+
+
+def _get_prioritized(actions_list: list) -> list:
+    """Call get_prioritized_actions with a mocked list_actions and frozen now."""
+    db = MagicMock()
+    with (
+        _patch('app.services.action_service.list_actions', return_value=actions_list),
+        _patch('app.services.action_service.datetime') as mock_dt,
+    ):
+        mock_dt.now.return_value = NOW
+        return get_prioritized_actions(db, 'fake-user', None)
+
+
+class TestPrioritizedActionsFilter:
+    """
+    P57: get_prioritized_actions must exclude done / not_useful / not_applicable
+    actions and future-snoozed actions, while keeping active and expired-snooze ones.
+    """
+
+    def test_done_action_excluded(self):
+        actions = [FakePrioritizedAction(status='done'), FakePrioritizedAction(status='todo')]
+        result = _get_prioritized(actions)
+        assert all(a.status != 'done' for a in result)
+        assert len(result) == 1
+
+    def test_not_useful_action_excluded(self):
+        actions = [FakePrioritizedAction(status='not_useful'), FakePrioritizedAction(status='todo')]
+        result = _get_prioritized(actions)
+        assert all(a.status != 'not_useful' for a in result)
+        assert len(result) == 1
+
+    def test_not_applicable_action_excluded(self):
+        actions = [FakePrioritizedAction(status='not_applicable'), FakePrioritizedAction(status='in_progress')]
+        result = _get_prioritized(actions)
+        assert all(a.status != 'not_applicable' for a in result)
+        assert len(result) == 1
+
+    def test_future_snoozed_excluded(self):
+        actions = [
+            FakePrioritizedAction(status='snoozed', snoozed_until=FUTURE),
+            FakePrioritizedAction(status='todo'),
+        ]
+        result = _get_prioritized(actions)
+        assert len(result) == 1
+        assert result[0].status == 'todo'
+
+    def test_snoozed_with_past_expiry_included(self):
+        """A snoozed action whose snoozed_until is in the past should still appear."""
+        actions = [FakePrioritizedAction(status='snoozed', snoozed_until=PAST)]
+        result = _get_prioritized(actions)
+        assert len(result) == 1
+
+    def test_snoozed_without_expiry_included(self):
+        """A snoozed action with snoozed_until=None should still appear (no auto-hide)."""
+        actions = [FakePrioritizedAction(status='snoozed', snoozed_until=None)]
+        result = _get_prioritized(actions)
+        assert len(result) == 1
+
+    def test_active_actions_included(self):
+        todo = FakePrioritizedAction(status='todo')
+        in_progress = FakePrioritizedAction(status='in_progress')
+        result = _get_prioritized([todo, in_progress])
+        assert len(result) == 2
+

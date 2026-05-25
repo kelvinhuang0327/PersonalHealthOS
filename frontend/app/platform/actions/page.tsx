@@ -52,7 +52,7 @@ function saveRecFeedback(personId: string, data: RecFeedback) {
 
 
 export default function ActionsPage() {
-  const { actions, updateStatus, createFromDecisionItem, dismissFromDecisionItem } = useActions()
+  const { actions, updateStatus, createFromDecisionItem, dismissFromDecisionItem, snoozeFromDecisionItem } = useActions()
   const { currentPerson, personId } = usePerson()
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -69,13 +69,21 @@ export default function ActionsPage() {
     if (personId) setRecFeedback(loadRecFeedback(personId))
   }, [personId])
 
-  // Sync server-persisted dismissals into recFeedback so dismissed recs stay
-  // hidden even after localStorage is cleared (server state wins for known dismissals).
+  // Sync server-persisted dismissals/snoozes into recFeedback so hidden recs stay
+  // hidden even after localStorage is cleared (server state wins for known entries).
   useEffect(() => {
+    const now = Date.now()
     const serverFeedback: RecFeedback = {}
     actions.forEach((a) => {
-      if ((a.status === 'not_useful' || a.status === 'not_applicable') && a.source_id) {
+      if (!a.source_id) return
+      if (a.status === 'not_useful' || a.status === 'not_applicable') {
         serverFeedback[a.source_id] = a.status as 'not_useful' | 'not_applicable'
+      } else if (
+        a.status === 'snoozed' &&
+        a.snoozed_until != null &&
+        new Date(a.snoozed_until).getTime() > now
+      ) {
+        serverFeedback[a.source_id] = 'snoozed'
       }
     })
     if (Object.keys(serverFeedback).length > 0) {
@@ -218,6 +226,8 @@ export default function ActionsPage() {
     const updated = { ...recFeedback, [item.source_id]: 'snoozed' as const }
     setRecFeedback(updated)
     if (personId) saveRecFeedback(personId, updated)
+    // Best-effort server persistence — localStorage is the fallback if this fails
+    void snoozeFromDecisionItem(item).catch(() => {})
   }
   const handleDismissRecommendation = (item: UnifiedDecisionItem, reason: 'not_useful' | 'not_applicable') => {
     trackEvent('dismiss_recommendation', { page: '/platform/actions', metadata: { source_id: item.source_id, reason } })
