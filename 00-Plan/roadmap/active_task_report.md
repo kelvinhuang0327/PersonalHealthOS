@@ -1,5 +1,53 @@
 # Active Task Report
 
+## P63-RECOMMENDATION-HISTORY-ACCEPTANCE (2026-05-25)
+
+**Final Classification: `P63_RECOMMENDATION_HISTORY_ACCEPTANCE_READY`**
+
+### 1. 本輪目標
+驗證並強化 P62 建議回饋 Timeline Card 的產品接受度：placement（元件出現在 Section 4 之後）、error state（API 500 → 卡片不顯示）、安全文案、回歸測試。
+
+### 2. 已完成事項
+- 調查 `recommendation-history-card.tsx`、`page.tsx` 整合、P62 spec，確認 5 項驗收標準
+- 確認 placement：Section 5 (`RecommendationHistoryCard`) 在 Section 4 (`行動效果回饋`) 之後 ✅
+- 確認 error state：`catch(() => setHistoryData(null))` → 卡片不渲染 ✅
+- 補充 `p63-recommendation-history-acceptance.spec.ts`（2 個 Playwright tests）
+- 修復 error-state 測試 timeout：以 `expect(getByText('執行中心')).toBeVisible` 取代 `waitForLoadState('networkidle')`
+
+### 3. 修改或產出的檔案
+| 檔案 | 動作 |
+|------|------|
+| `frontend/tests/e2e/p63-recommendation-history-acceptance.spec.ts` | 新建 |
+| `00-Plan/roadmap/active_task_report.md` | prepend |
+
+### 4. 驗證結果
+| 項目 | 結果 |
+|------|------|
+| TypeScript `tsc --noEmit` | 0 errors ✅ |
+| `make runtime-smoke` | 56 passed ✅ |
+| P62 regression (8 tests) | 8/8 ✅ |
+| P63 acceptance (2 tests) | 2/2 ✅ |
+
+### 5. 目前結論
+`P63_RECOMMENDATION_HISTORY_ACCEPTANCE_READY`
+
+### 6. 尚未完成事項
+無。
+
+### 7. 風險
+無產品代碼改動，純測試補充。P62 所有回歸通過。
+
+### 8. 建議
+進入 P64。
+
+### 9. 下一輪 task prompt
+由 CEO 決定。
+
+### 10. CTO 摘要
+P63 驗證 P62 Recommendation History Card 產品接受度。5 項驗收標準全部通過：(1) placement—Section 5 在 Section 4 之後；(2) error state—API 500 時卡片不顯示；(3) 安全文案存在；(4) 空狀態文案存在；(5) P62 regression 8/8。補充 `p63-recommendation-history-acceptance.spec.ts` 2 個 Playwright tests（placement + error state）。修復 error-state test timeout（networkidle → getByText）。TypeScript clean；runtime-smoke 56 passed；P62 8/8；P63 2/2。無產品代碼改動。Commit: `5ccf7c1`。
+
+---
+
 ## P62-RECOMMENDATION-FEEDBACK-TIMELINE (2026-05-25)
 
 **Final Classification: `P62_RECOMMENDATION_FEEDBACK_TIMELINE_READY`**
