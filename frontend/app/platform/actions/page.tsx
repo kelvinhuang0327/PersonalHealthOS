@@ -75,7 +75,7 @@ export default function ActionsPage() {
         status: r.is_tracking ? 'in_progress' : null,
         due_date: null,
         confidence: r.evidence_sources?.[0]?.confidence ?? 0.7,
-        evidence_level: r.evidence_sources?.[0]?.evidence_level ?? 'B',
+        evidence_level: r.evidence_level ?? r.evidence_sources?.[0]?.evidence_level ?? 'B',
         guideline_source: null,
         related_metric_types: [],
         outcome_hint: r.expected_health_impact ?? null,

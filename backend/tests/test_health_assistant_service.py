@@ -545,3 +545,95 @@ def test_external_metrics_stale_freshness():
     assert em["freshness"] == "stale"
     assert em["reliability"] == 0.85
     assert em["source"] == "wearable"
+
+
+# ---------------------------------------------------------------------------
+# Tests — P51: evidence_summary + data_insufficiency_reason
+# ---------------------------------------------------------------------------
+
+def test_risk_alert_recommendation_has_evidence_summary():
+    """Recommendations from a risk alert must include a non-empty evidence_summary."""
+    uid = str(uuid4())
+    pid = str(uuid4())
+    alert = _make_risk_alert(severity="high", rule_code="bp_high")
+    db = _make_db(alerts=[alert])
+
+    result = get_action_recommendations(db, uid, pid)
+
+    alert_recs = [r for r in result["recommendations"] if r.get("source_type") == "risk_alert"]
+    assert len(alert_recs) >= 1
+    rec = alert_recs[0]
+    assert "evidence_summary" in rec
+    assert isinstance(rec["evidence_summary"], str)
+    assert len(rec["evidence_summary"]) > 0
+    # risk_alert recs should NOT have a data_insufficiency_reason
+    assert rec.get("data_insufficiency_reason") is None
+
+
+def test_lab_report_recommendation_has_evidence_summary():
+    """Recommendations from a lab report item must include evidence_summary with item name and value."""
+    uid = str(uuid4())
+    pid = str(uuid4())
+    report = _make_lab_report(days_ago=5)
+    item = _make_lab_item(report.id, item_name="HbA1c", value=7.2, abnormal="H")
+    db = _make_db(reports=[report], lab_items=[item])
+
+    result = get_action_recommendations(db, uid, pid)
+
+    lab_recs = [r for r in result["recommendations"] if r.get("source_type") in ("lab_report_item", "lab_abnormality")]
+    assert len(lab_recs) >= 1
+    rec = lab_recs[0]
+    assert "evidence_summary" in rec
+    assert isinstance(rec["evidence_summary"], str)
+    assert len(rec["evidence_summary"]) > 0
+
+
+def test_long_term_symptom_recommendation_has_insufficiency_reason():
+    """Long-term symptom recommendations must have a data_insufficiency_reason (C-level evidence)."""
+    uid = str(uuid4())
+    pid = str(uuid4())
+    sym = _make_symptom(days_ago=3, severity=8, duration_days=45)
+    db = _make_db(symptoms=[sym])
+
+    result = get_action_recommendations(db, uid, pid)
+
+    sym_recs = [r for r in result["recommendations"] if r.get("source_type") == "long_term_symptom"]
+    assert len(sym_recs) >= 1
+    rec = sym_recs[0]
+    assert "data_insufficiency_reason" in rec
+    assert rec["data_insufficiency_reason"] is not None
+    assert "C 級" in rec["data_insufficiency_reason"]
+
+
+def test_fallback_recommendations_have_insufficiency_reason():
+    """Fallback (missing_data) recommendations must carry a data_insufficiency_reason."""
+    uid = str(uuid4())
+    pid = str(uuid4())
+    db = _make_db()  # no data → triggers fallbacks
+
+    result = get_action_recommendations(db, uid, pid)
+
+    fallbacks = [r for r in result["recommendations"] if r.get("source_type") == "missing_data"]
+    assert len(fallbacks) >= 1
+    for fb in fallbacks:
+        assert "evidence_summary" in fb
+        assert "data_insufficiency_reason" in fb
+        assert fb["data_insufficiency_reason"] is not None
+        assert len(fb["data_insufficiency_reason"]) > 0
+
+
+def test_all_recommendations_have_evidence_summary_key():
+    """Every recommendation returned (regardless of source) must have the evidence_summary key."""
+    uid = str(uuid4())
+    pid = str(uuid4())
+    alert1 = _make_risk_alert(severity="high", rule_code="bp_high")
+    alert2 = _make_risk_alert(severity="medium", rule_code="glucose_high")
+    report = _make_lab_report(days_ago=5)
+    item = _make_lab_item(report.id)
+    db = _make_db(alerts=[alert1, alert2], reports=[report], lab_items=[item])
+
+    result = get_action_recommendations(db, uid, pid)
+
+    for rec in result["recommendations"]:
+        assert "evidence_summary" in rec, f"Missing evidence_summary in: {rec.get('title')}"
+        assert isinstance(rec["evidence_summary"], str)

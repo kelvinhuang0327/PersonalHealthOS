@@ -787,6 +787,9 @@ def _build_recommendation_from_candidate(
     src = cand["_source"]
     src_type = cand["_source_type"]
 
+    evidence_summary: str = ""
+    data_insufficiency_reason: str | None = None
+
     if src_type == "risk_alert":
         title = src.get("title", "健康風險需關注")
         why_now = f"目前有主動風險警示：{src.get('message', '')}，嚴重度 {src.get('severity', '未知')}"
@@ -794,6 +797,7 @@ def _build_recommendation_from_candidate(
         next_action = src.get("recommendation") or "請查看完整風險說明"
         priority = _map_severity_to_priority(src.get("severity", "medium"))
         evidence = [{"type": "risk_alert", "id": src.get("source_id"), "summary": src.get("summary", title)}]
+        evidence_summary = f"風險警示：{src.get('summary', title)}（{src.get('recency', '最近')}觸發）"
 
     elif src_type == "lab_abnormality":
         item_name = src.get("labItemName", "")
@@ -805,6 +809,7 @@ def _build_recommendation_from_candidate(
         evidence = src.get("evidenceSources", [
             {"type": "lab_report_item", "id": src.get("reportId"), "summary": title}
         ])
+        evidence_summary = f"健檢報告：{item_name} 標記為異常（{src.get('severity', '需追蹤')}）"
 
     elif src_type == "lab_report_item":
         title = f"異常檢驗項目需追蹤：{src.get('item_name', '')}"
@@ -817,6 +822,13 @@ def _build_recommendation_from_candidate(
         next_action = f"與醫師討論 {src.get('item_name')} 異常並安排複查"
         priority = "high" if src.get("recency") in ("today", "this_week") else "medium"
         evidence = [{"type": "lab_report_item", "id": src.get("source_id"), "summary": src.get("summary", title)}]
+        val_display = src.get("value_num") or src.get("value_text") or "N/A"
+        evidence_summary = (
+            f"健檢報告（{src.get('report_date', '最近')}）：{src.get('item_name')} = {val_display}"
+            f"，旗標 {src.get('abnormal_flag', '異常')}"
+        )
+        if src.get("recency") not in ("today", "this_week", "this_month"):
+            data_insufficiency_reason = "此健檢報告距今超過一個月，建議安排複查以確認目前狀況。"
 
     elif src_type == "insight":
         title = src.get("title", "健康洞察需注意")
@@ -825,6 +837,7 @@ def _build_recommendation_from_candidate(
         next_action = src.get("recommendation") or "依據洞察採取對應行動"
         priority = _map_severity_to_priority(src.get("severity", "info"))
         evidence = [{"type": "insight", "id": src.get("source_id"), "summary": src.get("summary", title)}]
+        evidence_summary = f"AI 洞察：{src.get('summary', title)}（{src.get('recency', '最近')}）"
 
     elif src_type == "long_term_symptom":
         title = f"持續症狀需關注：{src.get('symptom', '')}"
@@ -836,6 +849,11 @@ def _build_recommendation_from_candidate(
         next_action = "就醫評估持續症狀的原因"
         priority = "high" if (src.get("severity") or 0) >= 8 else "medium"
         evidence = [{"type": "symptom", "id": src.get("source_id"), "summary": src.get("summary", title)}]
+        evidence_summary = (
+            f"自述症狀（C 級）：{src.get('symptom')}，嚴重度 {src.get('severity', 0)}/10"
+            f"，估計已持續 {src.get('estimated_duration_days', '多')} 天"
+        )
+        data_insufficiency_reason = "此建議基於自述症狀（C 級證據），補充健檢報告或健康指標可提高可信度。"
 
     elif src_type == "device_signal":
         signal_type = src.get("signal_type", "device_signal")
@@ -849,6 +867,8 @@ def _build_recommendation_from_candidate(
         next_action = src.get("suggested_action") or "查看裝置健康訊號詳情"
         priority = _map_severity_to_priority(src.get("severity", "medium"))
         evidence = [{"type": "device_signal", "id": signal_type, "summary": src.get("why_detected", title)}]
+        val_part = f"，當前值 {current_val}" if current_val is not None else ""
+        evidence_summary = f"裝置訊號（{signal_type}）{val_part}，新鮮度 {src.get('freshness', '未知')}"
 
     elif src_type == "symptom_pattern":
         pattern_type = src.get("patternType", "")
@@ -860,6 +880,9 @@ def _build_recommendation_from_candidate(
         next_action = src.get("suggestedAction") or "請追蹤症狀變化並諮詢醫師"
         priority = _map_severity_to_priority(src.get("severity", "medium"))
         evidence = src.get("evidenceSources", [])
+        obs_count = len(evidence) if evidence else src.get("observationCount", 1)
+        evidence_summary = f"症狀模式：{label}，觀測依據 {obs_count} 筆"
+        data_insufficiency_reason = "此建議基於症狀模式分析（C 級），補充健檢報告可提供更強佐證。"
 
     elif src_type == "decision_item":
         title = src.get("title", "健康優先事項")
@@ -868,6 +891,7 @@ def _build_recommendation_from_candidate(
         next_action = src.get("recommendation") or "執行此健康行動"
         priority = src.get("priority", "medium")
         evidence = [{"type": "decision_item", "id": src.get("id"), "summary": src.get("summary", title)}]
+        evidence_summary = f"決策引擎：{src.get('summary', title)}"
 
     else:
         title = "健康建議"
@@ -876,6 +900,7 @@ def _build_recommendation_from_candidate(
         next_action = "查看詳細健康資料"
         priority = "low"
         evidence = []
+        evidence_summary = "基於目前可用的健康資料"
 
     # Enrich evidence with related health metrics
     if bundle.get("health_metrics"):
@@ -886,6 +911,10 @@ def _build_recommendation_from_candidate(
             "summary": latest_metric.get("summary", "最新健康指標"),
         })
 
+    # If still no evidence_summary, derive from evidence list
+    if not evidence_summary and evidence:
+        evidence_summary = evidence[0].get("summary", "")
+
     return {
         "title": title,
         "why_now": why_now,
@@ -893,6 +922,8 @@ def _build_recommendation_from_candidate(
         "related_decision_item": src.get("id") if src_type == "decision_item" else None,
         "expected_health_impact": impact,
         "evidence_sources": evidence,
+        "evidence_summary": evidence_summary,
+        "data_insufficiency_reason": data_insufficiency_reason,
         "next_action": next_action,
         "is_tracking": is_tracking,
         "tracking_action_id": tracking_action["source_id"] if tracking_action else None,
@@ -919,6 +950,8 @@ def _build_fallback_recommendations(
             "related_decision_item": None,
             "expected_health_impact": "提供健康指標後，系統可產生個人化建議",
             "evidence_sources": [],
+            "evidence_summary": "目前無健康指標資料（血壓、血糖、體重等）",
+            "data_insufficiency_reason": "缺少近期健康指標，建議可信度有限。補充資料後系統可提供個人化建議。",
             "next_action": "前往記錄血壓、血糖或體重",
             "is_tracking": False,
             "tracking_action_id": None,
@@ -935,6 +968,8 @@ def _build_fallback_recommendations(
             "related_decision_item": None,
             "expected_health_impact": "症狀記錄有助於偵測潛在健康問題",
             "evidence_sources": [],
+            "evidence_summary": "目前無症狀記錄",
+            "data_insufficiency_reason": "缺少症狀記錄，建議可信度有限。補充後系統可追蹤症狀趨勢。",
             "next_action": "前往症狀記錄頁面",
             "is_tracking": False,
             "tracking_action_id": None,
@@ -951,6 +986,8 @@ def _build_fallback_recommendations(
             "related_decision_item": None,
             "expected_health_impact": "健檢報告可提供血液指標的客觀依據",
             "evidence_sources": [],
+            "evidence_summary": "目前無健檢報告資料（或無異常項目）",
+            "data_insufficiency_reason": "缺少健檢報告，建議可信度有限。上傳報告後可進行異常指標分析。",
             "next_action": "前往文件頁面上傳健檢報告",
             "is_tracking": False,
             "tracking_action_id": None,
