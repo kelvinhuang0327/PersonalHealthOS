@@ -82,6 +82,8 @@ export default function ActionsPage() {
         feedback_state: r.is_tracking ? 'tracking' : 'none',
         score: (3 - (r.rank ?? i)) * 20 + 50,
         trust: r.trust ?? undefined,
+        evidence_summary: r.evidence_summary ?? undefined,
+        data_insufficiency_reason: r.data_insufficiency_reason ?? undefined,
       }))
     }
     // Fallback: derive from dashboard data

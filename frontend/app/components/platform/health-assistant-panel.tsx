@@ -26,6 +26,10 @@ export interface Recommendation {
   tracking_action_id?: string;
   suppression_reason?: string;
   trust?: RecommendationTrust;
+  /** P51/P52: human-readable evidence summary (one-liner per source_type). */
+  evidence_summary?: string;
+  /** P51/P52: explains why confidence is limited and how to improve (C-level / fallback recs). */
+  data_insufficiency_reason?: string;
 }
 
 export interface HealthAssistantData {
@@ -140,15 +144,32 @@ function RecommendationCard({
         </p>
       )}
 
-      {/* Evidence sources */}
-      {rec.evidence_sources.length > 0 && (
+      {/* Evidence summary (P51/P52) */}
+      {rec.evidence_summary && (
+        <div className="mt-2 flex items-start gap-1.5 rounded bg-neutral-50 border border-neutral-200 px-2 py-1.5 text-[11px] text-neutral-500">
+          <FileText className="h-3 w-3 flex-shrink-0 mt-0.5" />
+          <span>{rec.evidence_summary}</span>
+        </div>
+      )}
+
+      {/* Evidence sources (raw tags) — only if evidence_summary absent */}
+      {!rec.evidence_summary && rec.evidence_sources.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {rec.evidence_sources.slice(0, 3).map((src, i) => (
-            <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-neutral-100 rounded text-[11px] text-neutral-500">
+            // eslint-disable-next-line react/no-array-index-key
+            <span key={`esrc_${i}`} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-neutral-100 rounded text-[11px] text-neutral-500">
               <FileText className="h-2.5 w-2.5" />
               {src.summary}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* Data insufficiency warning (P51/P52) */}
+      {rec.data_insufficiency_reason && (
+        <div className="mt-2 flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+          <AlertCircle className="h-3 w-3 flex-shrink-0 mt-0.5" />
+          <span>{rec.data_insufficiency_reason}</span>
         </div>
       )}
 

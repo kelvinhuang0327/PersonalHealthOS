@@ -12,7 +12,7 @@
  */
 
 import { useState } from 'react'
-import { ArrowRight, BookOpen, Brain, CheckCircle2, Clock3, Plus, Shield, Sparkles, TriangleAlert } from 'lucide-react'
+import { AlertCircle, ArrowRight, BookOpen, Brain, CheckCircle2, Clock3, FileText, Plus, Shield, Sparkles, TriangleAlert } from 'lucide-react'
 import type { UnifiedDecisionItem } from '../../../lib/decision-support'
 import type { HealthAction } from '../../../lib/actions'
 import { Badge } from '../ui/badge'
@@ -116,6 +116,22 @@ function RecommendationItem({
       {/* Next action */}
       {item.next_action && (
         <p className="mt-2 text-xs text-slate-600 italic">建議行動：{item.next_action}</p>
+      )}
+
+      {/* P51/P52: evidence_summary badge */}
+      {item.evidence_summary && (
+        <div className="mt-2 flex items-start gap-1.5 rounded bg-white/60 px-2 py-1.5 text-[11px] text-slate-500">
+          <FileText className="h-3 w-3 flex-shrink-0 mt-0.5" />
+          <span>{item.evidence_summary}</span>
+        </div>
+      )}
+
+      {/* P51/P52: data_insufficiency_reason warning */}
+      {item.data_insufficiency_reason && (
+        <div className="mt-2 flex items-start gap-1.5 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-700">
+          <AlertCircle className="h-3 w-3 flex-shrink-0 mt-0.5" />
+          <span>{item.data_insufficiency_reason}</span>
+        </div>
       )}
 
       {/* Trust block — compact inline display, same source as HealthAssistantPanel */}

@@ -30,6 +30,10 @@ export type UnifiedDecisionItem = {
   score: number
   /** Backend trust score — present when data comes from health-assistant/recommendations. */
   trust?: RecommendationTrust
+  /** P51/P52: human-readable evidence summary (one-liner per source_type). */
+  evidence_summary?: string
+  /** P51/P52: explains why confidence is limited and how to improve (C-level / fallback recs). */
+  data_insufficiency_reason?: string
 }
 
 /** Map a backend UnifiedDecisionItem → frontend ScoredDecisionItem. */
