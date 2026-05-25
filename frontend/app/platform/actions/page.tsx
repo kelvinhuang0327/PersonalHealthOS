@@ -52,7 +52,7 @@ function saveRecFeedback(personId: string, data: RecFeedback) {
 
 
 export default function ActionsPage() {
-  const { actions, updateStatus, createFromDecisionItem } = useActions()
+  const { actions, updateStatus, createFromDecisionItem, dismissFromDecisionItem } = useActions()
   const { currentPerson, personId } = usePerson()
   const [dashboardData, setDashboardData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -68,6 +68,20 @@ export default function ActionsPage() {
   useEffect(() => {
     if (personId) setRecFeedback(loadRecFeedback(personId))
   }, [personId])
+
+  // Sync server-persisted dismissals into recFeedback so dismissed recs stay
+  // hidden even after localStorage is cleared (server state wins for known dismissals).
+  useEffect(() => {
+    const serverFeedback: RecFeedback = {}
+    actions.forEach((a) => {
+      if ((a.status === 'not_useful' || a.status === 'not_applicable') && a.source_id) {
+        serverFeedback[a.source_id] = a.status as 'not_useful' | 'not_applicable'
+      }
+    })
+    if (Object.keys(serverFeedback).length > 0) {
+      setRecFeedback((prev) => ({ ...serverFeedback, ...prev }))
+    }
+  }, [actions])
 
   useEffect(() => {
     trackEvent('view_actions', { page: '/platform/actions' })
@@ -210,6 +224,8 @@ export default function ActionsPage() {
     const updated = { ...recFeedback, [item.source_id]: reason }
     setRecFeedback(updated)
     if (personId) saveRecFeedback(personId, updated)
+    // Best-effort server persistence — localStorage is the fallback if this fails
+    void dismissFromDecisionItem(item, reason).catch(() => {})
   }
 
   const handleAddAction = async () => {

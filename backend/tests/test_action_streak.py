@@ -142,3 +142,47 @@ class TestNonCompletionPatch:
         _run(action, patch_data, NOW)
         assert 'streak_count' not in patch_data
 
+
+class TestFeedbackStatusPatch:
+    """
+    P56: `not_useful` and `not_applicable` are feedback statuses that must be
+    accepted by update_action without triggering streak computation or
+    setting completed_at.  They pass through as generic attribute sets.
+    """
+
+    def test_not_useful_is_accepted_without_streak_change(self):
+        action = FakeAction(frequency='daily', streak_count=3, last_completed_at=YESTERDAY)
+        patch_data: dict = {'status': 'not_useful'}
+        _run(action, patch_data, NOW)
+        # Status is stored verbatim — streak must not be touched
+        assert 'streak_count' not in patch_data
+
+    def test_not_useful_does_not_set_completed_at(self):
+        action = FakeAction(frequency='daily', streak_count=3, last_completed_at=YESTERDAY)
+        patch_data: dict = {'status': 'not_useful'}
+        _run(action, patch_data, NOW)
+        assert 'completed_at' not in patch_data
+
+    def test_not_applicable_is_accepted_without_streak_change(self):
+        action = FakeAction(frequency='daily', streak_count=2, last_completed_at=YESTERDAY)
+        patch_data: dict = {'status': 'not_applicable'}
+        _run(action, patch_data, NOW)
+        assert 'streak_count' not in patch_data
+
+    def test_not_applicable_does_not_set_completed_at(self):
+        action = FakeAction(frequency='daily', streak_count=2, last_completed_at=YESTERDAY)
+        patch_data: dict = {'status': 'not_applicable'}
+        _run(action, patch_data, NOW)
+        assert 'completed_at' not in patch_data
+
+    def test_not_useful_status_written_to_action_object(self):
+        """update_action must setattr the status on the model object."""
+        action = FakeAction(status='todo')
+        _run(action, {'status': 'not_useful'}, NOW)
+        assert action.status == 'not_useful'
+
+    def test_not_applicable_status_written_to_action_object(self):
+        action = FakeAction(status='in_progress')
+        _run(action, {'status': 'not_applicable'}, NOW)
+        assert action.status == 'not_applicable'
+

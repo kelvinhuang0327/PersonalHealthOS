@@ -33,6 +33,12 @@ type ActionContextValue = {
   createFromSource: (sourceType: HealthAction['source_type'], source: Record<string, unknown>, status?: HealthAction['status']) => Promise<void>
   /** Create an Action from a backend UnifiedDecisionItem, deduplicating by source_id/title. */
   createFromDecisionItem: (item: UnifiedDecisionItem) => Promise<{ existed: boolean }>
+  /**
+   * Dismiss a recommendation from the decision layer with server-side persistence.
+   * Creates a new action with the given status, or patches an existing one.
+   * Best-effort — callers should keep localStorage as fallback.
+   */
+  dismissFromDecisionItem: (item: UnifiedDecisionItem, reason: 'not_useful' | 'not_applicable') => Promise<void>
   updateStatus: (id: string, status: HealthAction['status']) => Promise<void>
   deleteAction: (id: string) => Promise<void>
   refreshActions: () => Promise<void>
@@ -43,6 +49,7 @@ const ActionContext = createContext<ActionContextValue>({
   isLoading: false,
   createFromSource: async () => {},
   createFromDecisionItem: async () => ({ existed: false }),
+  dismissFromDecisionItem: async () => {},
   updateStatus: async () => {},
   deleteAction: async () => {},
   refreshActions: async () => {},
@@ -255,6 +262,83 @@ export function ActionProvider({ children }: { children: ReactNode }) {
           await refreshActions()
         }
         return { existed: false }
+      },
+
+      /**
+       * Persist a recommendation-layer dismissal to the backend by creating
+       * (or patching) a HealthAction with the given feedback status.
+       * This makes dismissals durable across localStorage clears.
+       */
+      dismissFromDecisionItem: async (item: UnifiedDecisionItem, reason: 'not_useful' | 'not_applicable'): Promise<void> => {
+        if (!personId) return
+        // Dedup: if an active action with the same source_id already exists, patch it.
+        const existing = actions.find(
+          (a) => a.source_id === item.source_id && a.status !== 'done' && a.status !== 'not_useful' && a.status !== 'not_applicable'
+        )
+        if (existing) {
+          // Optimistic update
+          setActions((prev) => {
+            const updated = prev.map((a) => (a.id === existing.id ? { ...a, status: reason } : a))
+            writeCache(personId, updated)
+            return updated
+          })
+          await api.updateAction(existing.id, { status: reason })
+          trackEvent('dismiss_recommendation_action', {
+            page: '/platform/actions',
+            metadata: { action_id: existing.id, source_id: item.source_id, reason, mode: 'patch' },
+          })
+          await refreshActions()
+          return
+        }
+        // No existing action — create one to record the dismissal server-side.
+        const now = new Date()
+        const payload: HealthAction = {
+          id: `act_${now.getTime()}_${Math.random().toString(36).slice(2, 8)}`,
+          person_id: personId,
+          source_type: (item.source_type as HealthAction['source_type']) ?? 'recommendation',
+          source_id: item.source_id,
+          title: item.title,
+          description: item.description || (Array.isArray(item.why_now) ? item.why_now[0] : '') || '',
+          action_type: 'lifestyle',
+          priority: (item.priority as HealthAction['priority']) ?? 'medium',
+          status: reason,
+          frequency: 'daily',
+          streak: 0,
+          impact_status: 'no_change',
+          reminder_status: 'none',
+          confidence: item.confidence,
+          evidence_level: item.evidence_level as 'A' | 'B' | 'C' | undefined,
+          guideline_source: item.guideline_source ?? undefined,
+          rule_id: item.source_id,
+          category: item.category,
+          created_at: now.toISOString(),
+        }
+        // Optimistic insert
+        setActions((prev) => {
+          const updated = [payload, ...prev]
+          writeCache(personId, updated)
+          return updated
+        })
+        await api.createAction({
+          source_type: payload.source_type,
+          source_id: payload.source_id,
+          title: payload.title,
+          description: payload.description,
+          category: payload.category,
+          action_type: payload.action_type,
+          priority: payload.priority,
+          frequency: payload.frequency,
+          status: payload.status,
+          confidence: payload.confidence,
+          evidence_level: payload.evidence_level,
+          guideline_source: payload.guideline_source,
+          rule_id: payload.rule_id,
+        })
+        trackEvent('dismiss_recommendation_action', {
+          page: '/platform/actions',
+          metadata: { source_id: item.source_id, reason, mode: 'create' },
+        })
+        await refreshActions()
       },
 
       updateStatus: async (id: string, status: HealthAction['status']) => {
