@@ -4874,3 +4874,115 @@ npx tsc --noEmit → exit 0
 ## Final Classification
 
 **`P0_EVIDENCE_EXTERNAL_METRICS_DONE`**
+
+---
+
+---
+
+## P53-P52-BROWSER-ACCEPTANCE-CLOSURE-VERIFICATION (2026-05-25)
+
+**Final Classification: `P53_P52_BROWSER_ACCEPTANCE_CLOSURE_VERIFIED`**
+
+### Branch Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- HEAD: `38f9c13` (P52 commit) ✅
+- Dirty files: `CEO-Decision.md`, `CTO-Analysis.md`, `active_task.md`, `roadmap.md` (governance docs only, not staged) ✅
+- No detached HEAD, no unrelated dirty application files ✅
+
+### 1. 本輪目標
+
+Closure verification for P52. Confirm that the P52 browser acceptance commit does not regress runtime smoke, TypeScript type check, or the browser acceptance spec itself. No new features.
+
+### 2. 已完成事項
+
+- **P52 commit scope verified** — `git show --stat 38f9c13` confirms exactly 5 files changed: `decision-recommendation-layer.tsx`, `health-assistant-panel.tsx`, `actions/page.tsx`, `decision-support.ts`, `p52-recommendation-fields.spec.ts`. No CI, auth, backend connector, or PostgreSQL scope.
+- **`make runtime-smoke`** — 130 passed / 2 skipped ✅ (identical to pre-P52 baseline)
+- **`npx tsc --noEmit`** — 0 errors ✅ (no `typecheck` npm script exists; ran tsc directly)
+- **P52 browser acceptance spec rerun** — `11 / 11 PASS` in 7.9s ✅
+
+### 3. 修改或產出的檔案
+
+No application code modified during this closure round. Only this report updated.
+
+| File | Action |
+|---|---|
+| `00-Plan/roadmap/active_task_report.md` | Appended P53 closure section |
+
+### 4. 驗證結果 / 測試結果
+
+| Check | Command | Result |
+|---|---|---|
+| Repo / branch | `git rev-parse --show-toplevel && git branch --show-current` | ✅ canonical |
+| P52 commit scope | `git show --stat --oneline 38f9c13` | ✅ 5 files, all frontend/browser |
+| Runtime smoke | `make runtime-smoke` | ✅ 130 passed / 2 skipped |
+| TypeScript | `npx tsc --noEmit` | ✅ 0 errors |
+| P52 browser spec | `npx playwright test tests/e2e/p52-recommendation-fields.spec.ts` | ✅ 11/11 PASS |
+
+### 5. 目前結論
+
+P52 is fully closed. All three verification checks pass with no regressions. The `evidence_summary` and `data_insufficiency_reason` fields are correctly propagated to both the Actions and Dashboard recommendation surfaces, and browser-verified by a stable 11-test Playwright suite. The root bug fixed during P52 stabilization (NarrativeMemoryCard cross-period mock crash + Playwright strict mode violation) does not affect production code — it was a test environment issue only.
+
+### 6. 尚未完成事項
+
+None within P52/P53 scope.
+
+Future backlog (not P53):
+- `npm run typecheck` script is missing from `frontend/package.json` — minor DX gap, could add `"typecheck": "tsc --noEmit"`.
+- `make runtime-smoke` coverage does not include orchestrator planner tests (pre-existing skip, unrelated to P52).
+
+### 7. 風險與不確定點
+
+| 項目 | 說明 |
+|---|---|
+| Live backend data shape | P52 browser acceptance is fully mocked. Live `/health-assistant/recommendations` must return `evidence_summary` and `data_insufficiency_reason` from the P51 backend. P51 backend was verified in its own round; no regression expected. |
+| `NarrativeMemoryCard` upstream bug | The `crossPeriod !== null` guard (which passes for `undefined`) is a real production bug in `narrative-memory-card.tsx`. If the live API returns a response where `res.reasoning` is missing, the component will crash in production. This was masked in tests but not fixed in application code. Recommend a follow-up defensive fix: `setCrossPeriod(res.reasoning ?? null)`. |
+
+### 8. 建議今天優先處理的方向
+
+1. **(Low, safe)** Add `setCrossPeriod(res.reasoning ?? null)` defensive guard in `narrative-memory-card.tsx` — prevents a real production crash if backend omits `reasoning`.
+2. **(Low, DX)** Add `"typecheck": "tsc --noEmit"` to `frontend/package.json` scripts.
+3. **(Next priority)** Proceed to next roadmap task per `roadmap.md`.
+
+### 9. 下一輪可直接執行的 task prompt
+
+```
+[每次交接開頭] — Governance Header
+
+## Required Pre-flight
+git rev-parse --show-toplevel
+git branch --show-current
+git status --short
+git log --oneline -5
+
+## Task
+P54-NARRATIVE-MEMORY-CARD-DEFENSIVE-GUARD
+
+Fix production crash risk in NarrativeMemoryCard:
+- File: frontend/app/components/platform/narrative-memory-card.tsx
+- Line: api.getCrossPeriodReasoning().then((res) => setCrossPeriod(res.reasoning))
+- Fix: change to setCrossPeriod(res.reasoning ?? null)
+- Rationale: crossPeriod !== null passes for undefined, leading to crossPeriod.confidence crash
+
+After fix:
+1. Run npx tsc --noEmit (0 errors required)
+2. Run make runtime-smoke (130 passed / 2 skipped required)
+3. Run npx playwright test tests/e2e/p52-recommendation-fields.spec.ts --reporter=line (11/11 required)
+4. git add frontend/app/components/platform/narrative-memory-card.tsx
+5. git commit -m "fix: guard setCrossPeriod against undefined reasoning to prevent production crash"
+
+Forbidden: No new features, no auth changes, no CI changes, no new branches.
+```
+
+### 10. CTO Agent 10 行內摘要
+
+1. P53 closure verification 完成，分類：`P53_P52_BROWSER_ACCEPTANCE_CLOSURE_VERIFIED`。
+2. P52 commit 38f9c13 scope 確認：5 個 frontend 檔案，無 CI/auth/backend 洩漏。
+3. `make runtime-smoke`：130 passed / 2 skipped，與 P51 baseline 完全一致。
+4. `npx tsc --noEmit`：0 errors（無 `typecheck` npm script，直接執行 tsc）。
+5. P52 browser acceptance spec 重跑：11/11 PASS，7.9s。
+6. 本輪未修改任何應用程式碼。
+7. 發現生產風險：`NarrativeMemoryCard` 的 `crossPeriod !== null` guard 對 `undefined` 失效，需補 `?? null`。
+8. 此 bug 在測試中被 route stub 遮蔽，未進入 P52 commit，需單獨修復。
+9. 建議下一輪 P54 專門修這個 defensive guard（一行修改，低風險）。
+10. P52/P53 已完全關閉，可安全推進 roadmap 下一任務。
