@@ -1,5 +1,51 @@
 # Active Task Report
 
+## P62-RECOMMENDATION-FEEDBACK-TIMELINE (2026-05-25)
+
+**Final Classification: `P62_RECOMMENDATION_FEEDBACK_TIMELINE_READY`**
+
+### 1. 本輪目標
+新增 `recommendation-history-card.tsx`，使用現有 `GET /api/v1/health-assistant/outcome-feedback?window_days=30` API，讓使用者在 `/platform/actions` 看到 30 天建議回饋 timeline。
+
+### 2. 已完成事項
+- 建立 props-driven `RecommendationHistoryCard` 元件（feedback status 標籤、顏色徽章、outcome badge、空狀態、安全免責聲明）
+- 整合至 `/platform/actions` Section 5，在現有 `view_actions` useEffect 中新增 `getOutcomeFeedback(30)` fetch
+- 建立 8 個 Playwright acceptance tests（完全 mocked，無需 live backend）
+- TypeScript 修正：`showOutcomeBadge` 條件移除錯誤的 `!== 'completed'` 判斷
+
+### 3. 修改或產出的檔案
+| 檔案 | 操作 |
+|------|------|
+| `frontend/app/components/platform/recommendation-history-card.tsx` | 新建 |
+| `frontend/app/platform/actions/page.tsx` | 修改（+14 行，新增 import + state + fetch + render） |
+| `frontend/tests/e2e/p62-recommendation-history-card.spec.ts` | 新建 |
+| `00-Plan/roadmap/active_task_report.md` | prepend P62 block |
+
+### 4. 驗證結果
+| 驗證項目 | 結果 |
+|----------|------|
+| TypeScript `npx tsc --noEmit` | ✅ 0 errors |
+| `make runtime-smoke` | ✅ 56 passed, 0 failures |
+| Playwright P62 (8 tests) | ✅ 8/8 passed |
+| Playwright P55/P56/P57 regression (17 tests) | ✅ 17/17 passed |
+
+### 5. 目前結論
+`P62_RECOMMENDATION_FEEDBACK_TIMELINE_READY` — 所有驗證通過，已 commit `b6cb0b9`。
+
+### 6. 尚未完成事項
+無。P62 bounded scope 全部完成。
+
+### 7. 風險
+無新後端改動，僅前端元件新增 + fetch，風險極低。
+
+### 8. 建議
+進入 P63（待 CEO 決定下一個 product slice 方向）。
+
+### 9. CTO 摘要
+P62 完成 Recommendation Feedback Timeline。新增 `recommendation-history-card.tsx`（props-driven, 30-day window）；整合至 `/platform/actions` section 5；8 Playwright tests 全過；使用現有 `/outcome-feedback?window_days=30` + P59 型別；無後端改動；TypeScript clean；runtime-smoke 56 passed；P55/P56/P57 regression 17/17；安全說明已加入（不代表醫療效果）。Commit: `b6cb0b9`。
+
+---
+
 ## P61-ROADMAP-REFOCUS-AFTER-OUTCOME-SMOKE-CLOSURE (2026-05-25)
 
 **Final Classification: `P61_ROADMAP_REFOCUS_READY`**
