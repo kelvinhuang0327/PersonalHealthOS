@@ -123,6 +123,76 @@ def _make_explanation(outcome_status: str, metric_type: str | None, action_title
     return f"尚未有足夠的 {label} 數據來評估效果，請繼續記錄。"
 
 
+_FEEDBACK_SAFE_COPY: dict[str, str] = {
+    "not_useful": (
+        "回饋已記錄：您標記此建議「沒有用」。"
+        "我們會將此回饋用於改善未來建議，但這不代表任何健康效果的判斷。"
+    ),
+    "not_applicable": (
+        "回饋已記錄：您標記此建議「不適合我」。"
+        "我們會將此回饋用於改善未來建議，但這不代表任何健康效果的判斷。"
+    ),
+    "snoozed": (
+        "您已延後此建議。尚未評估效果，系統會在到期後重新評估是否提醒您。"
+    ),
+}
+
+
+def _process_dismissed_action(action: Any) -> dict[str, Any]:
+    """Return a safe, non-overclaiming record for not_useful/not_applicable actions.
+
+    Guarantees
+    ----------
+    - outcome_status never claims effectiveness or improvement.
+    - confidence is always 0.0 — no metric evidence, just user feedback.
+    - explanation is user-feedback acknowledgement only.
+    """
+    status = action.status  # 'not_useful' or 'not_applicable'
+    return {
+        "action_id": str(action.id),
+        "action_title": action.title,
+        "status": status,
+        "completed_at": None,
+        "expected_health_impact": _derive_expected_impact(action),
+        "outcome_status": status,
+        "actual_metric_change": None,
+        "adherence_status": "dismissed",
+        "evidence_sources": [],
+        "confidence": 0.0,
+        "explanation": _FEEDBACK_SAFE_COPY.get(status, "回饋已記錄。"),
+        "next_check_in": None,
+    }
+
+
+def _process_snoozed_action(action: Any, now: datetime) -> dict[str, Any]:
+    """Return a safe record for snoozed actions.
+
+    Guarantees
+    ----------
+    - outcome_status is 'snoozed' — no effectiveness claim.
+    - confidence is always 0.0.
+    - snoozed_until is passed through for UI display.
+    """
+    raw_snooze = getattr(action, "snoozed_until", None)
+    snoozed_until_iso: str | None = (
+        _aware(raw_snooze).isoformat() if raw_snooze is not None else None
+    )
+    return {
+        "action_id": str(action.id),
+        "action_title": action.title,
+        "status": "snoozed",
+        "completed_at": None,
+        "expected_health_impact": _derive_expected_impact(action),
+        "outcome_status": "snoozed",
+        "actual_metric_change": None,
+        "adherence_status": "snoozed",
+        "evidence_sources": [],
+        "confidence": 0.0,
+        "explanation": _FEEDBACK_SAFE_COPY["snoozed"],
+        "next_check_in": snoozed_until_iso,
+    }
+
+
 def _next_check_in(completed_at: datetime, window_days: int, now: datetime) -> str:
     """Return the ISO date for the next evaluation checkpoint."""
     check = completed_at + timedelta(days=window_days)
@@ -309,6 +379,9 @@ def _compute_summary(outcome_items: list[dict[str, Any]]) -> dict[str, Any]:
         "deteriorated_count": _count("deteriorated"),
         "insufficient_data_count": _count("insufficient_data"),
         "tracking_count": _count("tracking"),
+        "not_useful_count": _count("not_useful"),
+        "not_applicable_count": _count("not_applicable"),
+        "snoozed_count": _count("snoozed"),
         "total_count": len(outcome_items),
     }
 
@@ -359,6 +432,14 @@ def compare_expected_vs_actual_outcome(
         a for a in all_actions
         if a.status in ("todo", "in_progress")
     ]
+    dismissed_actions = [
+        a for a in all_actions
+        if a.status in ("not_useful", "not_applicable")
+    ]
+    snoozed_actions = [
+        a for a in all_actions
+        if a.status == "snoozed"
+    ]
 
     all_outcomes: list = db.query(ActionOutcome).filter(
         ActionOutcome.user_id == uid,
@@ -386,6 +467,10 @@ def compare_expected_vs_actual_outcome(
         )
     for action in active_actions:
         outcome_items.append(_process_active_action(action, now, window_days))
+    for action in dismissed_actions:
+        outcome_items.append(_process_dismissed_action(action))
+    for action in snoozed_actions:
+        outcome_items.append(_process_snoozed_action(action, now))
 
     return {
         "person_id": person_id,

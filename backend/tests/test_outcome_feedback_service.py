@@ -451,3 +451,161 @@ def test_tracking_action_confidence_is_0():
     result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
 
     assert result["outcomes"][0]["confidence"] == 0.0
+
+
+# ---------------------------------------------------------------------------
+# P58 Tests — Feedback status outcome readiness (not_useful / not_applicable / snoozed)
+# ---------------------------------------------------------------------------
+
+def _make_dismissed_action(status: str = "not_useful", category: str = "weight") -> SimpleNamespace:
+    a = SimpleNamespace()
+    a.id = uuid4()
+    a.title = "每週量測體重"
+    a.status = status
+    a.category = category
+    a.completed_at = None
+    a.updated_at = _utc(0)
+    a.snoozed_until = None
+    return a
+
+
+def _make_snoozed_action(days_future: int = 3) -> SimpleNamespace:
+    a = SimpleNamespace()
+    a.id = uuid4()
+    a.title = "每日步行目標"
+    a.status = "snoozed"
+    a.category = "activity"
+    a.completed_at = None
+    a.updated_at = _utc(0)
+    from datetime import timedelta
+    a.snoozed_until = datetime.now(timezone.utc) + timedelta(days=days_future)
+    return a
+
+
+class TestFeedbackStatusOutcome:
+    """
+    P58: not_useful / not_applicable / snoozed actions must appear in outcome
+    response with safe, non-overclaiming language and confidence=0.0.
+    """
+
+    def test_not_useful_action_appears_in_outcomes(self):
+        action = _make_dismissed_action("not_useful")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        assert any(o["outcome_status"] == "not_useful" for o in result["outcomes"])
+
+    def test_not_applicable_action_appears_in_outcomes(self):
+        action = _make_dismissed_action("not_applicable")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        assert any(o["outcome_status"] == "not_applicable" for o in result["outcomes"])
+
+    def test_snoozed_action_appears_in_outcomes(self):
+        action = _make_snoozed_action(days_future=3)
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        assert any(o["outcome_status"] == "snoozed" for o in result["outcomes"])
+
+    def test_not_useful_confidence_is_zero(self):
+        action = _make_dismissed_action("not_useful")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        item = next(o for o in result["outcomes"] if o["outcome_status"] == "not_useful")
+        assert item["confidence"] == 0.0
+
+    def test_not_applicable_confidence_is_zero(self):
+        action = _make_dismissed_action("not_applicable")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        item = next(o for o in result["outcomes"] if o["outcome_status"] == "not_applicable")
+        assert item["confidence"] == 0.0
+
+    def test_snoozed_confidence_is_zero(self):
+        action = _make_snoozed_action()
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        item = next(o for o in result["outcomes"] if o["outcome_status"] == "snoozed")
+        assert item["confidence"] == 0.0
+
+    def test_no_overclaiming_language_in_not_useful_explanation(self):
+        """Explanation must not claim effectiveness or improvement."""
+        action = _make_dismissed_action("not_useful")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        item = next(o for o in result["outcomes"] if o["outcome_status"] == "not_useful")
+        assert "改善趨勢" not in item["explanation"]
+        assert "有效" not in item["explanation"]
+        assert "worked" not in item["explanation"]
+        assert "improved your health" not in item["explanation"]
+        assert "回饋已記錄" in item["explanation"]
+
+    def test_no_overclaiming_language_in_not_applicable_explanation(self):
+        action = _make_dismissed_action("not_applicable")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        item = next(o for o in result["outcomes"] if o["outcome_status"] == "not_applicable")
+        assert "改善趨勢" not in item["explanation"]
+        assert "有效" not in item["explanation"]
+        assert "回饋已記錄" in item["explanation"]
+
+    def test_no_overclaiming_language_in_snoozed_explanation(self):
+        action = _make_snoozed_action()
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        item = next(o for o in result["outcomes"] if o["outcome_status"] == "snoozed")
+        assert "改善趨勢" not in item["explanation"]
+        assert "有效" not in item["explanation"]
+        assert "延後" in item["explanation"]
+
+    def test_snoozed_action_passes_through_snoozed_until(self):
+        action = _make_snoozed_action(days_future=3)
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        item = next(o for o in result["outcomes"] if o["outcome_status"] == "snoozed")
+        assert item["next_check_in"] is not None
+
+    def test_summary_counts_not_useful(self):
+        action = _make_dismissed_action("not_useful")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        assert result["summary"]["not_useful_count"] == 1
+
+    def test_summary_counts_not_applicable(self):
+        action = _make_dismissed_action("not_applicable")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        assert result["summary"]["not_applicable_count"] == 1
+
+    def test_summary_counts_snoozed(self):
+        action = _make_snoozed_action()
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        assert result["summary"]["snoozed_count"] == 1
+
+    def test_dismissed_action_no_metric_change_field(self):
+        """Dismissed actions must have null actual_metric_change — no metric claim."""
+        action = _make_dismissed_action("not_useful")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        item = next(o for o in result["outcomes"] if o["outcome_status"] == "not_useful")
+        assert item["actual_metric_change"] is None
+
+    def test_dismissed_action_adherence_status_is_dismissed(self):
+        action = _make_dismissed_action("not_applicable")
+        db = _make_db({HealthAction: [action], ActionOutcome: [], HealthMetric: []})
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        item = next(o for o in result["outcomes"] if o["outcome_status"] == "not_applicable")
+        assert item["adherence_status"] == "dismissed"
+
+    def test_total_count_includes_all_statuses(self):
+        completed = _make_action(status="done", category="bp", completed_at=_utc(1))
+        not_useful = _make_dismissed_action("not_useful")
+        snoozed = _make_snoozed_action()
+        active = _make_action(status="todo", category="sleep")
+        db = _make_db({
+            HealthAction: [completed, not_useful, snoozed, active],
+            ActionOutcome: [],
+            HealthMetric: [],
+        })
+        result = compare_expected_vs_actual_outcome(db, UID, PID, window_days=7)
+        assert result["summary"]["total_count"] == 4
