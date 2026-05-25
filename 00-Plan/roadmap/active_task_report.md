@@ -1,5 +1,65 @@
 # Active Task Report
 
+## P61-ROADMAP-REFOCUS-AFTER-OUTCOME-SMOKE-CLOSURE (2026-05-25)
+
+**Final Classification: `P61_ROADMAP_REFOCUS_READY`**
+
+### Branch Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- HEAD: `6ea326b` (P60 outcome-smoke) ✅
+- Dirty files: `CEO-Decision.md`, `CTO-Analysis.md`, `active_task.md`, `roadmap.md` (expected governance outputs only) ✅
+
+### P50–P60 Closure Summary
+
+| Phase | Result | Commit |
+|-------|--------|--------|
+| P50 | Frontend auth smoke stabilized (missing BUILD_ID diagnosed) | `0191e59` |
+| P51 | Recommendation explanation safety (safe Chinese copy) | — |
+| P52 | Prioritized action safety | — |
+| P53 | Action confidence labels | — |
+| P54 | Daily summary context (topRisk/biggestChange/todayAction/whyNow/confidence/missingData) | — |
+| P55 | Action feedback loop (mark done/snoozed/not_useful/not_applicable) | `0191e59` |
+| P56 | Recommendation feedback persistence | `9624f04` |
+| P57 | Snooze persistence + dismissed filter | `07b15d0` |
+| P58 | Recommendation outcome readiness safeguards (safe copy, confidence=0.0) | `5dea27e` |
+| P59 | Outcome visibility: frontend type unions, outcome-feedback-card, 18 API tests | `4e5dd81` |
+| P60 | Outcome smoke: `outcome-smoke` Makefile target, 56 tests in `make runtime-smoke` | `6ea326b` |
+
+### Product Gap Identified
+
+After P50–P60, the product recommendation → feedback → outcome chain is closed at the data/API layer.
+**Missing from user experience**: a chronological history view showing past recommendations, user responses, and safe outcome statuses.
+
+### Option Evaluation
+
+| Option | Status | Reason |
+|--------|--------|--------|
+| A — Daily Assistant Summary Quality | Backend solid (all fields returned), UI polish only | Lower value: backend complete |
+| B — Recommendation Feedback Timeline | **Selected** | Completes visible product loop; existing API + types; bounded scope |
+| C — Report-to-Action Closure | Already implemented per P4 roadmap | No clear gap |
+| D — Data Insufficiency Clarity | `missingData` field exists in response | Minor UI polish |
+
+### Decision: Option B — P62
+
+**Rationale**: P55–P60 built the full action feedback + outcome data pipeline. The logical next product step is giving users a visible record of their recommendation history. The backend endpoint (`/outcome-feedback?window_days=30`) and all TypeScript types (`OutcomeFeedbackItem`, `OutcomeFeedback`) already exist. Only a new frontend component is needed.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `00-Plan/roadmap/roadmap.md` | Updated Latest Phase Status to reflect P50–P60 closure; added P62 direction |
+| `00-Plan/roadmap/active_task.md` | Replaced stale P50 task with P62 worker prompt |
+| `00-Plan/roadmap/active_task_report.md` | This P61 block prepended |
+
+### Tests
+Code tests: NOT RUN (docs/roadmap-only changes).
+TypeScript: NOT RUN (no frontend code changes).
+
+### Commits
+- C1: `docs(roadmap): refocus product roadmap after P60 outcome smoke closure`
+
+---
+
 ## P50-FRONTEND-AUTH-SMOKE-DIAGNOSIS (2026-05-25)
 
 **Final Classification: `P50_FRONTEND_AUTH_SMOKE_STABILIZED`**

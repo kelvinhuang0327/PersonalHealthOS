@@ -1,81 +1,131 @@
 # PersonalHealthOS Roadmap
 
-Updated: 2026-05-23
+Updated: 2026-05-25 (P61 refocus)
 Owner: CTO review
 
 ## Product Positioning
 
-[Confirmed] PersonalHealthOS is an AI personal health assistant. It should integrate symptoms, long-term symptom changes, health history, checkup reports, medical/lab data, daily health metrics, actions, outcomes, family context, and future device data, then provide daily trustworthy, actionable, and trackable health recommendations.
+[Confirmed] PersonalHealthOS is an AI personal health assistant. It should integrate daily symptoms, long-term symptom changes, health history, checkup reports, medical/lab data, daily health metrics, actions, outcomes, family context, and future device data, then provide daily trustworthy, actionable, and trackable health recommendations.
 
 ## Current Input Sources
 
-- [Confirmed] User-provided handoff: `P13 Auth E2E + Entrypoint Hardening`.
-- [Confirmed] `00-Plan/roadmap/active_task_report.md`: top P13 block reports `P13_AUTH_E2E_ENTRYPOINT_HARDENED`.
-- [Confirmed] `00-Plan/roadmap/active_task.md`: prior P12 post-closure verification task, now superseded by P13 report.
+- [Confirmed] User-provided handoff: `P49 Frontend Auth E2E CI Readiness`.
+- [Confirmed] `00-Plan/roadmap/active_task_report.md`: top P49 block reports `P49_FRONTEND_AUTH_E2E_LOCAL_GATE_DOCUMENTED`.
+- [Confirmed] `docs/security/P49_FRONTEND_AUTH_E2E_CI_READINESS.md`: documents frontend auth E2E CI readiness audit and local gate decision.
+- [Confirmed] `docs/security/P48_CI_RUNTIME_SMOKE_ALIGNMENT.md`: documents CI/runtime-smoke alignment after adding frontend TypeScript CI gate.
+- [Confirmed] `docs/security/P40_POSTGRESQL_PARITY_SMOKE.md`: documents one-off PostgreSQL parity smoke with 11/11 PASS.
 - [Confirmed] Current repo path: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS`.
 - [Confirmed] Current branch: `main`.
-- [Confirmed] Current working tree has existing dirty/uncommitted P13-related changes, including `.gitignore`, `Makefile`, `active_task_report.md`, `test_auth_negative_smoke.py`, `test_real_token_auth_negative.py`, and staged artifact removals.
-- [Confirmed] `frontend/package.json` has Playwright support through `npm run e2e`.
-- [Confirmed] `.github/workflows/ci-cd.yml` still runs backend tests with bare `PYTHONPATH=. pytest -q`.
+- [Confirmed] Current working tree is clean at review time.
+- [Confirmed] Current HEAD includes P49 commits `5776e35` and `62b791f`.
+- [Outdated] `00-Plan/roadmap/active_task.md` still describes a P13 finalize/browser-auth task and does not match current P49 state.
+- [Outdated] `00-Plan/roadmap/current_state.md` is an older P1 verification handoff and contains claims contradicted by the current canonical git repo state.
 
 ## Latest Phase Status
 
+### P50–P60 Closure Summary (2026-05-25)
+
+- [Closed] P50 — Frontend auth smoke local stability diagnosed and stabilized (commit `0191e59`).
+- [Closed] P51 — Recommendation explanation safety (safe Chinese copy, no medical overclaiming).
+- [Closed] P52 — Prioritized action safety (evidence-grounded, safe copy).
+- [Closed] P53 — Action confidence labels (UI trust layer).
+- [Closed] P54 — Daily summary context (topRisk / biggestChange / todayAction / whyNow / confidence / missingData).
+- [Closed] P55 — Action feedback loop (mark done/snoozed/not_useful/not_applicable at API level).
+- [Closed] P56 — Recommendation feedback persistence (commit `9624f04`).
+- [Closed] P57 — Snooze persistence + dismissed filter in prioritized actions (commit `07b15d0`).
+- [Closed] P58 — Recommendation outcome readiness safeguards (safe copy, confidence=0.0, actual_metric_change=null for dismissed/snoozed; commit `5dea27e`).
+- [Closed] P59 — Outcome visibility verification: frontend type unions fixed, outcome-feedback-card.tsx updated, 18 API tests added (commit `4e5dd81`).
+- [Closed] P60 — Outcome feedback route smoke readiness: `outcome-smoke` Makefile target added, 56 tests now in `make runtime-smoke` (commit `6ea326b`).
+
 ### P0 - Personal Health Assistant Core Closure
 
-Status: [Aligned] core loop completed enough for production-trust verification.
+Status: [Aligned] Core recommendation / feedback / outcome chain now closed end-to-end.
 
 - [Confirmed] Symptom input surfaces exist: `/platform/symptoms`, quick check-in symptom entry, and `/symptoms` API.
 - [Confirmed] Health Assistant Evidence Bundle exists.
 - [Confirmed] Top 3 Health Recommendations exist.
 - [Confirmed] Dashboard daily assistant surfaces exist.
 - [Confirmed] Actions Page uses the recommendation layer before dashboard fallbacks.
-- [Confirmed] External/source-tagged metrics are first-class evidence in `external_metrics`.
 - [Confirmed] Recommendation trust layer exists and is shared across relevant UI.
-- [Confirmed] P13 added real-token JWT auth negative/sanity tests for family context/recommendations.
-- [Blocked] Browser-level login/token/session auth flow remains unverified.
-- [Blocked] CI backend workflow still uses bare `pytest`, so entrypoint governance is not fully hardened in CI.
+- [Confirmed] Backend auth/security coverage is now included in `backend-auth-audit` and propagates through `runtime-smoke`.
+- [Confirmed] `make frontend-auth-smoke` stabilized (P50): requires `npm run build` before running.
+- [Confirmed] P51–P53 added safe copy and confidence labels to recommendations.
+- [Confirmed] P54 hardened daily summary with topRisk / biggestChange / todayAction / whyNow / confidence / missingData.
+- [Confirmed] P55–P57 closed the action feedback + snooze persistence loop.
+- [Confirmed] P58–P59 closed the safe outcome visibility loop (no overclaiming, dismissed/snoozed surfaced in UI).
+- [Confirmed] P60 added `outcome-smoke` to `make runtime-smoke` (56 service+API tests).
+- [Missing] Recommendation feedback timeline/history view: users cannot see a chronological record of past recommendations with user responses and outcomes.
 
 ### P1 - Daily Behavior Loop And Outcome Learning
 
-Status: [Aligned] partially completed, but browser regression remains open.
+Status: [Partially complete] Recommendation → feedback → outcome chain is closed. History/timeline view is the next product slice.
+
+- [Confirmed] Daily Health Summary exists with all required fields.
+- [Confirmed] Outcome Feedback exists and avoids claiming improvement when data is insufficient.
+- [Confirmed] Recommendation Trust Layer exists.
+- [Confirmed] P48 added frontend TypeScript CI coverage, reducing UI regression risk.
+- [Confirmed] Action feedback (mark done/snoozed/dismissed) persists at API level (P55-P57).
+- [Confirmed] Outcome feedback card renders safe outcome statuses (P59).
+- [Missing] A simple chronological recommendation history: recommended action → user response → safe outcome status.
+- [Next] P62 should add a recommendation feedback timeline view using existing backend data.
+
+### P2 - Device Data Readiness
+
+Status: [Aligned] important, but not today's blocker.
+
+- [Confirmed] Symptom input surfaces exist: `/platform/symptoms`, quick check-in symptom entry, and `/symptoms` API.
+- [Confirmed] Health Assistant Evidence Bundle exists.
+- [Confirmed] Top 3 Health Recommendations exist.
+- [Confirmed] Dashboard daily assistant surfaces exist.
+- [Confirmed] Actions Page uses the recommendation layer before dashboard fallbacks.
+- [Confirmed] Recommendation trust layer exists and is shared across relevant UI.
+- [Confirmed] Backend auth/security coverage is now included in `backend-auth-audit` and propagates through `runtime-smoke`.
+- [Blocked] `make frontend-auth-smoke` fails locally with Playwright webServer 120s timeout, so browser auth smoke is not a reliable local gate.
+- [Blocked] `active_task.md` is stale at P13 and can mislead the next Planner/Worker if used as the current source of truth.
+
+### P1 - Daily Behavior Loop And Outcome Learning
+
+Status: [Aligned] partially complete; product work should resume after the P50 local gate diagnosis is bounded.
 
 - [Confirmed] Daily Health Summary exists.
 - [Confirmed] Outcome Feedback exists and avoids claiming improvement when data is insufficient.
 - [Confirmed] Recommendation Trust Layer exists.
-- [Missing] Browser-level regression coverage is still not run for login/auth, Daily Assistant, Trust, Outcome Feedback, and Family Health Card.
-- [Missing] Real login page -> token/cookie/session -> protected API flow remains unverified.
+- [Confirmed] P48 added frontend TypeScript CI coverage, reducing UI regression risk.
+- [Missing] Browser-level regression coverage for Daily Assistant, Actions, Trust, Outcome Feedback, and Family Health Card is still limited to mocked CI E2E plus local/manual flows.
+- [Inferred] Product value work should focus on making the daily assistant more useful with existing data, not on expanding device connectors.
 
 ### P2 - Device Data Readiness
 
-Status: [Aligned] device signal intelligence exists; connector work remains paused.
+Status: [Aligned] important, but not today's blocker.
 
 - [Confirmed] Existing source-tagged metrics feed `external_metrics`.
 - [Confirmed] Device signal detection exists and is surfaced in the health assistant panel.
 - [Confirmed] `/health-assistant/device-signals` endpoint exists.
-- [Missing] SpO2 schema/column and PostgreSQL-backed integration lane are not complete.
-- [Outdated] Any roadmap item that starts Apple Health, Google Fit, or wearable connector work before browser auth/CI governance is downgraded.
+- [Missing] SpO2/pulse schema and stable provider-neutral import policy remain future work.
+- [Outdated] Apple Health, Google Fit, or real wearable connector work remains downgraded until core recommendation and gate reliability are stable.
 
 ### P3 - Symptom Intelligence Upgrade
 
-Status: [Aligned] partially completed.
+Status: [Aligned] partially implemented and future-expandable.
 
 - [Confirmed] Symptom page, symptom API, temporal symptom parsing, symptom patterns, and symptom insight UI exist.
 - [Inferred] More advanced symptom-to-reminder behavior remains future work.
 
 ### P4 - Report-To-Action Closure
 
-Status: [Aligned] substantially implemented.
+Status: [Aligned] substantially implemented and security-hardened.
 
 - [Confirmed] Lab abnormalities can enter recommendations and report-to-action flow.
-- [Confirmed] Stale report handling and lab insight UI have been reported as verified in prior active task report sections.
-- [Missing] Browser/E2E coverage for the report-to-action journey is still not proven.
+- [Confirmed] Report download token policy was audited in P44 and hardened in P45.
+- [Confirmed] P47 added report download token policy tests to `backend-auth-audit`, bringing them into `runtime-smoke`.
+- [Missing] Browser/E2E coverage for the complete report-to-action journey is still not proven as a stable gate.
 
 ### P5 - Notification And Reminder Intelligence
 
-Status: [Outdated] keep downgraded until P0/P1 verification is complete.
+Status: [Outdated] keep downgraded until P0/P1 verification is stable.
 
 - [Confirmed] Snooze/reminder data structures exist.
-- [Blocked] Notification expansion should not compete with browser auth smoke and CI entrypoint hardening.
+- [Blocked] Notification expansion should not compete with local auth smoke stability and core daily assistant usefulness.
 
 ### P6 - Personalization And Learning
 
@@ -91,108 +141,109 @@ Narrative memory and cross-period reasoning appear in tests/reports, but should 
 
 ### P8 - Family / Multi-Person Health Assistant
 
-Status: [Aligned] implemented and API-auth hardened, but browser auth still missing.
+Status: [Aligned] backend/API trust hardened; frontend auth UI gate remains local-only and currently unstable.
 
 - [Confirmed] Family relationships and family health context exist.
-- [Confirmed] Cross-profile isolation tests exist.
 - [Confirmed] P12 family permission enforcement and source granularity exist.
-- [Confirmed] P13 added real-token JWT negative tests for cross-user family context/recommendations.
-- [Blocked] Real browser auth flow for family context remains unverified.
+- [Confirmed] P13 real-token JWT negative tests cover cross-user family context/recommendations at API level.
+- [Confirmed] P49 concludes auth contract logic is meaningfully covered by backend CI/auth audit.
+- [Blocked] Full browser auth UI flow is not a reliable gate because `frontend-auth-smoke` fails locally.
 
 ### P9 - Product Analytics And Orchestrator Governance
 
-Status: [Aligned] ongoing governance track.
+Status: [Aligned] active governance track.
 
-- [Confirmed] P12 fixed `_open_db(profile_path=None)` so `ORCHESTRATOR_PROFILE_PATH` env fallback is respected.
-- [Confirmed] P13 hardened backend test entrypoint in README/Makefile.
-- [Drift] GitHub Actions backend workflow still uses bare pytest, so CI governance is incomplete.
-- [Drift] Current working tree still contains uncommitted/staged P13 changes and artifact removals; roadmap should not treat the repo as clean.
+- [Confirmed] P48 aligned CI with runtime-smoke for frontend TypeScript.
+- [Confirmed] CI backend uses `PYTHONPATH=. python -m pytest -q`, not bare `pytest`.
+- [Confirmed] CI frontend runs `npm run e2e:ci`, limited to three mocked specs with no live backend dependency.
+- [Confirmed] P49 documents frontend auth E2E as local/manual, not CI.
+- [Drift] `active_task.md` is stale and does not reflect P49/P50.
+- [Missing] `active_task_report.md` archive/lifecycle policy remains undefined.
 
 ### P10 - Production Trust, Compliance, And Ecosystem
 
-Status: [Aligned] active production-trust track.
+Status: [Aligned] production-trust track has progressed; remaining gaps are local frontend-auth smoke stability, live-service E2E design, and periodic DB parity.
 
-- [Confirmed] P13 reports backend regression 723/723 PASS.
-- [Confirmed] P13 reports frontend TypeScript PASS.
-- [Confirmed] P13 reports Next build PASS with 20 static routes.
-- [Confirmed] P13 reports `backend-smoke` PASS 10/10.
-- [Missing] Playwright browser JWT login flow and real browser E2E remain NOT RUN.
-- [Missing] PostgreSQL-backed integration lane remains future work.
+- [Confirmed] P47 runtime-smoke: 130 passed, 2 skipped.
+- [Confirmed] P48 reports CI backend full suite: 983 passed, 2 skipped.
+- [Confirmed] P48 reports CI frontend TypeScript gate added.
+- [Confirmed] P49 reports `make runtime-smoke`: 130 passed, 2 skipped.
+- [Confirmed] P49 reports `make frontend-auth-smoke`: FAIL due Playwright webServer 120s timeout.
+- [Confirmed] P40 PostgreSQL parity smoke exists with 11/11 PASS.
+- [Missing] PostgreSQL parity is not part of `runtime-smoke` or CI.
 
-### P11/P12/P13 - Production Trust Extension Track
+### P40-P49 - Production Trust Extension Track
 
-Status: [Aligned] P13 closure reached with remaining browser/CI risks.
+Status: [Aligned] most backend/security gates are closed or accepted; frontend auth E2E CI is explicitly deferred.
 
-- [Confirmed] P12 permission/source trust closure exists.
-- [Confirmed] P12 orchestrator env/path issue was fixed.
-- [Confirmed] P13 introduced `backend/tests/test_real_token_auth_negative.py` with real JWT decode path tests.
-- [Confirmed] P13 confirms `get_target_person` ownership check stays production code and is not overridden.
-- [Confirmed] P13 test shim only coerces SQLite UUID string to `uuid.UUID`; production app code was not changed.
-- [Blocked] SQLite UUID behavior differs from PostgreSQL and still needs a PostgreSQL integration lane before stronger production claims.
+- [Confirmed] P40 verified PostgreSQL parity for UUID, TIMESTAMPTZ, JSONB, and FK cascade at one-off smoke level.
+- [Confirmed] P41 hardened risk-engine UUID hygiene after P40.
+- [Confirmed] P44/P45 audited and hardened report download token policy.
+- [Confirmed] P47 added report download token policy tests to `backend-auth-audit` and `runtime-smoke`.
+- [Confirmed] P48 added `npx tsc --noEmit` to CI frontend job.
+- [Confirmed] P49 documented `frontend-auth-smoke` as local/manual gate and rejected direct CI inclusion.
+- [Blocked] P50-level work is needed to diagnose local `frontend-auth-smoke` stability before reconsidering CI.
 
 ## Roadmap Alignment Assessment
 
-- [Aligned] P13 directly addresses the prior P0 auth trust gap by moving from dependency override smoke to real-token JWT tests.
-- [Aligned] P13 entrypoint hardening supports roadmap governance and reduces false backend regression reports.
-- [Aligned] P13 did not expand into new product features, which matches the current instruction to stabilize production trust first.
-- [Drift] The previous roadmap still listed API auth E2E as an unclosed P0 blocker. It should now be narrowed to browser-level auth flow and PostgreSQL integration.
-- [Drift] README/Makefile entrypoint hardening exists, but CI workflow still uses bare pytest; "CI governance complete" would be overstated.
-- [Missing] Browser-level login/session E2E is not implemented/run.
-- [Missing] PostgreSQL-backed auth integration is not implemented/run.
-- [Outdated] Any next feature phase before browser auth smoke and CI workflow entrypoint hardening is downgraded.
-- [Blocked] Production deployment readiness remains blocked by browser auth flow, CI workflow hardening, and DB parity coverage.
+- [Aligned] P49 follows roadmap priority by auditing verification gates before adding CI complexity.
+- [Aligned] The choice not to add `frontend-auth-smoke` to CI is consistent with production-trust governance because local failure proves CI would be flaky.
+- [Aligned] Backend security/auth coverage is now stronger than the P13 roadmap state: `backend-auth-audit`, `runtime-smoke`, and CI full backend suite cover the core authorization logic.
+- [Drift] The prior roadmap's P0 "CI backend bare pytest" blocker is now outdated; CI backend uses `python -m pytest`.
+- [Drift] The prior roadmap's broad "browser auth smoke + CI hardening" should be narrowed to "local frontend-auth-smoke stability diagnosis"; direct CI inclusion is paused.
+- [Missing] Roadmap had not yet recorded P48/P49 decisions.
+- [Missing] `active_task.md` still points to P13 and is not aligned with the current P49/P50 decision state.
+- [Outdated] Treating frontend auth E2E CI inclusion as the next default step is no longer valid after P49.
+- [Blocked] System maturity is blocked by an unstable local browser auth gate and stale task-source governance, not by backend auth contract coverage.
 
 ## Completed Items Since Prior CTO Review
 
-- [Confirmed] P13 real-token JWT auth negative tests added.
-- [Confirmed] No-token, expired-token, and garbage-token paths are covered as 401.
-- [Confirmed] User A token cannot read user B family context/recommendations at API level.
-- [Confirmed] Own-profile and default-profile sanity paths return 200.
-- [Confirmed] `get_target_person` production ownership check remains un-overridden.
-- [Confirmed] `backend-smoke` target exists in `Makefile`.
-- [Confirmed] `.gitignore` contains runtime artifact rules for `frontend/tsconfig.tsbuildinfo` and launchd pid files.
-- [Confirmed from active report] Backend regression: 723/723 PASS.
-- [Confirmed from active report] Frontend TypeScript and Next build PASS.
+- [Confirmed] P40 PostgreSQL parity smoke documented 11/11 PASS.
+- [Confirmed] P41 risk-engine UUID hygiene was completed after P40.
+- [Confirmed] P44/P45 report download token risk was audited and hardened.
+- [Confirmed] P47 moved token policy tests into `backend-auth-audit` and `runtime-smoke`.
+- [Confirmed] P48 added frontend TypeScript check to CI and aligned CI/runtime-smoke coverage.
+- [Confirmed] P49 audited frontend auth E2E CI readiness.
+- [Confirmed] P49 executed `make frontend-auth-smoke` and found local webServer 120s timeout.
+- [Confirmed] P49 executed `make runtime-smoke` with 130 passed, 2 skipped.
+- [Confirmed] P49 created `docs/security/P49_FRONTEND_AUTH_E2E_CI_READINESS.md`.
+- [Confirmed] P49 committed `5776e35` and `62b791f`.
 
 ## Reprioritized Roadmap
 
-### P0 - Browser Auth Smoke + CI Entrypoint Governance
+### P0 - Frontend Auth Local Gate Stability And Governance Alignment
 
-Goal: Convert API-level auth confidence into browser/session confidence and make test entrypoints consistent for agents/CI.
+Goal: make the remaining browser auth gate diagnosable and keep agents from using stale task sources.
 
-1. [Blocked] Browser-level auth smoke.
-   - Required flow: login or token bootstrap in browser, access own protected family context, reject cross-user family context/recommendations.
-   - Acceptance: Playwright/browser smoke PASS, or a precise `BROWSER_AUTH_E2E_NOT_IMPLEMENTED` report with missing fixtures listed.
+1. [Blocked] Diagnose `make frontend-auth-smoke` local failure.
+   - Current issue: Playwright webServer times out after 120s while starting `next start` at `127.0.0.1:3010`.
+   - Acceptance: `make frontend-auth-smoke` becomes a reliable local PASS, or a root-cause blocker report identifies the exact failing prerequisite.
 
-2. [Blocked] CI backend entrypoint hardening.
-   - Current issue: `.github/workflows/ci-cd.yml` still uses `PYTHONPATH=. pytest -q`.
-   - Acceptance: CI backend test command uses the canonical venv/module entrypoint or an equivalent reproducible environment command.
+2. [Blocked] Keep frontend auth E2E out of CI until local gate is stable.
+   - Current issue: CI would require live backend, env, database, fresh Next build, `next start`, ports, and CORS bridge.
+   - Acceptance: CI continues to run mocked E2E plus backend auth/security gates; no direct auth E2E CI addition before local stability.
 
-3. [Blocked] PostgreSQL integration lane decision.
-   - Current issue: P13 needs a SQLite UUID coercion shim, while production uses PostgreSQL.
-   - Acceptance: at least one PostgreSQL-backed auth smoke exists, or the lane is explicitly planned with owner/scope.
+3. [Blocked] Align current task-source governance.
+   - Current issue: `active_task.md` is stale at P13 while active reports and HEAD are at P49.
+   - Acceptance: CEO/Planner-owned active task source is updated outside this CTO-only review, or explicitly ignored in favor of the P49 handoff.
 
-4. [Drift] Working tree / artifact finalization.
-   - Current issue: P13 changes are still dirty/untracked/staged in the current workspace.
-   - Acceptance: changes are committed or explicitly reported as pending; no unrelated dirty files block the next sprint.
+4. [Missing] Define report lifecycle/archive policy.
+   - Current issue: `active_task_report.md` is long and prepend-heavy.
+   - Acceptance: active top block remains concise while historical reports are clearly archived or indexed without deleting evidence.
 
-5. [Missing] Report archive strategy.
-   - Current issue: `active_task_report.md` is prepend/append heavy and growing.
-   - Acceptance: define an archive/appendix strategy without deleting historical evidence.
+### P1 - Product Core Resume Gate
 
-### P1 - Browser Regression And Trust UX
+1. Resume daily assistant product-value work only after P50 local-gate diagnosis is bounded.
+2. Improve user-facing daily assistant usefulness with existing data: today's risk, biggest change, next action, and data-insufficiency clarity.
+3. Add stable browser regression coverage for Daily Assistant, Actions, Trust, Outcome Feedback, and Family Health Card without requiring live backend orchestration.
+4. Strengthen product signals for completion, snooze, conversion, recommendation acceptance, and outcome feedback.
 
-1. Playwright regression for Daily Assistant, Actions recommendations, Recommendation Trust, Outcome Feedback, and Family Health Card.
-2. Unknown/missing trust fallback rendered explicitly.
-3. Browser-level health assistant smoke after login.
-4. Product signal reliability for completion, snooze, conversion, and recommendation acceptance.
+### P2 - Periodic Production-Parity And Device Readiness
 
-### P2 - Device Data Readiness Without Connector Overreach
-
-1. Provider-neutral external metrics contract for heart rate, pulse, sleep, steps, activity, and SpO2.
-2. SpO2/pulse schema decision and migration planning.
-3. Mock/manual import with source metadata, freshness, reliability, and source normalization.
-4. No real wearable connector until P0/P1 verification is clean.
+1. Convert P40 PostgreSQL parity evidence into a periodic/local smoke lane if cost is acceptable.
+2. Keep PostgreSQL parity out of P0 unless release claims require DB-level proof.
+3. Define provider-neutral external metrics contract for heart rate, pulse, sleep, steps, activity, and SpO2.
+4. Keep real wearable connectors paused until schema, source quality, and core recommendation usefulness are stable.
 
 ### P3 - Symptom Intelligence Upgrade
 
@@ -208,7 +259,7 @@ Goal: Convert API-level auth confidence into browser/session confidence and make
 2. Risk mapping.
 3. Report-to-decision item.
 4. Report-to-action recommendation.
-5. Document-to-action conversion tracking and E2E smoke.
+5. Browser smoke for report-to-action journey after gate reliability improves.
 
 ### P5 - Notification And Reminder Intelligence
 
@@ -232,35 +283,36 @@ Maintain family context, permission clarity, source badges, cross-profile isolat
 
 ### P9 - Product Analytics And Orchestrator Governance
 
-Harden task/report quality gates, CI/test entrypoints, report archive strategy, and orchestrator issue prioritization.
+Harden task/report quality gates, CI/test entrypoints, report archive strategy, smoke target clarity, and orchestrator issue prioritization.
 
 ### P10 - Production Trust, Compliance, And Ecosystem
 
-Audit logs, privacy boundaries, health recommendation safety guardrails, auth/deployment smoke, compliance documentation, and production monitoring.
+Audit logs, privacy boundaries, health recommendation safety guardrails, auth/deployment smoke, periodic DB parity, compliance documentation, and production monitoring.
 
 ## Items To Downgrade, Merge, Pause, Or Retire
 
-- [Retire] API-level real-token auth negative smoke as a blocker; P13 completed it.
-- [Downgrade] New product feature phases until browser auth smoke and CI entrypoint governance are closed.
-- [Downgrade] Real wearable connector work until P2 schema/readiness and P0/P1 verification are clean.
-- [Merge] CI entrypoint hardening into P0 because false regression signals block verifiability.
-- [Merge] Report archive strategy into P9 governance, with P0 urgency due active handoff size.
+- [Retire] CI backend bare-pytest blocker; current CI uses `python -m pytest`.
+- [Retire] API-level real-token auth negative smoke as a blocker; backend auth coverage is now gated through CI/backend-auth-audit.
+- [Downgrade] Direct frontend auth E2E CI inclusion; P49 proves it is not safe until local gate stability is fixed.
+- [Downgrade] PostgreSQL parity from P0 blocker to P2/periodic gate, because P40 one-off parity exists but it is not part of CI/runtime-smoke.
+- [Downgrade] Notification intelligence and real wearable connectors until P0/P1 verification and product core usefulness are stable.
+- [Merge] P47/P48/P49 smoke/CI governance into P9/P10.
+- [Pause] Full frontend E2E CI redesign until local `frontend-auth-smoke` is stable and service orchestration is specified.
 - [Pause] New worker task prompt generation by CTO because the current instruction explicitly forbids producing new worker prompts.
 
 ## Today Recommended Focus
 
 [Confirmed] The next most valuable optimization is:
 
-> Browser Auth Smoke + CI Test Governance Hardening.
+> P50 - Frontend Auth Smoke Local Stability Diagnosis.
 
-Do not start a new product feature phase. P13 proved API-level JWT negative auth behavior; now prove the browser/session path and make CI use the same canonical backend entrypoint so agents and CI stop disagreeing about regression status.
+Do not add frontend auth E2E to CI today. First determine why local `make frontend-auth-smoke` times out, and either stabilize it or produce a precise blocker report. In parallel, treat `active_task.md` as stale until CEO/Planner refreshes it outside this CTO-only review.
 
 ## Active Task Prompt Status
 
-[Blocked] No new worker task prompt is written by this CTO review.
+[Blocked] No new worker task prompt is written or emitted by this CTO review.
 
-Reasons:
+Reason:
 
 - [Confirmed] The instruction says CTO can update only `00-Plan/roadmap/roadmap.md` and `00-Plan/roadmap/CTO-Analysis.md`.
-- [Confirmed] The instruction says "嚴禁產出新的 worker task prompt."
-- [Confirmed] `00-Plan/roadmap/active_task.md` already exists but is not modified by CTO in this review.
+- [Confirmed] The instruction explicitly says "嚴禁產出新的 worker task prompt."
