@@ -1,5 +1,76 @@
 # Active Task Report
 
+## P50-FRONTEND-AUTH-SMOKE-DIAGNOSIS (2026-05-25)
+
+**Final Classification: `P50_FRONTEND_AUTH_SMOKE_STABILIZED`**
+
+### Branch Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `62b791f` (P49 closure) ✅
+- Dirty files: `CEO-Decision.md`, `CTO-Analysis.md`, `active_task.md`, `roadmap.md` (expected CTO/CEO outputs only) ✅
+
+### A. Reproduce + Evidence Summary
+
+**Pre-diagnosis state:**
+- `:3010` — free (no conflict)
+- `:3000` — node PID 2991 (unrelated dev process)
+- `:8000` — Python/uvicorn (backend live)
+- `frontend/.next/BUILD_ID` — **MISSING**
+
+**Direct `next start` probe (before fix):**
+```
+Error: Could not find a production build in the '.next' directory.
+Try building with 'next build' before starting the production server.
+EXIT: 1
+```
+
+### B. Timeout Type Judgment
+
+**B2 — Server crash; Playwright can't connect.**
+
+`next start` exits immediately (< 1s, exit code 1) on missing `BUILD_ID`. Playwright polls the readiness URL for the full 120s before timing out. Error message "Timed out waiting 120000ms" is misleading — the actual failure is a deterministic crash, not a slow startup.
+
+### C. Five-Item Checklist
+
+| Item | Result |
+|------|--------|
+| C1. Build state | **ROOT CAUSE** — `BUILD_ID` missing; ran `next build`, created `BUILD_ID=mmhAYpkD9M5aFIXDq1iZa` |
+| C2. Port conflict | `:3010` free — no conflict (C1 resolved, C2 skipped) |
+| C3. Manual `next start` | Post-fix: `✓ Ready in 438ms`, `curl → HTTP 200` (C1 resolved, C3 confirmation only) |
+| C4. Readiness URL | `playwright.config.ts` url `http://127.0.0.1:3010` matches binding — no mismatch (C1 resolved) |
+| C5. Env | `.env.local` has `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`; optional vars absent — not blocking (C1 resolved) |
+
+### D. Terminal Decision
+
+**Path (a): `P50_FRONTEND_AUTH_SMOKE_STABILIZED`**
+
+Fix: `cd frontend && npx next build` — creates production build artifacts. No config files modified.
+
+`make frontend-auth-smoke` post-fix: **6/6 PASS (11.7s)**.
+
+### E. `runtime-smoke` No Regression
+
+`make runtime-smoke` post-fix: **130 passed, 2 skipped** ✅
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `docs/security/P50_FRONTEND_AUTH_SMOKE_STABILITY.md` | Created — full diagnosis evidence |
+| `00-Plan/roadmap/active_task_report.md` | P50 block prepended |
+
+### Commits
+- C1: `docs(security): add P50 frontend auth smoke stability diagnosis`
+- C2: `docs(report): P50 frontend auth smoke diagnosis handoff`
+
+### Known Limitations
+- `.next/` must exist with a valid production build before running `make frontend-auth-smoke`; `Makefile` documents this as a prerequisite comment but does not enforce it
+- Fix durability: stable until `.next/` is cleared again
+
+---
+
+# Appendix: Prior Sprint Reports
+
 ## P49-FRONTEND-AUTH-E2E-CI-READINESS (2026-05-24)
 
 **Final Classification: `P49_FRONTEND_AUTH_E2E_LOCAL_GATE_DOCUMENTED`**
