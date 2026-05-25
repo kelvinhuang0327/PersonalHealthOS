@@ -4986,3 +4986,65 @@ Forbidden: No new features, no auth changes, no CI changes, no new branches.
 8. 此 bug 在測試中被 route stub 遮蔽，未進入 P52 commit，需單獨修復。
 9. 建議下一輪 P54 專門修這個 defensive guard（一行修改，低風險）。
 10. P52/P53 已完全關閉，可安全推進 roadmap 下一任務。
+
+---
+
+## P54-NARRATIVE-MEMORY-CARD-DEFENSIVE-GUARD (2026-05-25)
+
+**Final Classification: `P54_NARRATIVE_MEMORY_CARD_DEFENSIVE_GUARD_READY`**
+
+### Branch Governance Pre-flight
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅
+- Branch: `main` ✅
+- Starting HEAD: `262b77f` (P53 closure) ✅
+- Dirty files: `CEO-Decision.md`, `CTO-Analysis.md`, `active_task.md`, `roadmap.md` (governance docs only — not staged) ✅
+
+### Root Cause (identified in P53)
+`NarrativeMemoryCard.getCrossPeriodReasoning()` receives `{person_id, reasoning: undefined}` when the backend returns an absent field. JavaScript evaluates `undefined !== null` as `true`, so the render guard `crossPeriod !== null` passes — causing `crossPeriod.confidence` to crash inside the Dashboard ErrorBoundary.
+
+The test environment was masked by a route stub that returned `{reasoning: null}` explicitly; the production path remained vulnerable.
+
+### Fix Applied
+**File**: `frontend/app/components/platform/narrative-memory-card.tsx`
+
+| Before | After |
+|--------|-------|
+| `.then((res) => setCrossPeriod(res.reasoning))` | `.then((res) => setCrossPeriod(res.reasoning ?? null))` |
+
+One character change: `?? null` appended. The nullish-coalescing operator coerces `undefined` to `null`, which the existing render guard `crossPeriod !== null` correctly handles.
+
+### Grep Verification (pre-fix)
+```
+narrative-memory-card.tsx:162:  const [crossPeriod, setCrossPeriod] = useState<CrossPeriodReasoning | null>(null)
+narrative-memory-card.tsx:202:    api.getCrossPeriodReasoning()
+narrative-memory-card.tsx:203:      .then((res) => setCrossPeriod(res.reasoning))   ← VULNERABLE
+narrative-memory-card.tsx:211:    crossPeriod !== null &&
+narrative-memory-card.tsx:212:    (crossPeriod.confidence > 0 ||
+narrative-memory-card.tsx:432:      {crossPeriod !== null && !hasCrossData && (
+```
+Exactly one occurrence of the vulnerable pattern — surgical fix confirmed.
+
+### Verification Results
+| Check | Command | Result |
+|-------|---------|--------|
+| TypeScript | `npx tsc --noEmit` | 0 errors ✅ |
+| Runtime smoke | `make runtime-smoke` | 130 passed / 2 skipped ✅ |
+| P52 browser acceptance | `npx playwright test tests/e2e/p52-recommendation-fields.spec.ts` | 11/11 PASS ✅ |
+
+### Commits
+| SHA | Message |
+|-----|---------|
+| `c06dce1` | `fix: guard cross-period reasoning against undefined response` |
+
+### 10. CTO Agent 10 行內摘要
+
+1. P54 defensive guard 完成，分類：`P54_NARRATIVE_MEMORY_CARD_DEFENSIVE_GUARD_READY`。
+2. Root cause：`res.reasoning` 可能為 `undefined`，`undefined !== null` 為 `true`，導致 Dashboard ErrorBoundary crash。
+3. Fix：一行 `?? null`，nullish-coalescing 將 `undefined` 強制轉為 `null`，令現有 render guard 正確攔截。
+4. Grep 確認只有一個 vulnerable call site，無側效應。
+5. `npx tsc --noEmit`：0 errors。
+6. `make runtime-smoke`：130 passed / 2 skipped，baseline 不變。
+7. P52 browser acceptance spec：11/11 PASS（12.4s）。
+8. Commit `c06dce1`：僅 1 file changed，1 insertion，1 deletion。
+9. 未洩漏任何 governance docs，不開新 branch，不 force push。
+10. P50–P54 全部關閉，生產防護補完，可安全推進 roadmap 下一任務。
