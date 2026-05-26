@@ -246,6 +246,18 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
             </div>
           )}
 
+          {/* ── Summary confidence signal (P70) ──────────────────────────────── */}
+          {typeof summary?.confidence === 'number' && summary.confidence > 0 && (
+            <div
+              data-testid="daily-summary-confidence-signal"
+              className="flex items-center gap-1.5 px-1"
+            >
+              <span className="text-[10px] text-slate-400">
+                可信度 {Math.round(summary.confidence * 100)}%
+              </span>
+            </div>
+          )}
+
           {/* ── Top recommendation + trust ───────────────────────────────────── */}
           {topRec && (
             <div className="rounded-xl bg-white border border-slate-100 p-3">
