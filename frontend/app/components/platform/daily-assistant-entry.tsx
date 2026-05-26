@@ -57,8 +57,20 @@ const TRIVIAL_MISSING = new Set([
   '健康洞察（建議先執行健康分析）',
 ])
 
+/** Short user-facing explanation of what each data type unlocks for the assistant. */
+const MISSING_DATA_GAINS: Record<string, string> = {
+  '症狀記錄':                           '幫助偵測症狀模式與風險關聯',
+  '健康指標（血壓、血糖、體重等）':      '讓血壓、血糖趨勢更準確可信',
+  '健檢報告（或無異常項目）':            '啟用報告異常自動比對分析',
+  '個人健康檔案（性別、年齡等）':        '提升年齡性別個人化建議精度',
+}
+
 function getMissingLink(item: string): { href: string; label: string } {
   return MISSING_DATA_LINKS[item] ?? { href: '/platform/profile', label: '補充資料' }
+}
+
+function getMissingGain(item: string): string {
+  return MISSING_DATA_GAINS[item] ?? '補齊後可提升建議準確度'
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -249,21 +261,30 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                 </p>
               </div>
               <p className="text-[11px] text-amber-600 mb-2">目前資料不足，建議補充最近紀錄</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-1.5">
                 {missingItems.slice(0, 3).map((item) => {
                   const link = getMissingLink(item)
+                  const gain = getMissingGain(item)
                   return (
-                    <Link
-                      key={item}
-                      href={link.href}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-amber-200 rounded-lg text-[11px] text-amber-700 hover:bg-amber-50 transition-colors"
-                    >
-                      {link.label}
-                      <ArrowRight className="h-2.5 w-2.5" />
-                    </Link>
+                    <div key={item} className="flex items-center gap-2">
+                      <Link
+                        href={link.href}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-amber-200 rounded-lg text-[11px] text-amber-700 hover:bg-amber-50 transition-colors shrink-0"
+                      >
+                        {link.label}
+                        <ArrowRight className="h-2.5 w-2.5" />
+                      </Link>
+                      <span className="text-[10px] text-amber-500 leading-tight">— {gain}</span>
+                    </div>
                   )
                 })}
               </div>
+              <p
+                data-testid="daily-summary-missing-data-explanation"
+                className="mt-2 text-[10px] text-amber-600 italic"
+              >
+                補齊後，小助手可以更準確判斷風險變化與下一步建議。
+              </p>
             </div>
           )}
 
