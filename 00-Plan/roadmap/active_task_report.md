@@ -2,6 +2,33 @@
 
 ---
 
+## P105 — Lab Item Unit Normalization Discovery (2026-05-26)
+
+**Classification:** `P105_UNIT_MISMATCH_RISK_CONFIRMED`
+**Commit:** _(docs-only, see below)_
+**Branch:** `main`
+
+### Summary
+
+- `LabReportItem.unit` stores raw parsed strings; no unit normalization exists at parse or confirm time.
+- `lab-comparison-table.tsx:52` computes `deltaPct` with zero unit guard — glucose `mg/dL` vs `mmol/L` produces ~1700% false delta.
+- No conversion helpers exist anywhere in the codebase.
+- **Recommended P106 path:** frontend-only suppression (Option A) — 3–4 lines + one contract test T5.
+- All 11 baseline contracts pass pre- and post-docs.
+
+### Files Changed
+
+| File | Action |
+|---|---|
+| `docs/product/p105-lab-unit-normalization-discovery.md` | Created |
+| `00-Plan/roadmap/active_task_report.md` | Updated |
+
+### Validation
+
+All 11 baseline contracts PASS before and after docs creation (docs-only, no `next build` required).
+
+---
+
 ## P104 — Report Date Capture in Lab Confirm Flow (2026-05-26)
 **Classification:** `P104_LAB_TREND_DATE_READY`
 **Commit:** `1f47c7d`
