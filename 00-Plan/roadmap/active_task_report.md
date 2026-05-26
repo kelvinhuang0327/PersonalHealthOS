@@ -1,3 +1,65 @@
+# Active Task Report — P70 Daily Assistant Confidence Signal (2026-05-26)
+
+## P70 Daily Assistant Confidence Signal (2026-05-26)
+
+**Final Classification: `P70_DAILY_ASSISTANT_CONFIDENCE_SIGNAL_READY`**
+
+---
+
+### 1. Scope
+
+Added a compact confidence signal that surfaces `DailyHealthSummary.confidence`
+(a 0–1 float from the daily-summary API) as a rounded percentage to the user.
+Previous components used `topRec.trust.level` ("low"/"high") for qualitative
+banners, but the numeric `confidence` field was never displayed. P70 fills that
+gap with a single guarded line: `可信度 N%`.
+
+Guard: `typeof summary?.confidence === 'number' && summary.confidence > 0`
+Placement: after the 3-card grid, before the top-recommendation block.
+No backend changes. No API schema changes. No new dependencies.
+
+---
+
+### 2. Files changed
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/daily-assistant-entry.tsx` | Add `<div data-testid="daily-summary-confidence-signal">` after 3-card grid, guarded by confidence > 0 |
+| `frontend/tests/e2e/p70-daily-assistant-confidence-signal.spec.ts` | 10 acceptance tests (new file) |
+
+---
+
+### 3. Test results
+
+| Suite | Result |
+|---|---|
+| P70 acceptance (10 tests) | ✅ 10/10 |
+| P69 regression (7 tests) | ✅ 7/7 |
+| P68 regression (6 tests) | ✅ 6/6 |
+| P67 regression (5 tests) | ✅ 5/5 |
+| P66 regression (5 tests) | ✅ 5/5 |
+| P65 regression (4 tests) | ✅ 4/4 |
+| P64 regression (6 tests) | ✅ 6/6 |
+| Backend smoke (56 tests) | ✅ 56/56 |
+
+---
+
+### 4. Known limitations
+
+- The `confidence` field from `DailyHealthSummary` is a raw API value; its exact
+  calibration is not validated in the frontend. The guard `> 0` prevents showing
+  a "可信度 0%" which would be confusing.
+- The existing low/high confidence banners (from `topRec.trust.level`) remain
+  unchanged — they represent recommendation-level trust, not summary-level.
+
+---
+
+### 5. Commit
+
+`cdb0328` — feat(frontend): P70 daily assistant confidence signal
+
+---
+
 # Active Task Report — P69 Daily Assistant Biggest Change Context Label (2026-05-26)
 
 ## P69 Daily Assistant Biggest Change Context Label (2026-05-26)
