@@ -258,6 +258,19 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
             </div>
           )}
 
+          {/* ── Encouragement message (P71) ───────────────────────────────────── */}
+          {typeof summary?.encouragement === 'string' && summary.encouragement.trim().length > 0 && (
+            <div
+              data-testid="daily-summary-encouragement"
+              className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2"
+            >
+              <p className="text-[10px] font-medium text-emerald-600 mb-0.5">小助手鼓勵</p>
+              <p className="text-[11px] text-emerald-800 leading-relaxed">
+                {summary.encouragement.trim()}
+              </p>
+            </div>
+          )}
+
           {/* ── Top recommendation + trust ───────────────────────────────────── */}
           {topRec && (
             <div className="rounded-xl bg-white border border-slate-100 p-3">
