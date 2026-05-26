@@ -134,7 +134,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
 
       {/* ── Loading ───────────────────────────────────────────────────────────── */}
       {isFullyLoading ? (
-        <div className="space-y-3">
+        <div data-testid="daily-assistant-loading" className="space-y-3">
           <Skeleton variant="card" className="h-14" />
           <Skeleton variant="card" className="h-10" />
           <Skeleton variant="card" className="h-8" />
