@@ -1,3 +1,48 @@
+# Active Task Report — P66 Daily Assistant Missing Data Explanation (2026-05-26)
+
+## P66 Daily Assistant Missing Data Explanation (2026-05-26)
+
+**Final Classification: `P66_DAILY_ASSISTANT_MISSING_DATA_EXPLANATION_READY`**
+
+---
+
+### 1. Scope
+
+User-facing improvement: each missing-data item in the Daily Assistant card now
+shows an inline explanation of what capability is unlocked when that data is
+provided. A stable `data-testid="daily-summary-missing-data-explanation"` summary
+paragraph is also added at the bottom of the missing-data block.
+
+No backend changes. No new dependencies. No new routes.
+
+---
+
+### 2. Files changed
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/daily-assistant-entry.tsx` | Add `MISSING_DATA_GAINS` map, `getMissingGain()` helper; restructure missing-data block from `flex-wrap` to `flex-col` with per-item gain text and explanation paragraph |
+| `frontend/tests/e2e/p66-daily-assistant-missing-data-explanation.spec.ts` | 5 acceptance tests (new file) |
+
+---
+
+### 3. Test results
+
+| Suite | Result |
+|---|---|
+| P66 acceptance (5 tests) | ✅ 5/5 |
+| P65 regression (4 tests) | ✅ 4/4 |
+| P64 regression (6 tests) | ✅ 6/6 |
+| Backend smoke (56 tests) | ✅ 56/56 |
+
+---
+
+### 4. Commit
+
+`a00a8ae` — feat(frontend): P66 daily assistant missing data explanation
+
+---
+
 # Active Task Report — P65 Daily Assistant Why-Now Clarity (2026-05-26)
 
 ## P65 Daily Assistant Why-Now Clarity (2026-05-26)
