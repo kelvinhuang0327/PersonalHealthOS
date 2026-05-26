@@ -1,3 +1,89 @@
+# Active Task Report — P72 Daily Assistant Escalation Notice (2026-05-26)
+
+## P72 Daily Assistant Escalation Notice (2026-05-26)
+
+**Final Classification: `P72_DAILY_ASSISTANT_ESCALATION_READY`**
+
+---
+
+### 1. Scope
+
+Added an escalation notice that surfaces `DailyHealthSummary.escalation`
+(optional `EscalationDecision` from the daily-summary API) when the
+`escalationLevel` is not `'none'`. The field was already fetched every render
+but never displayed. P72 closes that gap with a guarded amber block placed
+before the 3-card grid so urgent signals are visible before routine context.
+
+`EscalationDecision` shape (read from `lib/api.ts`):
+```typescript
+{
+  escalationLevel: 'none' | 'watch' | 'warning' | 'urgent'
+  reasons: string[]
+  confidence: number
+  recommendedAction: string | null
+  requiresFollowUp: boolean
+}
+```
+
+Note: the prompt suggested `should_escalate === true` but that field does not
+exist in the type. The actual guard uses `escalationLevel !== 'none'`.
+
+Guard: `summary?.escalation != null && summary.escalation.escalationLevel !== 'none'`
+Placement: before the 3-card grid (after isHighConf banner).
+Display: label "需要留意" + level suffix (緊急/警告/觀察) + `reasons[0]` +
+`recommendedAction` prefixed with "建議：" if not null.
+Uses existing `AlertTriangle` icon (already imported). No new dependencies.
+No backend changes. No API schema changes.
+
+---
+
+### 2. Files changed
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/daily-assistant-entry.tsx` | Add `<div data-testid="daily-summary-escalation-notice">` before 3-card grid, guarded by escalationLevel !== 'none' |
+| `frontend/tests/e2e/p72-daily-assistant-escalation-notice.spec.ts` | 16 acceptance tests (new file) |
+
+---
+
+### 3. Test results
+
+| Suite | Result |
+|---|---|
+| P72 acceptance (16 tests) | ✅ 16/16 |
+| P71 regression (12 tests) | ✅ 12/12 |
+| P70 regression (10 tests) | ✅ 10/10 |
+| P69 regression (7 tests) | ✅ 7/7 |
+| P68 regression (6 tests) | ✅ 6/6 |
+| P67 regression (5 tests) | ✅ 5/5 |
+| P66 regression (5 tests) | ✅ 5/5 |
+| P65 regression (4 tests) | ✅ 4/4 |
+| P64 regression (6 tests) | ✅ 6/6 |
+| Backend smoke (56 tests) | ✅ 56/56 |
+
+---
+
+### 4. Known limitations
+
+- Only `reasons[0]` is shown; subsequent reasons are silently dropped if the
+  backend returns multiple. This is intentional to keep the notice compact.
+- `escalationLevel` maps to static Chinese labels in the frontend. If a new
+  level is added to the backend enum, the label will not appear (silent fallback
+  to just "需要留意" with no suffix).
+- The notice is styled amber regardless of level — `urgent` does not receive
+  a stronger colour. This is intentional conservatism (no medical alarm UX
+  without product review).
+- Prompt specified `should_escalate === true` guard; the actual type uses
+  `escalationLevel !== 'none'` — corrected after reading `lib/api.ts`.
+
+---
+
+### 5. Commit
+
+`4477a22` — feat(frontend): P72 daily assistant escalation notice
+
+---
+
 # Active Task Report — P71 Daily Assistant Encouragement Message (2026-05-26)
 
 ## P71 Daily Assistant Encouragement Message (2026-05-26)
