@@ -264,8 +264,8 @@ export default function HealthAssistantPanel({
   loading = false,
   onActionClick,
 }: HealthAssistantPanelProps) {
-  const hasRecs = data && data.recommendations.length > 0;
-  const hasMissing = data && data.missing_data.length > 0 && !hasRecs;
+  const hasRecs = data && (data.recommendations?.length ?? 0) > 0;
+  const hasMissing = data && (data.missing_data?.length ?? 0) > 0 && !hasRecs;
 
   return (
     <section className="rounded-xl border border-blue-100 bg-gradient-to-b from-blue-50 to-white p-5 shadow-sm">

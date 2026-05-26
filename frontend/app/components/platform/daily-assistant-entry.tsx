@@ -100,7 +100,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
   const hasFeedback = fbSummary && fbSummary.total_count > 0
 
   return (
-    <Card className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 via-white to-emerald-50/30 p-5 shadow-sm">
+    <Card data-testid="daily-assistant-entry" className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 via-white to-emerald-50/30 p-5 shadow-sm">
 
       {/* ── Header ───────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-4">
@@ -155,7 +155,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
           {hasDailySummary || topRec ? (
             <div className="grid gap-3 sm:grid-cols-3">
               {/* Today's top risk */}
-              <div className="rounded-xl bg-white border border-slate-100 p-3">
+              <div data-testid="daily-summary-top-risk" className="rounded-xl bg-white border border-slate-100 p-3">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <AlertTriangle className="h-3.5 w-3.5 text-rose-500" />
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
@@ -168,7 +168,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
               </div>
 
               {/* Biggest change */}
-              <div className="rounded-xl bg-white border border-slate-100 p-3">
+              <div data-testid="daily-summary-biggest-change" className="rounded-xl bg-white border border-slate-100 p-3">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <TrendingUp className="h-3.5 w-3.5 text-sky-500" />
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
@@ -181,7 +181,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
               </div>
 
               {/* Today's primary action */}
-              <div className="rounded-xl bg-white border border-slate-100 p-3">
+              <div data-testid="daily-summary-next-action" className="rounded-xl bg-white border border-slate-100 p-3">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
@@ -195,7 +195,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
             </div>
           ) : (
             // Empty state — does not mislead
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center">
+            <div data-testid="daily-summary-empty" className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-5 text-center">
               <RefreshCw className="mx-auto h-6 w-6 text-slate-300 mb-2" />
               <p className="text-sm font-medium text-slate-500">今日摘要尚未生成</p>
               <p className="mt-1 text-xs text-slate-400 max-w-sm mx-auto">
@@ -233,13 +233,14 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
 
           {/* ── Missing data hints (Task 4: missing data 顯示) ───────────────── */}
           {missingItems.length > 0 && (
-            <div className="rounded-xl bg-amber-50/60 border border-amber-100 p-3">
+            <div data-testid="daily-summary-missing-data" className="rounded-xl bg-amber-50/60 border border-amber-100 p-3">
               <div className="flex items-center gap-1.5 mb-2">
                 <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
                 <p className="text-[10px] font-semibold text-amber-700">
                   補充以下資料可提升可信度
                 </p>
               </div>
+              <p className="text-[11px] text-amber-600 mb-2">目前資料不足，建議補充最近紀錄</p>
               <div className="flex flex-wrap gap-2">
                 {missingItems.slice(0, 3).map((item) => {
                   const link = getMissingLink(item)
@@ -260,7 +261,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
 
           {/* ── Outcome feedback summary (Task 4: 正常 fallback) ─────────────── */}
           {hasFeedback ? (
-            <div className="rounded-xl bg-white border border-slate-100 p-3">
+            <div data-testid="daily-summary-outcome-section" className="rounded-xl bg-white border border-slate-100 p-3">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
                 近 7 天成效回饋
               </p>
@@ -300,6 +301,12 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                   查看詳情 →
                 </Link>
               </div>
+              {(fbSummary!.tracking_count > 0 || fbSummary!.insufficient_data_count > 0) && (
+                <p data-testid="daily-summary-outcome-unknown" className="mt-2 text-[11px] text-slate-400">
+                  目前尚無足夠後續資料判斷效果
+                </p>
+              )}
+              <p className="mt-2 text-[11px] text-slate-400 italic">這是使用者回饋，不是醫療效果證明</p>
             </div>
           ) : feedback !== null && fbSummary?.total_count === 0 ? (
             // Graceful fallback — empty outcome state
