@@ -2,6 +2,132 @@
 
 ---
 
+## P103 — Lab Trend Comparison Contract + Direction Framing Fix (2026-05-26)
+
+**Final Classification: `P103_LAB_TREND_CONTRACT_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `9bd71ef` (P102) |
+| Dirty files | governance-only (3 files) |
+| P102 commit present | YES — `9bd71ef` |
+
+---
+
+### 2. Baseline Gates
+
+| Gate | Before | After |
+|---|---|---|
+| report-symptom-recommendation-contract | 5 passed | 5 passed |
+| documents-evidence-deeplink-contract | 4 passed | 4 passed |
+| daily-summary-evidence-contract | 4 passed | 4 passed |
+| daily-assistant-contract | 5 passed | 5 passed |
+| actions-page-contract | 4 passed | 4 passed |
+| documents-confirmed-data-contract | 4 passed | 4 passed |
+| documents-page-contract | 4 passed | 4 passed |
+| symptoms-page-contract | 4 passed | 4 passed |
+| runtime-smoke | 56 passed | 56 passed |
+| **lab-trend-comparison-contract (new)** | — | **4 passed** |
+
+---
+
+### 3. Direction Framing Changes
+
+File: `frontend/app/components/platform/lab-comparison-table.tsx`
+
+| Before | After |
+|---|---|
+| `FilterKey: 'improved' \| 'not_improved'` | `FilterKey: 'value_down' \| 'value_up'` |
+| Button label `已改善` | Button label `數值下降` |
+| Button label `未改善` | Button label `數值上升` |
+| Root div had no testid | Added `data-testid="lab-comparison-table"` |
+
+Filter logic behavior unchanged — `value_down` maps to `deltaPct < 0`, `value_up` maps to `deltaPct >= 0`.
+
+---
+
+### 4. Contract Spec
+
+`frontend/tests/e2e/p103-lab-trend-comparison-contract.spec.ts` — 4 tests:
+- T1: "歷史比較" tab click → `lab-comparison-table` visible, mocked ALT metric renders
+- T2: `數值下降` / `數值上升` buttons visible; `已改善` / `未改善` absent
+- T3: Empty lab history → safe empty state with "尚無歷史資料", no crash
+- T4: No prohibited overclaim phrases (已治癒, 保證改善, 取代醫師, 診斷為, 治療成功, 惡化) in comparison tab
+
+---
+
+### 5. Makefile Target Added
+
+`make lab-trend-comparison-contract` — tsc + 4 Playwright tests.
+Added to `.PHONY`. Runs in ~3s.
+
+---
+
+### 6. Guard Index Updated
+
+`docs/product/local-contract-guard-index.md`:
+- Added row to Guard Matrix (§2)
+- Added "When to run" row (§2)
+- Added "Related files" row (§2)
+- Added new validation bundle "Documents — lab trend comparison" (§3)
+- Updated "Full local validation" bundle (§3)
+- Updated Quick Reference (§8)
+
+---
+
+### 7. Files Changed
+
+| File | Action |
+|---|---|
+| `frontend/app/components/platform/lab-comparison-table.tsx` | Modified — direction framing fix + testid |
+| `frontend/tests/e2e/p103-lab-trend-comparison-contract.spec.ts` | Created — 4 contract tests |
+| `Makefile` | Added `lab-trend-comparison-contract` target + `.PHONY` |
+| `docs/product/local-contract-guard-index.md` | Updated — new guard row, bundle, quick-ref |
+| `00-Plan/roadmap/active_task_report.md` | Updated |
+
+---
+
+### 8. Commits
+
+- `dbea69a` — `fix(frontend): P103 neutral lab trend direction framing`
+- _(this commit)_ — `docs(report): P103 lab trend comparison contract report`
+
+---
+
+### 9. Known Limitations
+
+- `report_date` accuracy: still set to `date.today()` at parse time. Users uploading multiple reports on the same day will see all reports dated today in the expandable history rows. Deferred to P104.
+- ALIAS_MAP coverage: unrecognized item names appear unnormalized in trend table. No change in P103.
+- Unit normalization (mg/dL vs mmol/L across labs): deferred beyond P104.
+- "持平" (flat) direction label: not added in P103 (deltaPct === 0 falls into `value_up` filter currently). Can be refined in P104.
+
+---
+
+### 10. Next Recommended Lane
+
+**P104 — Report Date Capture in Confirm Flow**
+
+The lab trend table currently shows upload/parse date as the report date.
+P104 should add a date input to the `ParsedItemsDrawer` confirm footer so
+users can record the actual health check date. This requires:
+1. A `report_date` date input field in `ParsedItemsDrawer` (optional, pre-empty)
+2. Backend: extend `PUT /documents/{id}/confirm` to accept `report_date: date | None`
+   and write to `LabReport.report_date` for the document's linked report
+3. `p104-lab-trend-report-date-contract.spec.ts` — verify date persists and
+   appears in expandable history rows
+
+Alternatively, P104 could focus on **first-run report upload onboarding discovery**:
+explore whether new users need a guided upload flow to reach the "歷史比較" tab
+with sufficient data for trend comparison.
+
+---
+
 ## P102 — Lab Trend Visualization Discovery (2026-05-26)
 
 **Final Classification: `P102_FRONTEND_ONLY_TREND_FEASIBLE`**
