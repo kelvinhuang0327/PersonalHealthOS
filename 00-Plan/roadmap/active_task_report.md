@@ -1,3 +1,50 @@
+# Active Task Report — P68 Daily Assistant Outcome Known Badge (2026-05-26)
+
+## P68 Daily Assistant Outcome Known Badge (2026-05-26)
+
+**Final Classification: `P68_DAILY_ASSISTANT_OUTCOME_BADGE_READY`**
+
+---
+
+### 1. Scope
+
+Added an explicit positive badge in the 7-day outcome section when
+`fbSummary.improved_count > 0`. Previously the count was shown only as a grey
+dot + plain text. The badge uses the already-imported `CheckCircle2` icon with
+emerald styling and shows "已改善 N 項，持續追蹤中".
+
+No backend changes. No new dependencies. Guard: `improved_count > 0`.
+
+---
+
+### 2. Files changed
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/daily-assistant-entry.tsx` | Add `<div data-testid="daily-summary-outcome-improved-badge">` after count flex row, guarded by `fbSummary!.improved_count > 0` |
+| `frontend/tests/e2e/p68-daily-assistant-outcome-badge.spec.ts` | 6 acceptance tests (new file) |
+
+---
+
+### 3. Test results
+
+| Suite | Result |
+|---|---|
+| P68 acceptance (6 tests) | ✅ 6/6 |
+| P67 regression (5 tests) | ✅ 5/5 |
+| P66 regression (5 tests) | ✅ 5/5 |
+| P65 regression (4 tests) | ✅ 4/4 |
+| P64 regression (6 tests) | ✅ 6/6 |
+| Backend smoke (56 tests) | ✅ 56/56 |
+
+---
+
+### 4. Commit
+
+`1733d40` — feat(frontend): P68 daily assistant outcome known badge
+
+---
+
 # Active Task Report — P67 Daily Assistant Action Impact Clarity (2026-05-26)
 
 ## P67 Daily Assistant Action Impact Clarity (2026-05-26)
