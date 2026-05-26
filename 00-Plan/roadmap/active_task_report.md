@@ -2,6 +2,58 @@
 
 ---
 
+## P98 Evidence Deep Link Contract Adoption (2026-06)
+
+**Final Classification: `P98_EVIDENCE_DEEPLINK_CONTRACT_ADOPTION_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `f5cf87f` (P97 report) |
+| Dirty files | governance-only (4 files) |
+
+---
+
+### 2. Baseline Gates (all 8 green before edits)
+
+| Gate | Result |
+|---|---|
+| documents-evidence-deeplink-contract | 4 passed |
+| daily-summary-evidence-contract | 4 passed |
+| daily-assistant-contract | 5 passed |
+| actions-page-contract | 4 passed |
+| documents-confirmed-data-contract | 4 passed |
+| documents-page-contract | 4 passed |
+| symptoms-page-contract | 4 passed |
+| runtime-smoke | 56 passed |
+
+---
+
+### 3. Deliverable
+
+`docs/product/p98-evidence-deeplink-contract-adoption.md` — full adoption guide including:
+- What P97's contract protects (5 observable behaviors)
+- When to run `make documents-evidence-deeplink-contract` (10 touch-point triggers)
+- Explicit non-goals (symptoms/risk-alert/metric deep links; CI wiring)
+- Known pitfalls preserved from P97 implementation (5 pitfalls with code examples)
+- Future expansion lanes (P99-A symptoms feasibility, P99-B source map extension, P99-C CI adoption)
+- Complete file map (13 files)
+
+---
+
+### 4. Changes in This Task
+
+- No code changes (docs-only task)
+- New file: `docs/product/p98-evidence-deeplink-contract-adoption.md`
+- Updated: `00-Plan/roadmap/active_task_report.md`
+
+---
+
 ## P96 Source-Specific Deep Link Planning (2025-01)
 
 **Final Classification: `P96_SOURCE_DEEP_LINK_PLANNING_READY`**
