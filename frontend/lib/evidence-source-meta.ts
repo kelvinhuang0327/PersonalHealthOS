@@ -1,0 +1,26 @@
+/**
+ * Shared evidence source metadata for frontend evidence badge + source-page links.
+ *
+ * Consumed by:
+ *   - components/platform/decision-recommendation-layer.tsx (Actions page — P89)
+ *   - components/platform/daily-assistant-entry.tsx (Daily Assistant — P91)
+ *
+ * Rules (safe, page-level only):
+ *   - Entries with `href` render a source-page navigation link.
+ *   - Entries without `href` render no link (label reserved for future use).
+ *   - Generic source types (e.g. 'recommendation') have no entry → no link.
+ *   - Do NOT add deep-links to specific records — page-level only.
+ */
+
+export type EvidenceSourceMeta = {
+  label: string
+  href?: string
+}
+
+export const EVIDENCE_SOURCE_META: Record<string, EvidenceSourceMeta> = {
+  lab_report_item:   { label: '查看健檢報告', href: '/platform/documents' },
+  lab_abnormality:   { label: '查看健檢報告', href: '/platform/documents' },
+  symptom:           { label: '查看症狀紀錄', href: '/platform/symptoms' },
+  long_term_symptom: { label: '查看症狀紀錄', href: '/platform/symptoms' },
+  risk_alert:        { label: '查看風險提醒' },
+}

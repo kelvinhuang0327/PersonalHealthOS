@@ -16,6 +16,7 @@ import { useState } from 'react'
 import { Activity, AlertCircle, ArrowRight, BookOpen, Brain, CheckCircle2, Clock3, ExternalLink, FileText, Plus, Shield, Sparkles, TriangleAlert } from 'lucide-react'
 import type { UnifiedDecisionItem } from '../../../lib/decision-support'
 import type { HealthAction } from '../../../lib/actions'
+import { EVIDENCE_SOURCE_META } from '../../../lib/evidence-source-meta'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card } from '../ui/card'
@@ -36,13 +37,6 @@ const SOURCE_META: Record<string, { label: string; icon: React.ElementType; cls:
   long_term_symptom: { label: '持續症狀',   icon: Activity,     cls: 'bg-orange-50 border-orange-200 text-orange-700' },
 }
 
-// ── P89: Source-page navigation links (safe, page-level only) ────────────────
-const SOURCE_LINK: Record<string, { label: string; href: string }> = {
-  lab_report_item:   { label: '查看健檢報告', href: '/platform/documents' },
-  lab_abnormality:   { label: '查看健檢報告', href: '/platform/documents' },
-  symptom:           { label: '查看症狀紀錄', href: '/platform/symptoms' },
-  long_term_symptom: { label: '查看症狀紀錄', href: '/platform/symptoms' },
-}
 
 const PRIORITY_META = {
   high:   { label: '高', cls: 'bg-rose-100 text-rose-700' },
@@ -139,14 +133,14 @@ function RecommendationItem({
         <div className="mt-2 flex items-start gap-1.5 rounded bg-white/60 px-2 py-1.5 text-[11px] text-slate-500">
           <FileText className="h-3 w-3 flex-shrink-0 mt-0.5" />
           <span className="flex-1">{item.evidence_summary}</span>
-          {SOURCE_LINK[item.source_type] && (
+          {EVIDENCE_SOURCE_META[item.source_type]?.href && (
             <Link
-              href={SOURCE_LINK[item.source_type].href}
+              href={EVIDENCE_SOURCE_META[item.source_type]!.href!}
               data-testid="p89-source-page-link"
               className="ml-1 flex items-center gap-0.5 shrink-0 text-[11px] text-slate-400 hover:text-blue-600 transition-colors"
             >
               <ExternalLink className="h-2.5 w-2.5" />
-              {SOURCE_LINK[item.source_type].label}
+              {EVIDENCE_SOURCE_META[item.source_type]!.label}
             </Link>
           )}
         </div>

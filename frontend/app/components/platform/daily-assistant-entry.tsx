@@ -43,14 +43,8 @@ import { Skeleton } from '../ui/skeleton'
 import { RecommendationTrustBlock } from './recommendation-trust-block'
 import { api, type DailyHealthSummary, type OutcomeFeedback } from '../../../lib/api'
 import type { HealthAssistantData } from './health-assistant-panel'
+import { EVIDENCE_SOURCE_META } from '../../../lib/evidence-source-meta'
 
-// ── P91: Top-rec source-page navigation (page-level only, safe) ─────────────
-const TOPREC_SOURCE_LINK: Record<string, { label: string; href: string }> = {
-  lab_report_item:   { label: '查看健檢報告', href: '/platform/documents' },
-  lab_abnormality:   { label: '查看健檢報告', href: '/platform/documents' },
-  symptom:           { label: '查看症狀紀錄', href: '/platform/symptoms' },
-  long_term_symptom: { label: '查看症狀紀錄', href: '/platform/symptoms' },
-}
 
 // ── Missing data action links ─────────────────────────────────────────────────
 
@@ -326,14 +320,14 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                     >
                       <FileText className="h-3 w-3 flex-shrink-0 mt-0.5" />
                       <span className="flex-1">參考依據：{topRec.evidence_summary}</span>
-                      {TOPREC_SOURCE_LINK[topRec.source_type] && (
+                      {EVIDENCE_SOURCE_META[topRec.source_type]?.href && (
                         <Link
-                          href={TOPREC_SOURCE_LINK[topRec.source_type].href}
+                          href={EVIDENCE_SOURCE_META[topRec.source_type]!.href!}
                           data-testid="p91-daily-source-page-link"
                           className="ml-1 flex items-center gap-0.5 shrink-0 text-[11px] text-slate-400 hover:text-blue-600 transition-colors"
                         >
                           <ExternalLink className="h-2.5 w-2.5" />
-                          {TOPREC_SOURCE_LINK[topRec.source_type].label}
+                          {EVIDENCE_SOURCE_META[topRec.source_type]!.label}
                         </Link>
                       )}
                     </div>
