@@ -1,4 +1,140 @@
-# Active Task Report — P88 Evidence Traceability Discovery (2026-05-26)
+# Active Task Report
+
+---
+
+## P89 Frontend Evidence Source Traceability (2026-05-26)
+
+**Final Classification: `P89_FRONTEND_EVIDENCE_TRACEABILITY_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `2743c64` |
+| Dirty files | governance-only |
+
+---
+
+### 2. Baseline Gates (all green before changes)
+
+| Gate | Tests | Result |
+|---|---|---|
+| `actions-page-contract` | 4 | ✅ PASS |
+| `documents-confirmed-data-contract` | 4 | ✅ PASS |
+| `documents-page-contract` | 4 | ✅ PASS |
+| `symptoms-page-contract` | 4 | ✅ PASS |
+| `daily-assistant-contract` | 5 | ✅ PASS |
+| `runtime-smoke` | 56 | ✅ PASS |
+
+---
+
+### 3. Problem Statement
+
+P88 discovery identified 5 traceability gaps. P89 targets the two highest-value, lowest-risk gaps:
+
+- **G1**: `actions/page.tsx` hardcoded `source_type: 'recommendation'` for all health-assistant recs regardless of backend value
+- **G3**: `DecisionRecommendationLayer` had no source-page navigation link adjacent to `evidence_summary`
+
+---
+
+### 4. Changes Made
+
+#### 4.1 `frontend/app/platform/actions/page.tsx` — G1 fix (2 lines)
+
+```typescript
+// Before
+source_type: 'recommendation',
+source_id: r.action_id ? String(r.action_id) : `ha_rec_${r.rule_id ?? i}`,
+
+// After
+source_type: r.source_type ?? 'recommendation',
+source_id: r.source_id ? String(r.source_id) : (r.action_id ? String(r.action_id) : `ha_rec_${r.rule_id ?? i}`),
+```
+
+The backend already returns the correct `source_type` per recommendation. This forwards it.
+
+#### 4.2 `frontend/app/components/platform/decision-recommendation-layer.tsx` — G3 fix
+
+**Imports**: Added `Link` (next/link), `Activity`, `ExternalLink` (lucide-react).
+
+**SOURCE_META** expanded with 5 new types: `risk_alert`, `lab_report_item`, `lab_abnormality`, `symptom`, `long_term_symptom` — each with appropriate icon and colour class.
+
+**SOURCE_LINK** map added (page-level only, no deep-link):
+
+```typescript
+const SOURCE_LINK: Record<string, { label: string; href: string }> = {
+  lab_report_item:   { label: '查看健檢報告', href: '/platform/documents' },
+  lab_abnormality:   { label: '查看健檢報告', href: '/platform/documents' },
+  symptom:           { label: '查看症狀紀錄', href: '/platform/symptoms' },
+  long_term_symptom: { label: '查看症狀紀錄', href: '/platform/symptoms' },
+}
+```
+
+**evidence_summary badge** updated: when `SOURCE_LINK[item.source_type]` exists, a `<Link data-testid="p89-source-page-link">` is rendered inline after the text.
+
+---
+
+### 5. Test Coverage
+
+New file: `frontend/tests/e2e/p89-actions-evidence-traceability.spec.ts`
+
+| Test | Description | Result |
+|---|---|---|
+| T1 | `lab_report_item` → evidence_summary + link to `/platform/documents` | ✅ PASS |
+| T2 | `symptom` → evidence_summary + link to `/platform/symptoms` | ✅ PASS |
+| T3 | `recommendation` → evidence_summary, no source-page link | ✅ PASS |
+| T4 | Overclaim guard — page has no 確診/診斷/治療/保證 | ✅ PASS |
+
+---
+
+### 6. Post-Change Validation
+
+| Gate | Tests | Result |
+|---|---|---|
+| P89 spec | 4 | ✅ PASS |
+| `actions-page-contract` (P82) | 4 | ✅ PASS |
+| `documents-confirmed-data-contract` | 4 | ✅ PASS |
+| `documents-page-contract` | 4 | ✅ PASS |
+| `symptoms-page-contract` | 4 | ✅ PASS |
+| `daily-assistant-contract` | 5 | ✅ PASS |
+| `runtime-smoke` | 56 | ✅ PASS |
+| `npx tsc --noEmit` | — | ✅ PASS |
+| `npx next build` | — | ✅ PASS |
+
+---
+
+### 7. Known Limitations
+
+- `SOURCE_LINK` covers only `lab_report_item`, `lab_abnormality`, `symptom`, `long_term_symptom`. Types `insight`, `alert`, `trend`, `action` have no deep-link target yet.
+- Links are page-level only (e.g., `/platform/documents`) — no deep-link to the specific document or symptom entry.
+- Daily Assistant `why_now` string (G4) is still not source-annotated — deferred to P90.
+- `evidence_sources[]` array (G2) not rendered as structured list — deferred.
+
+---
+
+### 8. Commit
+
+```
+feat(frontend): P89 add recommendation evidence source links
+SHA: a16d7c1
+Files: 3 changed, 274 insertions, 9 deletions
+```
+
+---
+
+### 9. CTO Summary
+
+P89 completes the first user-visible traceability slice. Two structural bugs fixed: the frontend was silently discarding the backend's `source_type` field (hardcoded to `'recommendation'`), and the evidence badge had no navigation out. Now `lab_report_item` and `symptom` recommendations surface a one-click link to the relevant data page. SOURCE_META extended to 10 types for future readiness. 4 new E2E tests, all existing 21 contract tests still green, TSC clean, build clean. Gap G1 and G3 are closed; G2 (evidence_sources list), G4 (daily assistant), G5 (backend layer) remain queued.
+
+---
+
+---
+
+## P88 Evidence Traceability Discovery (2026-05-26)
 
 ## P88 Evidence Traceability Discovery (2026-05-26)
 
