@@ -2,6 +2,108 @@
 
 ---
 
+## P104 — Report Date Capture in Lab Confirm Flow (2026-05-26)
+**Classification:** `P104_LAB_TREND_DATE_READY`
+**Commit:** `1f47c7d`
+**Branch:** `main`
+
+---
+
+### 1. Pre-flight Result
+
+| Check | Result |
+|---|---|
+| Branch | `main` ✅ |
+| P103 baseline commit `ab76b53` | ✅ present |
+| Dirty files at start | Only governance files ✅ |
+| Baseline contracts (10 guards) | All 10 PASS ✅ |
+
+---
+
+### 2. Backend `report_date` Behavior
+
+**Schema** (`backend/app/schemas/documents.py`): Added `report_date: Optional[date] = None` to `DocumentConfirmRequest`. Backward-compatible — absent = no-op.
+
+**API** (`backend/app/api/documents.py`): `confirm_document` PUT handler queries the latest `LabReport` for the document and sets `lab_report.report_date` when payload field is provided. Both `Document` and `LabReport` changes committed atomically.
+
+---
+
+### 3. Frontend Confirm Date Input Behavior
+
+**Component** (`frontend/app/components/platform/parsed-items-drawer.tsx`): Added `reportDate` state, date input (`data-testid="report-date-input"`, `type="date"`, label "健檢日期（選填）") in footer above confirm buttons. `handleConfirm` sends `report_date: reportDate || null`. No api.ts changes — `confirmDocument` already accepts `Record<string, unknown>`.
+
+---
+
+### 4. Contract Tests and Backend Tests
+
+**Backend** — 4/4 PASS: write-through, no-op when absent, confirmed_data preserved, 422 on invalid date.
+
+**Frontend** — 4/4 PASS: input visible, payload capture, empty-date no-crash, table date display.
+
+**Test fix:** `getByText('ALT', { exact: false })` caused strict-mode violation (Playwright case-insensitive substring matched "he**alt**h_check"). Fixed to `getByRole('cell', { name: 'ALT' })`.
+
+---
+
+### 5. Validation Table
+
+| Target | Tests | Result |
+|---|---|---|
+| Backend pytest (P104) | 4 | ✅ PASS |
+| `make lab-trend-report-date-contract` | 4 | ✅ PASS |
+| `make lab-trend-comparison-contract` | 4 | ✅ PASS |
+| `make documents-confirmed-data-contract` | 4 | ✅ PASS |
+| `make documents-page-contract` | 4 | ✅ PASS |
+| `make report-symptom-recommendation-contract` | 5 | ✅ PASS |
+| `make documents-evidence-deeplink-contract` | 4 | ✅ PASS |
+| `make daily-summary-evidence-contract` | 4 | ✅ PASS |
+| `make daily-assistant-contract` | 5 | ✅ PASS |
+| `make actions-page-contract` | 4 | ✅ PASS |
+| `make symptoms-page-contract` | 4 | ✅ PASS |
+| `make runtime-smoke` | 56 | ✅ PASS |
+| **Total** | **106** | **0 failures** |
+
+---
+
+### 6. Files Changed
+
+| File | Change |
+|---|---|
+| `backend/app/schemas/documents.py` | `report_date: Optional[date] = None` added |
+| `backend/app/api/documents.py` | PUT confirm writes `lab_report.report_date` |
+| `backend/tests/test_api_document_report_date.py` | **NEW** 4 backend tests |
+| `frontend/app/components/platform/parsed-items-drawer.tsx` | Date input + state + payload |
+| `frontend/tests/e2e/p104-lab-trend-report-date-contract.spec.ts` | **NEW** 4 Playwright tests |
+| `Makefile` | `lab-trend-report-date-contract` target |
+| `docs/product/local-contract-guard-index.md` | 6 locations updated |
+
+---
+
+### 7. Known Limitations
+
+- Only the **latest** LabReport per document is updated (intentional).
+- Date defaults to blank — user must explicitly set it.
+- Trend table date is only visible in the **expanded** row detail, not the summary row.
+
+---
+
+### 8. Next Recommended Lane
+
+**P105 — Lab item unit normalization**: ALT U/L vs mU/mL, glucose mg/dL vs mmol/L. Without unit normalization, delta% comparisons in the trend table are numerically incorrect for multi-system datasets.
+
+---
+
+### 9. CTO Agent 5-Line Summary
+
+P104 adds an optional `report_date` field to the document confirm flow with zero breaking changes. The backend schema and PUT handler are strictly additive — absent field = no-op. The frontend drawer gains a single date `<input>` in the footer; existing confirm path unchanged. All 106 tests across 12 validation targets pass. LabReport.report_date is now user-controllable, making lab trend chronology meaningful.
+
+---
+
+### 10. CEO Agent 5-Line Summary
+
+Users can now stamp their actual health checkup date when reviewing parsed lab results — instead of defaulting to upload/parse date. The "Lab Trend Comparison" table will show time-ordered trends reflecting real-world checkup chronology. The feature is entirely optional (zero friction). No data migration, no breaking API change, shipped in one atomic commit. Next step: unit normalization so delta% values are accurate across different test systems.
+
+---
+
 ## P103 — Lab Trend Comparison Contract + Direction Framing Fix (2026-05-26)
 
 **Final Classification: `P103_LAB_TREND_CONTRACT_READY`**
