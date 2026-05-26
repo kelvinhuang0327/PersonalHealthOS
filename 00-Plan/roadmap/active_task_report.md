@@ -1,3 +1,75 @@
+# Active Task Report — P81 Actions Feedback / Snooze Detail Smoke (2026-05-26)
+
+## P81 Actions Page Feedback / Snooze Detail Smoke (2026-05-26)
+
+**Final Classification: `P81_ACTIONS_FEEDBACK_SNOOZE_SMOKE_READY`**
+
+---
+
+### 1. Pre-flight / P80 Postcheck
+
+| Check | Result |
+|-------|--------|
+| Repo / branch | `main` ✅ |
+| P80 commit (`fe1d82c`) | present ✅ |
+| P80 spec (`p80-actions-recommendation-smoke.spec.ts`) | ✅ 7/7 |
+| `make daily-assistant-contract` | ✅ TSC + 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 2. Option B — Minimal Testids Added
+
+Inspected `actions/page.tsx`, `action-feedback-card.tsx`, `decision-recommendation-layer.tsx`.  
+Zero pre-existing testids on target sections. Decision: **Option B** (add 2 testids to page.tsx).
+
+| Testid | Element | Location |
+|--------|---------|----------|
+| `actions-snoozed-section` | `<Card>` wrapping 稍後提醒 section | page.tsx ~line 500 |
+| `actions-feedback-loop` | `<Card>` wrapping Section 4 行動效果回饵 | page.tsx ~line 515 |
+
+---
+
+### 3. Spec — `p81-actions-feedback-snooze-smoke.spec.ts`
+
+| # | Test | Result |
+|---|------|--------|
+| 1 | feedback-loop section visible when completed action exists | ✅ |
+| 2 | feedback-loop section absent when no completed actions | ✅ |
+| 3 | snoozed section visible when snoozed action exists | ✅ |
+| 4 | snoozed section absent when no snoozed actions | ✅ |
+| 5 | both feedback-loop and snoozed section visible simultaneously | ✅ |
+| 6 | recommendation-history-card still visible alongside feedback and snooze | ✅ |
+| 7 | no unsafe medical overclaiming phrases | ✅ |
+
+**P81: 7/7 ✅**
+
+---
+
+### 4. Regression Matrix
+
+| Suite | Result |
+|-------|--------|
+| P81 spec (7 tests) | ✅ 7/7 |
+| P80 spec (7 tests) | ✅ 7/7 |
+| P55 action-feedback-loop (6 tests) | ✅ 6/6 |
+| P56 recommendation-feedback-persistence (6 tests) | ✅ 6/6 |
+| P57 snooze-persistence (6 tests) | ✅ 6/6 |
+| `make daily-assistant-contract` | ✅ 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 5. Commit
+
+```
+31611ad feat(frontend): P81 actions feedback snooze smoke testids + spec
+```
+
+Files staged: `frontend/app/platform/actions/page.tsx`, `frontend/tests/e2e/p81-actions-feedback-snooze-smoke.spec.ts`
+
+---
+
 # Active Task Report — P80 Actions Page Recommendation Smoke (2026-05-26)
 
 ## P80 Actions Page Consistency Smoke — Recommendation History / Outcome Feedback / Loading (2026-05-26)
