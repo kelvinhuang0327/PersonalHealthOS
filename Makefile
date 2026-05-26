@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
 
 up:
 	docker compose up -d --build
@@ -114,6 +114,14 @@ actions-page-contract:
 documents-page-contract:
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx playwright test tests/e2e/p85-documents-page-contract.spec.ts --reporter=line
+
+# P86 Symptoms page contract guard — local/manual only, not CI-required
+# Runs typescript check + P86 symptoms page contract smoke (4 tests).
+# Run after touching /platform/symptoms, quick-symptom chips, heatmap,
+# severity/duration selectors, or symptom list display.
+symptoms-page-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p86-symptoms-page-contract.spec.ts --reporter=line
 
 local-db-up:
 	docker compose -f docker-compose.local.yml up -d

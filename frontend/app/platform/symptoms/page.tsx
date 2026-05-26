@@ -112,7 +112,7 @@ export default function SymptomsPage() {
   }, [logs])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="symptoms-page">
       {chronic ? (
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-800">{chronic.symptom} 已持續記錄 {chronic.count} 次（過去 2 週），建議追蹤</p>
@@ -120,7 +120,7 @@ export default function SymptomsPage() {
         </Card>
       ) : null}
 
-      <Card>
+      <Card data-testid="symptoms-input-section">
         <h2 className="text-2xl font-semibold">快速症狀記錄</h2>
         <p className="mt-1 text-sm text-slate-500">點選常見症狀，快速完成每日紀錄。</p>
 
@@ -169,7 +169,7 @@ export default function SymptomsPage() {
         <Button className="mt-4 min-h-11" onClick={() => void submit()}>儲存症狀</Button>
       </Card>
 
-      <Card>
+      <Card data-testid="symptoms-insight-section">
         <h3 className="font-semibold">症狀熱度日曆（近 6 週）</h3>
         <div className="mt-3 grid grid-cols-7 gap-1">
           {heatmap.map((day) => {
@@ -196,7 +196,7 @@ export default function SymptomsPage() {
         ) : null}
       </Card>
 
-      <Card>
+      <Card data-testid="symptoms-list-section">
         <h3 className="font-semibold">近期症狀紀錄</h3>
         <div className="mt-2 space-y-2">
           {recentLogs.map((row) => (
