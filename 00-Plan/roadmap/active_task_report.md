@@ -1,3 +1,72 @@
+# Active Task Report — P88 Evidence Traceability Discovery (2026-05-26)
+
+## P88 Evidence Traceability Discovery (2026-05-26)
+
+**Final Classification: `P88_EVIDENCE_TRACEABILITY_DISCOVERY_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `8fbc5b4` |
+| Dirty files | governance-only (CEO-Decision.md, CTO-Analysis.md, active_task.md, roadmap.md) |
+
+---
+
+### 2. Baseline Validation (before changes)
+
+| Gate | Result |
+|---|---|
+| `make documents-confirmed-data-contract` | ✅ 4/4 |
+| `make documents-page-contract` | ✅ 4/4 |
+| `make symptoms-page-contract` | ✅ 4/4 |
+| `make actions-page-contract` | ✅ 5/5 |
+| `make daily-assistant-contract` | ✅ 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 3. Investigation Findings
+
+**Scope**: Read-only audit — no code changes. Discovery report only.  
+**Report**: `docs/product/p88-evidence-traceability-discovery.md`
+
+**Evidence bundle** (`health_assistant_service.py:build_evidence_bundle`): Fully traceable. Every evidence item carries `source_type`, `source_id`, `evidence_level`, `recency`, and domain-specific fields. Lab report items additionally carry `report_id`, `report_date`, `item_name`, `value_num`, `abnormal_flag`.
+
+**Recommendation response** (`get_action_recommendations`): Rich traceability already present — `evidence_summary` (one-liner), `data_insufficiency_reason`, `evidence_sources[]`, `source_type`, `source_id` all returned by backend.
+
+**Frontend gap G1** (`actions/page.tsx` line 113): `source_type` is hardcoded to `'recommendation'`, discarding the backend's actual originating type (`"lab_report_item"`, `"symptom"`, `"risk_alert"`). One-line fix.
+
+**Frontend gap G3** (`DecisionRecommendationLayer`): `evidence_summary` string is rendered (FileText badge) but no source-page navigation link exists. Users cannot navigate to `/platform/documents` or `/platform/symptoms` from the recommendation card.
+
+**Daily Assistant**: `topRisk`, `biggestChange`, `whyNow` are narrative strings — no structured source refs. Backend-layer gap, out of P88 scope.
+
+---
+
+### 4. Deliverables
+
+| Deliverable | Status |
+|---|---|
+| `docs/product/p88-evidence-traceability-discovery.md` | ✅ Created |
+| `active_task_report.md` updated | ✅ This block |
+| No code changes | ✅ Discovery-only |
+
+---
+
+### 5. P89 Recommendation
+
+**Classification**: `P89_FRONTEND_ONLY_TRACEABILITY_READY`  
+**Files**: `frontend/app/platform/actions/page.tsx` (1 line) + `frontend/app/components/platform/decision-recommendation-layer.tsx` (~11 lines)  
+**Changes**: Forward `r.source_type` instead of hardcoding `'recommendation'`; add `SOURCE_META` entries for lab/symptom types; add conditional source-page link after `evidence_summary` badge.  
+**Backend changes**: None.  
+**Estimated effort**: ~12 lines, 2 files.
+
+---
+
 # Active Task Report — P87 Documents Confirmed-Data Re-feed (2026-05-26)
 
 ## P87 Documents Confirmed-Data Re-feed (2026-05-26)
