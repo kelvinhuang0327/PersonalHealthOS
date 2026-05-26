@@ -2,6 +2,69 @@
 
 ---
 
+## P90 Daily Assistant Evidence Traceability Discovery (2026-05-26)
+
+**Final Classification: `P90_FRONTEND_ONLY_DAILY_TRACEABILITY_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `e1418d6` |
+| Dirty files | governance-only |
+
+---
+
+### 2. Baseline Gates
+
+All 6 gates green before and after investigation. No code modified in P90.
+
+---
+
+### 3. Key Findings
+
+| Finding | Detail |
+|---|---|
+| `generate_daily_health_summary` | Returns 7 narrative strings only. No `source_type`, `source_id`, `evidence_summary`. |
+| `DailyHealthSummary` TS type | 9 fields, no source refs. Gap G5 confirmed. |
+| `topRec` in `DailyAssistantEntry` | `Recommendation` type — has `source_type`, `source_id`, `evidence_summary` in scope |
+| `topRec.evidence_summary` rendering | NOT rendered. Gap confirmed. |
+| Frontend-only fix viable? | **Yes.** `topRec.evidence_summary` + P89 `SOURCE_LINK` pattern can be applied to the `topRec` block with ~10 lines JSX, zero backend changes. |
+
+---
+
+### 4. Deliverable
+
+Discovery report: `docs/product/p90-daily-assistant-evidence-traceability-discovery.md`
+
+No code changes. No test changes.
+
+---
+
+### 5. P91 Recommendation
+
+**Option A (recommended)**: Add `evidence_summary` badge + conditional `SOURCE_LINK` to `topRec` block in `daily-assistant-entry.tsx`. Same pattern as P89. Estimated 10 JSX lines + 1 new Playwright spec.
+
+3-grid cards (`topRisk`, `biggestChange`, `todayAction`) remain narrative-only — source refs not available in `DailyHealthSummary` response (Option B / backend schema work deferred to P92+).
+
+---
+
+### 6. Commit
+
+```
+docs(product): P90 daily assistant evidence traceability discovery
+SHA: <see git log>
+Files: 2 changed (report + task_report)
+```
+
+---
+
+---
+
 ## P89 Frontend Evidence Source Traceability (2026-05-26)
 
 **Final Classification: `P89_FRONTEND_EVIDENCE_TRACEABILITY_READY`**
