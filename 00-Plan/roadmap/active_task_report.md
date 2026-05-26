@@ -2,6 +2,62 @@
 
 ---
 
+## P99 Local Contract Guard Index (2026-05-26)
+
+**Final Classification: `P99_LOCAL_CONTRACT_GUARD_INDEX_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `0ed0e17` (P98) |
+| Dirty files | governance-only (4 files) |
+
+---
+
+### 2. Baseline Gates (all 8 green before + after edits)
+
+| Gate | Before | After |
+|---|---|---|
+| documents-evidence-deeplink-contract | 4 passed | 4 passed |
+| daily-summary-evidence-contract | 4 passed | 4 passed |
+| daily-assistant-contract | 5 passed | 5 passed |
+| actions-page-contract | 4 passed | 4 passed |
+| documents-confirmed-data-contract | 4 passed | 4 passed |
+| documents-page-contract | 4 passed | 4 passed |
+| symptoms-page-contract | 4 passed | 4 passed |
+| runtime-smoke | 56 passed | 56 passed |
+
+---
+
+### 3. Deliverable
+
+`docs/product/local-contract-guard-index.md` — authoritative runbook including:
+- Purpose and maintenance rule
+- Guard matrix: all 8 targets × (spec file, test count, `next build` requirement, what it protects)
+- Per-guard "when to run" trigger table
+- Per-guard related files + phase table
+- 8 recommended validation bundles (targeted + full)
+- `next build` requirement rules
+- Non-goals (no CI wiring, no full-regression replacement)
+- Staging hygiene rules
+- Future maintenance checklist (5 steps for new targets)
+- Quick-reference paste blocks
+
+---
+
+### 4. Changes in This Task
+
+- No code changes (docs-only task)
+- New file: `docs/product/local-contract-guard-index.md`
+- Updated: `00-Plan/roadmap/active_task_report.md`
+
+---
+
 ## P98 Evidence Deep Link Contract Adoption (2026-06)
 
 **Final Classification: `P98_EVIDENCE_DEEPLINK_CONTRACT_ADOPTION_READY`**
