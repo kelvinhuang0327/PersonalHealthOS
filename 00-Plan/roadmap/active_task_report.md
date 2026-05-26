@@ -1,4 +1,116 @@
-# Active Task Report — P85 Documents Page Contract Smoke (2026-05-26)
+# Active Task Report — P86 Symptoms Page Contract Smoke (2026-05-26)
+
+## P86 Symptoms Page Contract Smoke (2026-05-26)
+
+**Final Classification: `P86_SYMPTOMS_PAGE_CONTRACT_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `edab599` |
+| Dirty files | governance-only (CEO-Decision.md, CTO-Analysis.md, active_task.md, roadmap.md) |
+
+---
+
+### 2. Baseline Validation (before changes)
+
+| Gate | Result |
+|---|---|
+| `make documents-page-contract` | ✅ 4/4 |
+| `make actions-page-contract` | ✅ 4/4 |
+| `make daily-assistant-contract` | ✅ 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 3. Changes Made
+
+**Gap closed: P84 Gap G5 — `/platform/symptoms` had zero testids.**
+
+#### `frontend/app/platform/symptoms/page.tsx` — 4 testids added
+
+| testid | Element | Condition | Rationale |
+|---|---|---|---|
+| `symptoms-page` | root `<div>` | always visible | page identity anchor |
+| `symptoms-input-section` | `<Card>` wrapping quick-input form | always visible | primary CTA — symptom entry path |
+| `symptoms-insight-section` | `<Card>` wrapping 6-week heatmap | always visible | pattern/temporal visualisation surface |
+| `symptoms-list-section` | `<Card>` wrapping recent logs | always visible | symptom history — downstream recommendation evidence |
+
+No business logic changed. No backend changes.
+
+#### `frontend/tests/e2e/p86-symptoms-page-contract.spec.ts` — created
+
+4 mocked contract tests:
+
+| # | Test | Key assertions |
+|---|---|---|
+| 1 | page renders | `symptoms-page` visible, no ErrorBoundary |
+| 2 | input section discoverable | `symptoms-input-section` + heading + `儲存症狀` button + `頭痛` chip visible |
+| 3 | heatmap + list sections with data | `symptoms-insight-section` + `symptoms-list-section` + `頭痛` + `疲勞` in list |
+| 4 | API failure safe + overclaim guard | page survives 500, input still accessible, no prohibited phrases |
+
+Fixtures: `SYMPTOM_RECENT` (頭痛, severity 2, today), `SYMPTOM_CHRONIC` (疲勞, severity 1, chronic, 3 days ago).
+
+Mocked routes: `/symptoms` (GET), `/metrics` (GET), plus full layout shell stubs (health-assistant, dashboard, documents, actions, etc.).
+
+#### `Makefile` — `symptoms-page-contract` target added
+
+```
+make symptoms-page-contract   → npx tsc --noEmit + p86 spec (4 tests)
+```
+
+---
+
+### 4. Validation
+
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | ✅ 0 errors |
+| P86 spec (4 tests) | ✅ 4/4 |
+| `make symptoms-page-contract` | ✅ 4/4 |
+| `npx next build` | ✅ clean |
+| `make documents-page-contract` | ✅ 4/4 (no regression) |
+| `make actions-page-contract` | ✅ 4/4 (no regression) |
+| `make daily-assistant-contract` | ✅ 5/5 (no regression) |
+| `make runtime-smoke` | ✅ 56/56 (no regression) |
+
+---
+
+### 5. Commits
+
+| SHA | Message |
+|---|---|
+| `61cd499` | feat(frontend): P86 symptoms page contract smoke |
+
+---
+
+### 6. Known Limitations
+
+- Heatmap cells are rendered as `<button>` elements without per-cell testids — click interaction not covered in this contract (out of P86 scope)
+- `symptoms-insight-section` does not cover the `chronic` alert card (amber banner) — that Card is conditionally rendered only when ≥3 occurrences of a symptom exist in the last 14 days; not adding testid to conditional-only elements without contract need
+- POST `/symptoms` (createSymptom) not exercised by contract — form interaction test is out of scope for a selector surface smoke
+
+---
+
+### 7. CTO 10-Line Summary
+
+1. P86 closes P84 Gap G5: `/platform/symptoms` now has 4 stable testids.
+2. Testids: `symptoms-page` (root), `symptoms-input-section` (quick-entry card), `symptoms-insight-section` (6-week heatmap), `symptoms-list-section` (recent logs).
+3. Contract spec: 4 mocked tests — render safety, input section discovery, heatmap + list with data, API failure + overclaim guard.
+4. No backend changes. No business logic changes. Testid-only surface addition.
+5. `make symptoms-page-contract` target added (TSC + 4 contract tests).
+6. `next build` required because component file modified — completed cleanly.
+7. All baselines maintained: symptoms 4/4, documents 4/4, actions 4/4, daily-assistant 5/5, runtime-smoke 56/56.
+8. Conditional chronic-alert Card not testid'd — renders only when ≥3 same-symptom logs in 14 days, not a stable selector.
+9. heatmap cell interaction not covered — out of scope for this contract tier.
+10. Next lane: P87 — `confirmed_data` re-feed investigation (P84 Gap G1): when `/documents/{id}/confirm` returns `confirmed_data`, that data is not re-fed into LabReportItem rows. Discovery + minimal fix plan.
+
+---
 
 ## P85 Documents Page Contract Smoke (2026-05-26)
 
