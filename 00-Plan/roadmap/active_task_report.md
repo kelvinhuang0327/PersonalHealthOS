@@ -1,3 +1,51 @@
+# Active Task Report — P69 Daily Assistant Biggest Change Context Label (2026-05-26)
+
+## P69 Daily Assistant Biggest Change Context Label (2026-05-26)
+
+**Final Classification: `P69_DAILY_ASSISTANT_BIGGEST_CHANGE_CONTEXT_READY`**
+
+---
+
+### 1. Scope
+
+Added a static context label beneath the 今日最大變化 (biggestChange) text,
+using the same conditional guard pattern established in P65 (whyNow) and P67
+(action impact). The label renders only when `summary?.biggestChange` is
+non-empty, and displays: 「此為近 7 天最顯著的健康趨勢變化。」
+
+No backend changes. No API schema changes. No new dependencies.
+
+---
+
+### 2. Files changed
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/daily-assistant-entry.tsx` | Add `<p data-testid="daily-summary-biggest-change-context">` after biggestChange text, guarded by `summary?.biggestChange` non-empty |
+| `frontend/tests/e2e/p69-daily-assistant-biggest-change-context.spec.ts` | 7 acceptance tests (new file) |
+
+---
+
+### 3. Test results
+
+| Suite | Result |
+|---|---|
+| P69 acceptance (7 tests) | ✅ 7/7 |
+| P68 regression (6 tests) | ✅ 6/6 |
+| P67 regression (5 tests) | ✅ 5/5 |
+| P66 regression (5 tests) | ✅ 5/5 |
+| P65 regression (4 tests) | ✅ 4/4 |
+| P64 regression (6 tests) | ✅ 6/6 |
+| Backend smoke (56 tests) | ✅ 56/56 |
+
+---
+
+### 4. Commit
+
+`07aa0cc` — feat(frontend): P69 daily assistant biggest change context label
+
+---
+
 # Active Task Report — P68 Daily Assistant Outcome Known Badge (2026-05-26)
 
 ## P68 Daily Assistant Outcome Known Badge (2026-05-26)
