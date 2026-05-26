@@ -1,10 +1,65 @@
-# Active Task Report — P76 Daily Assistant Signal Contract (2026-05-26)
+# Active Task Report — P77 Daily Assistant Contract Guard (2026-05-26)
 
-## P76 Daily Assistant Signal Contract Consolidation (2026-05-26)
+## P77 Daily Assistant Contract Drift Guard (2026-05-26)
 
-**Final Classification: `P76_DAILY_ASSISTANT_SIGNAL_CONTRACT_READY`**
+**Final Classification: `P77_DAILY_ASSISTANT_CONTRACT_GUARD_READY`**
 
 ---
+
+### 1. Scope
+
+After P76 created the contract doc and spec, P77 adds a lightweight
+Makefile target so the P76 contract is one command away and harder
+to accidentally skip.
+
+No component changes. No backend changes. No new dependencies.
+No CI wiring.
+
+---
+
+### 2. Changes
+
+| File | Type | Change |
+|---|---|---|
+| `Makefile` | Modified | Added `daily-assistant-contract` target + `.PHONY` entry |
+| `docs/security/P76_DAILY_ASSISTANT_SIGNAL_CONTRACT.md` | Modified | Added P77 guard command to §6, P77 row to §8 |
+
+---
+
+### 3. New Makefile Target
+
+```makefile
+# P77 Daily Assistant signal contract guard — local/manual only, not CI-required
+# Runs typescript check + P76 contract smoke (5 tests).
+# Full P64–P76 regression: use frontend-e2e-local
+# See: docs/security/P76_DAILY_ASSISTANT_SIGNAL_CONTRACT.md
+daily-assistant-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p76-daily-assistant-signal-contract.spec.ts --reporter=line
+```
+
+---
+
+### 4. Validation Results
+
+| Gate | Result |
+|------|--------|
+| P76 postcheck: `npx tsc --noEmit` | ✅ 0 errors |
+| P76 postcheck: P76 contract tests (5) | ✅ 5/5 |
+| P76 postcheck: `make runtime-smoke` (56) | ✅ 56/56 |
+| `make daily-assistant-contract` (new target) | ✅ TSC + 5/5 |
+
+---
+
+### 5. Commits
+
+| Commit | Message |
+|--------|---------|
+| `f0fd117` | chore(dev): P77 daily assistant contract make target |
+
+---
+
+
 
 ### 1. Scope
 
