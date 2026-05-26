@@ -1,3 +1,84 @@
+# Active Task Report — P83 Actions Page Contract Local Guard (2026-05-26)
+
+## P83 Actions Page Contract Local Guard (2026-05-26)
+
+**Final Classification: `P83_ACTIONS_PAGE_CONTRACT_GUARD_READY`**
+
+---
+
+### 1. Pre-flight / P82 Postcheck
+
+| Check | Result |
+|-------|--------|
+| Repo / branch | `main` ✅ |
+| HEAD | `bb41ad4` ✅ |
+| Dirty files | governance-only ✅ |
+| `make actions-page-contract` (new) | ✅ 4/4 |
+| `make daily-assistant-contract` | ✅ 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 2. Files Changed
+
+| File | Change |
+|------|--------|
+| `Makefile` | Added `actions-page-contract` to `.PHONY` + target (TSC + 4 contract tests) |
+| `docs/security/P82_ACTIONS_PAGE_CONTRACT.md` | Added "When to run" section, `make actions-page-contract` to validation commands, P83 to change history |
+
+No frontend components modified. No testids added. No backend changes.
+
+---
+
+### 3. Makefile Target Added
+
+```make
+# P83 Actions page contract guard — local/manual only, not CI-required
+# Runs typescript check + P82 actions page contract smoke (4 tests).
+# Run after touching /platform/actions, recommendation history, feedback loop,
+# snooze sections, or related selectors.
+# See: docs/security/P82_ACTIONS_PAGE_CONTRACT.md
+actions-page-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p82-actions-page-contract.spec.ts --reporter=line
+```
+
+---
+
+### 4. Validation
+
+| Command | Result |
+|---------|--------|
+| `make actions-page-contract` (TSC + 4 tests) | ✅ 4/4 |
+| `make daily-assistant-contract` (TSC + 5 tests) | ✅ 5/5 |
+| `make runtime-smoke` (56 Python tests) | ✅ 56/56 |
+
+---
+
+### 5. Commit
+
+```
+e14ada3 chore(dev): add P83 actions page contract guard
+```
+
+Files staged explicitly: `Makefile` + `docs/security/P82_ACTIONS_PAGE_CONTRACT.md`
+
+---
+
+### 6. Known Limitations
+
+- `actions-page-contract` is local/manual only — not wired to CI (by design)
+- The target uses the P82 spec file (`p82-actions-page-contract.spec.ts`) directly
+- Full regression (P80/P81/P55/P56/P57) available via `frontend-e2e-local` but not part of this target
+
+---
+
+### 7. Next Recommended Lane
+
+**Report/Symptom-to-Daily-Recommendation** — connect symptom input to daily recommendation pipeline.
+
+---
+
 # Active Task Report — P82 Actions Page Contract Consolidation (2026-05-26)
 
 ## P82 Actions Page Contract Consolidation (2026-05-26)
