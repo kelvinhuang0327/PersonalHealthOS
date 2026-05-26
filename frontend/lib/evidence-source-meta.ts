@@ -22,5 +22,9 @@ export const EVIDENCE_SOURCE_META: Record<string, EvidenceSourceMeta> = {
   lab_abnormality:   { label: '查看健檢報告', href: '/platform/documents' },
   symptom:           { label: '查看症狀紀錄', href: '/platform/symptoms' },
   long_term_symptom: { label: '查看症狀紀錄', href: '/platform/symptoms' },
-  risk_alert:        { label: '查看風險提醒' },
+  risk_alert:        { label: '查看風險提醒' },  // no href — no /risk-alerts page yet
+  // P94: 3-grid card ref source types (label-only — no dedicated navigation page)
+  health_metric:     { label: '健康指標數據' },
+  outcome:           { label: '健康成效紀錄' },
+  recommendation:    { label: '行動建議來源' },
 }

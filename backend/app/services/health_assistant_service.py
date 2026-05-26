@@ -1173,12 +1173,12 @@ def generate_daily_health_summary(
     bundle_summary: dict[str, Any] = bundle.get("summary", {})
     device_escalation: dict[str, Any] = bundle.get("device_escalation", {})
 
-    top_risk = _derive_top_risk(
+    top_risk, top_risk_ref = _derive_top_risk(
         risk_alerts, recommendations, long_term_symptoms, missing_data,
         escalation=device_escalation,
     )
-    biggest_change = _derive_biggest_change(outcomes, health_metrics)
-    today_action, why_now = _derive_today_action_and_why(
+    biggest_change, biggest_change_ref = _derive_biggest_change(outcomes, health_metrics)
+    today_action, why_now, today_action_ref = _derive_today_action_and_why(
         recommendations, escalation=device_escalation,
     )
     confidence = _compute_confidence(bundle_summary, missing_data)
@@ -1199,6 +1199,12 @@ def generate_daily_health_summary(
         result["encouragement"] = encouragement
     if device_escalation and device_escalation.get("escalationLevel") not in (None, "none"):
         result["escalation"] = device_escalation
+    if top_risk_ref:
+        result["topRiskRef"] = top_risk_ref
+    if biggest_change_ref:
+        result["biggestChangeRef"] = biggest_change_ref
+    if today_action_ref:
+        result["todayActionRef"] = today_action_ref
     return result
 
 
@@ -1210,8 +1216,13 @@ def _derive_top_risk(
     long_term_symptoms: list[dict[str, Any]],
     missing_data: list[str],
     escalation: dict[str, Any] | None = None,
-) -> str:
-    """Pick the single most urgent risk description."""
+) -> tuple[str, dict[str, Any] | None]:
+    """Pick the single most urgent risk description.
+
+    Returns:
+        (narrative, ref | None) — ref is a DailySummaryEvidenceRef dict when
+        a DB-sourced winner is identified; None for escalation / fallback paths.
+    """
     if risk_alerts:
         best = max(
             risk_alerts,
@@ -1220,40 +1231,73 @@ def _derive_top_risk(
         sev_label = {
             "critical": "嚴重", "high": "高風險", "warning": "警示",
         }.get(best.get("severity", ""), best.get("severity", ""))
-        return f"{best.get('title', '健康風險')}（{sev_label}）"
+        return (
+            f"{best.get('title', '健康風險')}（{sev_label}）",
+            {
+                "source_type": "risk_alert",
+                "source_id": str(best["source_id"]) if best.get("source_id") else None,
+                "summary": best.get("title", "健康風險"),
+            },
+        )
 
     # No explicit risk alert — check device escalation
     if escalation:
         esc_level = escalation.get("escalationLevel", "none")
         esc_reasons = escalation.get("reasons", [])
         if esc_level == "urgent" and esc_reasons:
-            return f"裝置健康訊號緊急：{esc_reasons[0]}"
+            return f"裝置健康訊號緊急：{esc_reasons[0]}", None
         if esc_level == "warning" and esc_reasons:
-            return f"裝置健康訊號警示：{esc_reasons[0]}"
+            return f"裝置健康訊號警示：{esc_reasons[0]}", None
 
     for rec in recommendations:
         if rec.get("priority") == "high" and rec.get("source_type") not in ("missing_data", None):
-            return rec.get("title", "健康問題需關注")
+            return (
+                rec.get("title", "健康問題需關注"),
+                {
+                    "source_type": rec["source_type"],
+                    "source_id": str(rec["source_id"]) if rec.get("source_id") else None,
+                    "summary": rec.get("evidence_summary", ""),
+                },
+            )
 
     for sym in long_term_symptoms:
         if (sym.get("severity") or 0) >= 6:
-            return f"持續症狀需關注：{sym.get('symptom', '')}（已追蹤中）"
+            return (
+                f"持續症狀需關注：{sym.get('symptom', '')}（已追蹤中）",
+                {
+                    "source_type": "symptom",
+                    "source_id": str(sym["source_id"]) if sym.get("source_id") else None,
+                    "summary": sym.get("symptom", ""),
+                },
+            )
 
     for rec in recommendations:
         if rec.get("source_type") not in ("missing_data", None):
-            return rec.get("title", "建議主動追蹤健康狀況")
+            return (
+                rec.get("title", "建議主動追蹤健康狀況"),
+                {
+                    "source_type": rec["source_type"],
+                    "source_id": str(rec["source_id"]) if rec.get("source_id") else None,
+                    "summary": rec.get("evidence_summary", ""),
+                },
+            )
 
     if len(missing_data) >= 3:
-        return "資料不足，建議補充健康資料以完整評估風險"
+        return "資料不足，建議補充健康資料以完整評估風險", None
 
-    return "目前未偵測到顯著風險"
+    return "目前未偵測到顯著風險", None
 
 
 def _derive_biggest_change(
     outcomes: list[dict[str, Any]],
     health_metrics: list[dict[str, Any]],
-) -> str:
-    """Return a one-liner describing the largest measurable health change."""
+) -> tuple[str, dict[str, Any] | None]:
+    """Return (narrative, ref | None) for the largest measurable health change.
+
+    ref.source_type is 'outcome' when sourced from ActionOutcome, 'health_metric'
+    when derived from raw metric trend.  source_id is None for trend-based refs
+    (trend spans multiple records, not a single winning UUID).
+    """
     if outcomes:
         best = max(outcomes, key=lambda o: abs(o.get("delta") or 0))
         delta = best.get("delta") or 0
@@ -1269,7 +1313,14 @@ def _derive_biggest_change(
             window = best.get("time_window_days", "")
             outcome_tag = best.get("outcome_label", "")
             suffix = f"（{outcome_tag}，{window}天）" if outcome_tag and window else ""
-            return f"{label}{direction} {abs(delta):.1f}{suffix}"
+            return (
+                f"{label}{direction} {abs(delta):.1f}{suffix}",
+                {
+                    "source_type": "outcome",
+                    "source_id": str(best["source_id"]) if best.get("source_id") else None,
+                    "summary": f"{label}{direction} {abs(delta):.1f}",
+                },
+            )
 
     # Derive trend from raw metric readings (ordered newest → oldest)
     for extractor, label, lower_is_better, threshold, unit in [
@@ -1286,16 +1337,27 @@ def _derive_biggest_change(
                     direction = "改善" if delta < 0 else "上升"
                 else:
                     direction = "上升" if delta > 0 else "下降"
-                return f"{label}{direction} {abs(delta):.1f}{unit}（近期趨勢）"
+                return (
+                    f"{label}{direction} {abs(delta):.1f}{unit}（近期趨勢）",
+                    {
+                        "source_type": "health_metric",
+                        "source_id": None,  # trend spans multiple records
+                        "summary": f"{label} 近期趨勢",
+                    },
+                )
 
-    return "近期無明顯數據變化"
+    return "近期無明顯數據變化", None
 
 
 def _derive_today_action_and_why(
     recommendations: list[dict[str, Any]],
     escalation: dict[str, Any] | None = None,
-) -> tuple[str, str]:
-    """Return (todayAction, whyNow) from the top available recommendation."""
+) -> tuple[str, str, dict[str, Any] | None]:
+    """Return (todayAction, whyNow, ref | None) from the top available recommendation.
+
+    ref is a DailySummaryEvidenceRef dict when the winning rec has a traceable
+    source_type.  None for device escalation overrides and empty-rec fallbacks.
+    """
     # Urgent escalation overrides fallback but never overrides explicit recs
     if escalation and escalation.get("escalationLevel") == "urgent":
         urgent_action = escalation.get("recommendedAction")
@@ -1308,25 +1370,45 @@ def _derive_today_action_and_why(
             if not has_actionable:
                 reasons = escalation.get("reasons", [])
                 why = reasons[0] if reasons else "裝置訊號顯示健康異常需監測"
-                return urgent_action, why
+                return urgent_action, why, None
     default_action = "記錄今日健康狀況"
     default_why = "建立每日健康追蹤習慣，讓系統更了解您的健康趨勢"
 
     # Prefer actionable (non-tracking, non-missing_data) recs
     for rec in recommendations:
         if not rec.get("is_tracking") and rec.get("source_type") not in ("missing_data",):
-            return rec.get("title", default_action), rec.get("why_now", default_why)
+            return (
+                rec.get("title", default_action),
+                rec.get("why_now", default_why),
+                {
+                    "source_type": rec["source_type"],
+                    "source_id": str(rec["source_id"]) if rec.get("source_id") else None,
+                    "summary": rec.get("evidence_summary", ""),
+                },
+            )
 
     # Accept tracking recs (still meaningful — user is already on it)
     for rec in recommendations:
         if rec.get("source_type") not in ("missing_data",):
-            return rec.get("title", default_action), rec.get("why_now", default_why)
+            return (
+                rec.get("title", default_action),
+                rec.get("why_now", default_why),
+                {
+                    "source_type": rec["source_type"],
+                    "source_id": str(rec["source_id"]) if rec.get("source_id") else None,
+                    "summary": rec.get("evidence_summary", ""),
+                },
+            )
 
-    # Fallback to first (may be missing_data type)
+    # Fallback to first (may be missing_data type — no meaningful source ref)
     if recommendations:
-        return recommendations[0].get("title", default_action), recommendations[0].get("why_now", default_why)
+        return (
+            recommendations[0].get("title", default_action),
+            recommendations[0].get("why_now", default_why),
+            None,
+        )
 
-    return default_action, default_why
+    return default_action, default_why, None
 
 
 def _compute_confidence(

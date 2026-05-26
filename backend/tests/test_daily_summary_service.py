@@ -333,38 +333,49 @@ def test_daily_summary_missing_data_absent_when_complete():
 
 def test_top_risk_from_alert():
     alert = {"title": "血壓偏高", "severity": "high"}
-    result = _derive_top_risk([alert], [], [], [])
-    assert "血壓偏高" in result
-    assert "高風險" in result
+    narrative, ref = _derive_top_risk([alert], [], [], [])
+    assert "血壓偏高" in narrative
+    assert "高風險" in narrative
+    assert ref is not None
+    assert ref["source_type"] == "risk_alert"
+    assert ref["summary"] == "血壓偏高"
 
 
 def test_top_risk_critical_label():
     alert = {"title": "心臟警示", "severity": "critical"}
-    result = _derive_top_risk([alert], [], [], [])
-    assert "嚴重" in result
+    narrative, ref = _derive_top_risk([alert], [], [], [])
+    assert "嚴重" in narrative
+    assert ref is not None
+    assert ref["source_type"] == "risk_alert"
 
 
 def test_top_risk_from_high_priority_rec_when_no_alert():
     recs = [{"title": "立即就醫", "priority": "high", "source_type": "risk_alert"}]
-    result = _derive_top_risk([], recs, [], [])
-    assert "立即就醫" in result
+    narrative, ref = _derive_top_risk([], recs, [], [])
+    assert "立即就醫" in narrative
+    assert ref is not None
+    assert ref["source_type"] == "risk_alert"
 
 
 def test_top_risk_from_long_term_symptom():
     sym = {"symptom": "胸悶", "severity": 8, "source_type": "symptom"}
-    result = _derive_top_risk([], [], [sym], [])
-    assert "胸悶" in result
+    narrative, ref = _derive_top_risk([], [], [sym], [])
+    assert "胸悶" in narrative
+    assert ref is not None
+    assert ref["source_type"] == "symptom"
 
 
 def test_top_risk_missing_data_fallback():
     missing = ["a", "b", "c"]
-    result = _derive_top_risk([], [], [], missing)
-    assert "資料不足" in result
+    narrative, ref = _derive_top_risk([], [], [], missing)
+    assert "資料不足" in narrative
+    assert ref is None
 
 
 def test_top_risk_no_risk_fallback():
-    result = _derive_top_risk([], [], [], [])
-    assert "未偵測" in result
+    narrative, ref = _derive_top_risk([], [], [], [])
+    assert "未偵測" in narrative
+    assert ref is None
 
 
 def test_top_risk_picks_highest_severity_alert():
@@ -373,8 +384,10 @@ def test_top_risk_picks_highest_severity_alert():
         {"title": "嚴重心臟問題", "severity": "critical"},
         {"title": "中度風險", "severity": "medium"},
     ]
-    result = _derive_top_risk(alerts, [], [], [])
-    assert "嚴重心臟問題" in result
+    narrative, ref = _derive_top_risk(alerts, [], [], [])
+    assert "嚴重心臟問題" in narrative
+    assert ref is not None
+    assert ref["source_type"] == "risk_alert"
 
 
 # ---------------------------------------------------------------------------
@@ -388,10 +401,12 @@ def test_biggest_change_from_outcome():
         "outcome_label": "improved",
         "time_window_days": 7,
     }
-    result = _derive_biggest_change([outcome], [])
-    assert "收縮壓" in result
-    assert "12.0" in result
-    assert "改善" in result
+    narrative, ref = _derive_biggest_change([outcome], [])
+    assert "收縮壓" in narrative
+    assert "12.0" in narrative
+    assert "改善" in narrative
+    assert ref is not None
+    assert ref["source_type"] == "outcome"
 
 
 def test_biggest_change_positive_bp_outcome():
@@ -402,30 +417,37 @@ def test_biggest_change_positive_bp_outcome():
         "outcome_label": "worsened",
         "time_window_days": 7,
     }
-    result = _derive_biggest_change([outcome], [])
-    assert "收縮壓" in result
-    assert "上升" in result
+    narrative, ref = _derive_biggest_change([outcome], [])
+    assert "收縮壓" in narrative
+    assert "上升" in narrative
+    assert ref is not None
+    assert ref["source_type"] == "outcome"
 
 
 def test_biggest_change_from_metric_trend():
     m1 = {"systolic_bp": 120, "weight_kg": 70.0, "blood_glucose": None, "sleep_hours": None}
     m2 = {"systolic_bp": 135, "weight_kg": 72.0, "blood_glucose": None, "sleep_hours": None}
-    result = _derive_biggest_change([], [m1, m2])
+    narrative, ref = _derive_biggest_change([], [m1, m2])
     # BP dropped from 135 → 120 (newest first), delta = -15 → 改善
-    assert "收縮壓" in result or "體重" in result
+    assert "收縮壓" in narrative or "體重" in narrative
+    assert ref is not None
+    assert ref["source_type"] == "health_metric"
+    assert ref["source_id"] is None  # trend has no single winning UUID
 
 
 def test_biggest_change_no_data():
-    result = _derive_biggest_change([], [])
-    assert "近期無明顯數據變化" in result
+    narrative, ref = _derive_biggest_change([], [])
+    assert "近期無明顯數據變化" in narrative
+    assert ref is None
 
 
 def test_biggest_change_below_threshold_ignored():
     """BP change of 2mmHg (< 5 threshold) should not be reported."""
     m1 = {"systolic_bp": 130, "weight_kg": None, "blood_glucose": None, "sleep_hours": None}
     m2 = {"systolic_bp": 132, "weight_kg": None, "blood_glucose": None, "sleep_hours": None}
-    result = _derive_biggest_change([], [m1, m2])
-    assert "近期無明顯數據變化" in result
+    narrative, ref = _derive_biggest_change([], [m1, m2])
+    assert "近期無明顯數據變化" in narrative
+    assert ref is None
 
 
 # ---------------------------------------------------------------------------
@@ -530,17 +552,21 @@ def test_today_action_prefers_non_tracking():
         {"title": "追蹤中行動", "why_now": "已追蹤", "is_tracking": True, "source_type": "risk_alert"},
         {"title": "新行動", "why_now": "立即需要", "is_tracking": False, "source_type": "insight"},
     ]
-    action, why = _derive_today_action_and_why(recs)
+    action, why, ref = _derive_today_action_and_why(recs)
     assert action == "新行動"
     assert why == "立即需要"
+    assert ref is not None
+    assert ref["source_type"] == "insight"
 
 
 def test_today_action_accepts_tracking_if_no_other():
     recs = [
         {"title": "追蹤中行動", "why_now": "已追蹤", "is_tracking": True, "source_type": "risk_alert"},
     ]
-    action, why = _derive_today_action_and_why(recs)
+    action, why, ref = _derive_today_action_and_why(recs)
     assert action == "追蹤中行動"
+    assert ref is not None
+    assert ref["source_type"] == "risk_alert"
 
 
 def test_today_action_skips_missing_data_type():
@@ -548,19 +574,23 @@ def test_today_action_skips_missing_data_type():
         {"title": "記錄健康指標", "why_now": "缺資料", "is_tracking": False, "source_type": "missing_data"},
         {"title": "就醫評估", "why_now": "有症狀", "is_tracking": False, "source_type": "insight"},
     ]
-    action, why = _derive_today_action_and_why(recs)
+    action, why, ref = _derive_today_action_and_why(recs)
     assert action == "就醫評估"
+    assert ref is not None
+    assert ref["source_type"] == "insight"
 
 
 def test_today_action_fallback_to_missing_data_when_only_option():
     recs = [
         {"title": "記錄健康指標", "why_now": "缺資料", "is_tracking": False, "source_type": "missing_data"},
     ]
-    action, why = _derive_today_action_and_why(recs)
+    action, why, ref = _derive_today_action_and_why(recs)
     assert action == "記錄健康指標"
+    assert ref is None  # missing_data type has no meaningful source ref
 
 
 def test_today_action_empty_recs():
-    action, why = _derive_today_action_and_why([])
+    action, why, ref = _derive_today_action_and_why([])
     assert action == "記錄今日健康狀況"
     assert len(why) > 0
+    assert ref is None

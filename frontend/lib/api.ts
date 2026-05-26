@@ -135,6 +135,12 @@ export type LabAbnormality = {
 }
 
 // ── Daily Health Summary type (Task 5 — P1) ──────────────────────────────────
+export type DailySummaryEvidenceRef = {
+  source_type: string
+  source_id?: string
+  summary?: string
+}
+
 export type DailyHealthSummary = {
   person_id: string
   generated_at: string
@@ -146,6 +152,10 @@ export type DailyHealthSummary = {
   missingData?: string[]
   encouragement?: string
   escalation?: EscalationDecision
+  // P94: optional per-card evidence refs (non-breaking)
+  topRiskRef?: DailySummaryEvidenceRef
+  biggestChangeRef?: DailySummaryEvidenceRef
+  todayActionRef?: DailySummaryEvidenceRef
 }
 // ── Notification Intelligence types (P5 Foundation) ─────────────────────
 export type NotificationCandidate = {

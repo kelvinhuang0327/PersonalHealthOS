@@ -217,6 +217,26 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                     為什麼重要：{summary.whyNow}
                   </p>
                 )}
+                {summary?.topRiskRef && (
+                  <div
+                    data-testid="p94-top-risk-ref-badge"
+                    className="mt-1.5 flex items-center gap-1 text-[10px] text-slate-400 border-t border-slate-50 pt-1.5"
+                  >
+                    <FileText className="h-2.5 w-2.5 flex-shrink-0" />
+                    <span className="flex-1 truncate">
+                      {summary.topRiskRef.summary || EVIDENCE_SOURCE_META[summary.topRiskRef.source_type]?.label || '參考依據'}
+                    </span>
+                    {EVIDENCE_SOURCE_META[summary.topRiskRef.source_type]?.href && (
+                      <Link
+                        href={EVIDENCE_SOURCE_META[summary.topRiskRef.source_type]!.href!}
+                        data-testid="p94-top-risk-ref-link"
+                        className="shrink-0 text-slate-400 hover:text-blue-600"
+                      >
+                        <ExternalLink className="h-2.5 w-2.5" />
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Biggest change */}
@@ -238,6 +258,26 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                     此為近 7 天最顯著的健康趨勢變化。
                   </p>
                 )}
+                {summary?.biggestChangeRef && (
+                  <div
+                    data-testid="p94-biggest-change-ref-badge"
+                    className="mt-1.5 flex items-center gap-1 text-[10px] text-slate-400 border-t border-slate-50 pt-1.5"
+                  >
+                    <FileText className="h-2.5 w-2.5 flex-shrink-0" />
+                    <span className="flex-1 truncate">
+                      {summary.biggestChangeRef.summary || EVIDENCE_SOURCE_META[summary.biggestChangeRef.source_type]?.label || '參考依據'}
+                    </span>
+                    {EVIDENCE_SOURCE_META[summary.biggestChangeRef.source_type]?.href && (
+                      <Link
+                        href={EVIDENCE_SOURCE_META[summary.biggestChangeRef.source_type]!.href!}
+                        data-testid="p94-biggest-change-ref-link"
+                        className="shrink-0 text-slate-400 hover:text-blue-600"
+                      >
+                        <ExternalLink className="h-2.5 w-2.5" />
+                      </Link>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Today's primary action */}
@@ -258,6 +298,26 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                   >
                     完成後，小助手可以把今日行動與後續結果連起來追蹤。
                   </p>
+                )}
+                {summary?.todayActionRef && (
+                  <div
+                    data-testid="p94-today-action-ref-badge"
+                    className="mt-1.5 flex items-center gap-1 text-[10px] text-slate-400 border-t border-slate-50 pt-1.5"
+                  >
+                    <FileText className="h-2.5 w-2.5 flex-shrink-0" />
+                    <span className="flex-1 truncate">
+                      {summary.todayActionRef.summary || EVIDENCE_SOURCE_META[summary.todayActionRef.source_type]?.label || '參考依據'}
+                    </span>
+                    {EVIDENCE_SOURCE_META[summary.todayActionRef.source_type]?.href && (
+                      <Link
+                        href={EVIDENCE_SOURCE_META[summary.todayActionRef.source_type]!.href!}
+                        data-testid="p94-today-action-ref-link"
+                        className="shrink-0 text-slate-400 hover:text-blue-600"
+                      >
+                        <ExternalLink className="h-2.5 w-2.5" />
+                      </Link>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
