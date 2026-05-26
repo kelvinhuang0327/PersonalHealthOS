@@ -1,3 +1,99 @@
+# Active Task Report — P82 Actions Page Contract Consolidation (2026-05-26)
+
+## P82 Actions Page Contract Consolidation (2026-05-26)
+
+**Final Classification: `P82_ACTIONS_PAGE_CONTRACT_READY`**
+
+---
+
+### 1. Pre-flight / P81 Postcheck
+
+| Check | Result |
+|-------|--------|
+| Repo / branch | `main` ✅ |
+| P81 commit (`31611ad`) | present at HEAD ✅ |
+| P81 report (`active_task_report.md`) | dirty on entry — committed now as `9aabf61` ✅ |
+| TSC (`npx tsc --noEmit`) | ✅ clean |
+| P81 spec (7 tests) | ✅ 7/7 |
+| P80 spec (7 tests) | ✅ 7/7 |
+| `make daily-assistant-contract` | ✅ 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 2. Component Changes
+
+**None.** P82 is tests-only + docs consolidation.  
+No testids were added to any component.  
+All 6 stable selectors already existed from P62, P80, P81.
+
+---
+
+### 3. Stable Actions Page Testid Surface Documented
+
+| Testid | Phase | Condition | Required |
+|--------|-------|-----------|----------|
+| `actions-loading` | P80 | `loading === true` | ✅ Required |
+| `actions-page` | P80 | `loading === false` | ✅ Required |
+| `actions-feedback-loop` | P81 | `grouped.completed.length > 0` | Optional |
+| `actions-snoozed-section` | P81 | `grouped.snoozed.length > 0` | Optional |
+| `recommendation-history-card` | P62 | `historyData !== null` | Optional |
+| `history-summary-bar` | P62 | `historyData !== null` | Optional |
+
+---
+
+### 4. Contract Spec — `p82-actions-page-contract.spec.ts`
+
+| # | Test | Result |
+|---|------|--------|
+| 1 | loaded state — all 4 surfaces co-visible | ✅ |
+| 2 | loading state — `actions-loading` visible while dashboard frozen | ✅ |
+| 3 | api failure safe — history card absent on 500, page survives | ✅ |
+| 4 | medical overclaim guard | ✅ |
+
+**P82: 4/4 ✅**
+
+---
+
+### 5. Regression Matrix
+
+| Suite | Result |
+|-------|--------|
+| P82 spec (4 tests) | ✅ 4/4 |
+| P81 spec (7 tests) | ✅ 7/7 |
+| P80 spec (7 tests) | ✅ 7/7 |
+| P55 (6 tests) | ✅ 6/6 |
+| P56 (6 tests) | ✅ 6/6 |
+| P57 (6 tests) | ✅ 6/6 |
+| `make daily-assistant-contract` | ✅ 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 6. Commits
+
+```
+9aabf61 docs(report): P81 actions consistency smoke report  ← P81 report committed
+ee60b7a test(frontend): P82 actions page contract smoke
+4788365 docs(security): P82 actions page contract
+```
+
+Files staged explicitly:
+- `frontend/tests/e2e/p82-actions-page-contract.spec.ts`
+- `docs/security/P82_ACTIONS_PAGE_CONTRACT.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+---
+
+### 7. Known Limitations
+
+- `action-feedback-card.tsx` has no inner testids — individual card items not addressed
+- `decision-recommendation-layer.tsx` has no testids — P55 covers button behavior
+- Snoozed section does not verify `snoozed_until` future/past logic in UI layer
+- `next build` not required (no component changes in P82)
+
+---
+
 # Active Task Report — P81 Actions Feedback / Snooze Detail Smoke (2026-05-26)
 
 ## P81 Actions Page Feedback / Snooze Detail Smoke (2026-05-26)
