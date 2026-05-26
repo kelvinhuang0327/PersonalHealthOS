@@ -1,3 +1,85 @@
+# Active Task Report — P65 Daily Assistant Why-Now Clarity (2026-05-26)
+
+## P65 Daily Assistant Why-Now Clarity (2026-05-26)
+
+**Final Classification: `P65_DAILY_ASSISTANT_CONTINUITY_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD at start | `85ae765` — docs(report): P64 recovery handoff ✅ |
+| Dirty files | 4 governance M — no scope conflict ✅ |
+
+---
+
+### 2. P64 Postcheck
+
+| Suite | Result |
+|---|---|
+| `npx tsc --noEmit` | ✅ 0 errors |
+| P64 targeted (6 tests) | ✅ 6/6 passed |
+| P55/P56/P57 regression (17 tests) | ✅ 17/17 passed |
+| `make runtime-smoke` | ✅ 56/56 passed |
+
+---
+
+### 3. Chosen P65 Improvement
+
+**Surface the `whyNow` field on the daily summary top-risk card.**
+
+**Why bounded**:
+- `DailyHealthSummary` type already had `whyNow: string` defined in `lib/api.ts`
+- P64 test fixture already populated `whyNow: '近期記錄顯示血壓波動加劇'`
+- The field was fetched by the component but never rendered anywhere in the UI
+- One conditional `<p>` element added — no new fetches, no types, no backend changes
+- `data-testid="daily-summary-why-now"` added for stable acceptance targeting
+
+**Addresses P65 requirements**:
+- #1 (today's top risk): risk card now shows both WHAT the risk is and WHY it matters
+- #4 (why-now explanation): `whyNow` text displayed as "為什麼重要：…" sub-line
+
+---
+
+### 4. Files Modified
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/daily-assistant-entry.tsx` | Added conditional `whyNow` sub-line inside `daily-summary-top-risk` card |
+| `frontend/tests/e2e/p65-daily-assistant-why-now-clarity.spec.ts` | New — 4 acceptance tests (present/absent whyNow + P64 regression ×2) |
+
+---
+
+### 5. Tests
+
+| Suite | Result |
+|---|---|
+| `npx tsc --noEmit` (pre + post) | ✅ 0 errors |
+| P65 targeted (4 tests) | ✅ 4/4 passed |
+| P64 regression (6 tests) | ✅ 6/6 passed |
+| P55/P56/P57 regression (17 tests) | ✅ 17/17 passed |
+| `make runtime-smoke` | ✅ 56/56 passed |
+
+---
+
+### 6. Commits
+
+- `0a1c470` feat(frontend): P65 daily assistant why-now clarity — render whyNow explanation on top-risk card
+
+---
+
+### 7. Known Limitations / Unknown / Inferred
+
+- `whyNow` is only shown for the top-risk card. `biggestChange` and `todayAction` cards do not have an analogous "why this matters" sub-line — this is intentional (bounded scope).
+- The `whyNow` field comes from the backend `/health-assistant/daily-summary` endpoint. If the backend returns an empty string or omits the field, the sub-line is correctly suppressed.
+- P65 does not address requirements #2 (biggest change), #3 (recommended next action), #5 (missing data), #6 (outcome known/unknown) beyond what P64 already shipped. These remain as future candidates for P66+.
+
+---
+
 # Active Task Report — P64-RECOVERY (2026-05-26)
 
 ## P64-RECOVERY (2026-05-26)
