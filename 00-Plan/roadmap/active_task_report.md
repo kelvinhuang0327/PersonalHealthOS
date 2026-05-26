@@ -2,6 +2,90 @@
 
 ---
 
+## P92 Shared Evidence Source Metadata Refactor (2026-05-26)
+
+**Final Classification: `P92_EVIDENCE_SOURCE_META_REFACTOR_DONE`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `7dd9d10` |
+| Dirty files | governance-only |
+
+---
+
+### 2. Baseline Gates (before)
+
+All 6 gates green. `4 passed` / `4 passed` / `5 passed` / `3 passed` / `41 passed` / `56 passed`.
+
+---
+
+### 3. Changes Made
+
+#### `frontend/lib/evidence-source-meta.ts` (NEW)
+
+Shared source-page link metadata:
+```ts
+export type EvidenceSourceMeta = { label: string; href?: string }
+
+export const EVIDENCE_SOURCE_META: Record<string, EvidenceSourceMeta> = {
+  lab_report_item:   { label: '查看健檢報告', href: '/platform/documents' },
+  lab_abnormality:   { label: '查看健檢報告', href: '/platform/documents' },
+  symptom:           { label: '查看症狀紀錄', href: '/platform/symptoms' },
+  long_term_symptom: { label: '查看症狀紀錄', href: '/platform/symptoms' },
+  risk_alert:        { label: '查看風險提醒' },  // no href → no link
+}
+```
+
+#### `frontend/app/components/platform/decision-recommendation-layer.tsx`
+
+- Removed local `SOURCE_LINK` constant (P89 duplication)
+- Added `import { EVIDENCE_SOURCE_META } from '../../../lib/evidence-source-meta'`
+- Updated guard: `SOURCE_LINK[item.source_type]` → `EVIDENCE_SOURCE_META[item.source_type]?.href`
+- Updated JSX: `.href` / `.label` via `!` non-null assertion
+
+#### `frontend/app/components/platform/daily-assistant-entry.tsx`
+
+- Removed local `TOPREC_SOURCE_LINK` constant (P91 duplication)
+- Added `import { EVIDENCE_SOURCE_META } from '../../../lib/evidence-source-meta'`
+- Updated guard: `TOPREC_SOURCE_LINK[topRec.source_type]` → `EVIDENCE_SOURCE_META[topRec.source_type]?.href`
+- Updated JSX: `.href` / `.label` via `!` non-null assertion
+
+---
+
+### 4. Validation
+
+| Step | Result |
+|---|---|
+| `npx tsc --noEmit` | ✅ Clean |
+| P89 Playwright (4 tests) | ✅ 4/4 passed |
+| P91 Playwright (4 tests) | ✅ 4/4 passed |
+| All 6 Makefile gates | ✅ All green (no regressions) |
+| `npx next build` | ✅ Clean |
+
+---
+
+### 5. Commit
+
+| Commit | Message |
+|---|---|
+| `379efe0` | `refactor(frontend): P92 extract shared EVIDENCE_SOURCE_META helper` |
+
+---
+
+### 6. Known Limitations / Design Notes
+
+- `risk_alert` entry has `label` but no `href` — reserved for future page when risk-alerts detail view exists
+- New source types (e.g. `health_record`) can be added to `evidence-source-meta.ts` alone — no changes to consumers required
+- No test specifically covers `evidence-source-meta.ts` in isolation; coverage is via P89/P91 integration tests
+
+---
+
 ## P91 Daily Assistant Top-Rec Evidence Badge (2026-05-26)
 
 **Final Classification: `P91_DAILY_ASSISTANT_EVIDENCE_BADGE_READY`**
