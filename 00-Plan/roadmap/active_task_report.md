@@ -2,6 +2,70 @@
 
 ---
 
+## P96 Source-Specific Deep Link Planning (2025-01)
+
+**Final Classification: `P96_SOURCE_DEEP_LINK_PLANNING_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `8b76463` (P95) |
+| Dirty files | governance-only (4 files) |
+
+---
+
+### 2. Baseline Gates (all 7 green before investigation)
+
+| Gate | Result |
+|---|---|
+| daily-summary-evidence-contract | 4 passed |
+| daily-assistant-contract | passed |
+| actions-page-contract | 3 passed, 4 warnings |
+| documents-confirmed-data-contract | 41 passed, 2 skip |
+| documents-page-contract | 29 passed |
+| symptoms-page-contract | 57 passed |
+| runtime-smoke | 56 passed |
+
+---
+
+### 3. Investigation Findings
+
+**Source ID gap confirmed**: `lab_report_item` and `lab_abnormality` refs carry `LabReportItem.id` / `LabReport.id`, but the documents page drawer needs `MedicalDocument.id` (= `LabReport.document_id`).
+
+**Destination page capabilities**:
+- `/platform/documents` — no `useSearchParams`; drawer state-controlled; **feasible** with small addition.
+- `/platform/symptoms` — no `useSearchParams`; no per-entry UI; **page-level only** recommended.
+- `/platform/insights` — already uses `useSearchParams`; proven pattern in codebase.
+
+**Recommended model**: Option B — `?document_id=<MedicalDocument.id>` for lab types; page-level for symptoms.
+
+---
+
+### 4. Deliverable
+
+`docs/product/p96-source-specific-deep-link-planning.md` — full discovery report including:
+- Source ID map (8 source_types)
+- Destination page capability map
+- Recommended deep-link URL contract
+- Minimal P97 implementation plan (2 backend files, 4 frontend files, 2 spec files, 1 Makefile gate)
+- Risks / edge cases / graceful degradation
+- P97 kickoff prompt
+
+---
+
+### 5. Changes in This Task
+
+- No code changes (discovery-only task)
+- New file: `docs/product/p96-source-specific-deep-link-planning.md`
+- Updated: `00-Plan/roadmap/active_task_report.md`
+
+---
+
 ## P95 Daily Summary Evidence Refs Contract Guard (2026-05-26)
 
 **Final Classification: `P95_CONTRACT_GUARD_DONE`**
