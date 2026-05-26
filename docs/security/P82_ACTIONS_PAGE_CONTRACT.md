@@ -126,7 +126,29 @@ The following phrases **must not** appear anywhere on the rendered Actions page:
 
 ## 6. Validation Commands
 
-Run after any PR touching `/platform/actions` or related components:
+### When to run
+
+Run `make actions-page-contract` after touching any of:
+- `frontend/app/platform/actions/page.tsx`
+- `frontend/app/components/platform/recommendation-history-card.tsx`
+- `frontend/app/components/platform/action-feedback-card.tsx`
+- `frontend/app/components/platform/decision-recommendation-layer.tsx`
+- Any testid listed in §3 (Stable Test IDs)
+
+### Make targets (local/manual only — not CI-required)
+
+```bash
+# Actions page contract guard (P83) — TSC + 4 contract tests
+make actions-page-contract
+
+# Daily Assistant contract guard (P77)
+make daily-assistant-contract
+
+# Backend smoke (must never be broken by frontend changes)
+make runtime-smoke
+```
+
+### Full regression (when changing Actions page behavior)
 
 ```bash
 # Contract smoke (P82)
@@ -144,12 +166,6 @@ cd frontend && npx playwright test \
   tests/e2e/p56-recommendation-feedback-persistence.spec.ts \
   tests/e2e/p57-snooze-persistence.spec.ts \
   --reporter=line
-
-# Daily Assistant contract
-make daily-assistant-contract
-
-# Backend smoke (must never be broken by frontend changes)
-make runtime-smoke
 ```
 
 ---
@@ -173,3 +189,4 @@ make runtime-smoke
 | P80 | Added `actions-loading`, `actions-page` testids; wrote recommendation smoke | actions/page.tsx, p80-actions-recommendation-smoke.spec.ts |
 | P81 | Added `actions-snoozed-section`, `actions-feedback-loop` testids; wrote feedback/snooze smoke | actions/page.tsx, p81-actions-feedback-snooze-smoke.spec.ts |
 | P82 | Contract consolidation doc + contract smoke test | docs/security/P82_ACTIONS_PAGE_CONTRACT.md, p82-actions-page-contract.spec.ts |
+| P83 | Added `make actions-page-contract` local guard; updated validation commands | Makefile, docs/security/P82_ACTIONS_PAGE_CONTRACT.md |
