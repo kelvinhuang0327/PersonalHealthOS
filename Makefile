@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract documents-evidence-deeplink-contract
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract documents-evidence-deeplink-contract report-symptom-recommendation-contract
 
 up:
 	docker compose up -d --build
@@ -112,6 +112,17 @@ daily-summary-evidence-contract:
 documents-evidence-deeplink-contract:
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx playwright test tests/e2e/p97-documents-evidence-deep-link.spec.ts --reporter=line
+
+# P101 Report + Symptom → Recommendation integration contract — local/manual only, not CI-required
+# Runs TypeScript check + P101 integration smoke (5 tests).
+# Proves the core PersonalHealthOS product loop: lab evidence + symptom evidence
+# both feed Daily Assistant 3-grid refs with correct source-specific hrefs,
+# and lab document_id deep links open the matching documents drawer.
+# Run after touching Daily Assistant evidence refs, documents deep link,
+# symptom evidence source behavior, or report/symptom recommendation integration.
+report-symptom-recommendation-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p101-report-symptom-recommendation-integration.spec.ts --reporter=line
 
 # P83 Actions page contract guard — local/manual only, not CI-required
 # Runs typescript check + P82 actions page contract smoke (4 tests).

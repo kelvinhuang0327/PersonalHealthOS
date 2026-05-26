@@ -1,6 +1,6 @@
 # Local Contract Guard Index
 
-**Last updated:** P99 (2026-05-26)
+**Last updated:** P101 (2026-05-26)
 **Status:** Authoritative runbook for all local/manual Makefile contract guards.
 
 ---
@@ -33,6 +33,7 @@ All frontend guards run `npx tsc --noEmit` first, then the Playwright spec.
 | `daily-summary-evidence-contract` | `p94-daily-summary-3grid-evidence-refs.spec.ts` | 4 | **Yes** — if any frontend file changed | 3-grid evidence ref badges, per-card `source_type` attribution, `EVIDENCE_SOURCE_META` display |
 | `actions-page-contract` | `p82-actions-page-contract.spec.ts` | 4 | **Yes** — if any frontend file changed | `/platform/actions` render, recommendation history, feedback loop, snooze sections, overclaim guard |
 | `documents-evidence-deeplink-contract` | `p97-documents-evidence-deep-link.spec.ts` | 4 | **Yes** — if any frontend file changed | `document_id` deep link URL, `ParsedItemsDrawer` auto-open, fallback to base route, Actions + Daily Assistant badge hrefs |
+| `report-symptom-recommendation-contract` | `p101-report-symptom-recommendation-integration.spec.ts` | 5 | **No** — spec-only change (no frontend code changed) | Lab `topRiskRef` deep link in Daily Assistant 3-grid, symptom `todayActionRef` page link, Actions `p89-source-page-link` with `document_id`, documents drawer auto-open, unknown `document_id` safety |
 | `documents-confirmed-data-contract` | `p87-documents-confirmed-data-refeed.spec.ts` | 4 | **Yes** — if any frontend file changed | `ParsedItemsDrawer` confirm flow, `Doc` interface confirmed-data display, overclaim guard |
 | `documents-page-contract` | `p85-documents-page-contract.spec.ts` | 4 | **Yes** — if any frontend file changed | `/platform/documents` list render, upload/parse flow, `LabReportItem` display, 500 failure safe |
 | `symptoms-page-contract` | `p86-symptoms-page-contract.spec.ts` | 4 | **Yes** — if any frontend file changed | `/platform/symptoms` render, quick-symptom chips, heatmap, severity/duration selectors, 500 failure safe |
@@ -46,6 +47,7 @@ All frontend guards run `npx tsc --noEmit` first, then the Playwright spec.
 | `daily-summary-evidence-contract` | `DailyHealthSummary` evidence refs, 3-grid card layout, `EVIDENCE_SOURCE_META`, `evidence-source-meta.ts`, `api.ts` `DailySummaryEvidenceRef` |
 | `actions-page-contract` | `actions/page.tsx`, recommendation history list, snooze/feedback API, `UnifiedDecisionItem` shape |
 | `documents-evidence-deeplink-contract` | `evidence-source-meta.ts` `getEvidenceHref()`, `documents/page.tsx` `useSearchParams`, `actions/page.tsx` `document_id` forwarding, evidence badge hrefs, `health_assistant_service.py` top-risk/today-action refs, `lab_intelligence_service.py` abnormality `document_id` |
+| `report-symptom-recommendation-contract` | Daily Assistant evidence refs (`p94-top-risk-ref-link`, `p94-today-action-ref-link`), `getEvidenceHref()` source-type dispatch, `p89-source-page-link` on Actions page, `documents/page.tsx` drawer auto-open, `EVIDENCE_SOURCE_META` for `symptom` + `lab_report_item` |
 | `documents-confirmed-data-contract` | `parsed-items-drawer.tsx`, `Doc` interface, confirmed-data re-feed API, `documents-confirmed-data-refeed` service |
 | `documents-page-contract` | `documents/page.tsx` (non-deeplink), document list components, upload API, `LabReportItem` display |
 | `symptoms-page-contract` | `symptoms/page.tsx`, symptom chip components, heatmap, severity/duration selectors, symptoms API |
@@ -59,6 +61,7 @@ All frontend guards run `npx tsc --noEmit` first, then the Playwright spec.
 | `daily-summary-evidence-contract` | `lib/evidence-source-meta.ts`, `lib/api.ts` (`DailySummaryEvidenceRef`), 3-grid components | `health_assistant_service.py` | P92–P95 |
 | `actions-page-contract` | `app/platform/actions/page.tsx`, `lib/decision-support.ts` | `health_assistant_service.py` | P82–P83 |
 | `documents-evidence-deeplink-contract` | `lib/evidence-source-meta.ts`, `app/platform/documents/page.tsx`, `app/platform/actions/page.tsx`, `daily-assistant-entry.tsx`, `decision-recommendation-layer.tsx` | `health_assistant_service.py`, `lab_intelligence_service.py` | P97 |
+| `report-symptom-recommendation-contract` | `lib/evidence-source-meta.ts`, `daily-assistant-entry.tsx` (`p94-top-risk-ref-link`, `p94-today-action-ref-link`), `decision-recommendation-layer.tsx` (`p89-source-page-link`), `app/platform/documents/page.tsx` | `health_assistant_service.py` | P101 |
 | `documents-confirmed-data-contract` | `components/platform/parsed-items-drawer.tsx`, `lib/api.ts` | document parsing services | P87 |
 | `documents-page-contract` | `app/platform/documents/page.tsx`, document list components | document API routes | P85 |
 | `symptoms-page-contract` | `app/platform/symptoms/page.tsx`, symptom chip/heatmap components | symptoms API routes | P86 |
@@ -105,11 +108,19 @@ make symptoms-page-contract
 make runtime-smoke
 ```
 
+### Report + symptom → recommendation integration (touched Daily Assistant refs, evidence hrefs, symptom/lab source dispatch)
+```bash
+make report-symptom-recommendation-contract
+make documents-evidence-deeplink-contract
+make daily-summary-evidence-contract
+```
+
 ### Broad evidence traceability work (touched evidence refs end-to-end)
 ```bash
 make daily-summary-evidence-contract
 make actions-page-contract
 make documents-evidence-deeplink-contract
+make report-symptom-recommendation-contract
 make runtime-smoke
 ```
 
@@ -122,9 +133,10 @@ make actions-page-contract
 make documents-confirmed-data-contract
 make documents-page-contract
 make symptoms-page-contract
+make report-symptom-recommendation-contract
 make runtime-smoke
 ```
-Total wall-clock time: ~50–60 seconds.
+Total wall-clock time: ~60–70 seconds.
 
 ---
 
@@ -197,6 +209,7 @@ are more than 12 individual guards. Grouping hides which surface failed.
 make documents-evidence-deeplink-contract
 make daily-summary-evidence-contract
 make actions-page-contract
+make report-symptom-recommendation-contract
 make runtime-smoke
 
 # Paste after any documents-surface change:
@@ -205,5 +218,5 @@ make documents-confirmed-data-contract
 make documents-evidence-deeplink-contract
 
 # Paste before any commit that touches 3+ surfaces:
-make documents-evidence-deeplink-contract daily-summary-evidence-contract daily-assistant-contract actions-page-contract documents-confirmed-data-contract documents-page-contract symptoms-page-contract runtime-smoke
+make documents-evidence-deeplink-contract daily-summary-evidence-contract daily-assistant-contract actions-page-contract documents-confirmed-data-contract documents-page-contract symptoms-page-contract report-symptom-recommendation-contract runtime-smoke
 ```
