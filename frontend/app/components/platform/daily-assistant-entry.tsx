@@ -424,10 +424,14 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
             </p>
           ) : null}
 
-          {/* ── Next check-in ─────────────────────────────────────────────────── */}
-          {trust?.nextCheckInSuggestion && (
-            <p className="text-[11px] text-slate-400 italic text-right">
-              {trust.nextCheckInSuggestion}
+          {/* ── Next check-in (P73) ───────────────────────────────────────────── */}
+          {(trust?.nextCheckInSuggestion || summary) && (
+            <p data-testid="daily-summary-next-checkin" className="text-[11px] text-slate-400 italic text-right">
+              {trust?.nextCheckInSuggestion
+                ? trust.nextCheckInSuggestion
+                : summary?.todayAction
+                  ? '完成今日行動後，回來更新記錄。'
+                  : '今日資料已更新，明天繼續追蹤。'}
             </p>
           )}
         </div>
