@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
 
 up:
 	docker compose up -d --build
@@ -105,6 +105,15 @@ daily-assistant-contract:
 actions-page-contract:
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx playwright test tests/e2e/p82-actions-page-contract.spec.ts --reporter=line
+
+# P85 Documents page contract guard — local/manual only, not CI-required
+# Runs typescript check + P85 documents page contract smoke (4 tests).
+# Run after touching /platform/documents, upload/parse flow, LabReportItem
+# display, or document list components.
+# See: docs/security/P85_DOCUMENTS_PAGE_CONTRACT.md
+documents-page-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p85-documents-page-contract.spec.ts --reporter=line
 
 local-db-up:
 	docker compose -f docker-compose.local.yml up -d

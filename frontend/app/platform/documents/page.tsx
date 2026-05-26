@@ -82,9 +82,9 @@ export default function DocumentsPage() {
     ['parsed', 'completed', 'confirmed'].includes(doc.parse_status)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="documents-page">
       {/* Upload form */}
-      <Card>
+      <Card data-testid="documents-upload-section">
         <h2 className="text-2xl font-semibold">健檢報告</h2>
         <form className="mt-2 grid gap-2 md:grid-cols-4" onSubmit={(e) => void onUpload(e)}>
           <select
@@ -130,15 +130,15 @@ export default function DocumentsPage() {
       </Card>
 
       {tab === 'documents' ? (
-      <ErrorBoundary><Card>
+      <ErrorBoundary><Card data-testid="documents-list-section">
         <h3 className="font-semibold">文件列表</h3>
         <div className="mt-2 space-y-2">
           {loading ? (
-            <>
+            <div data-testid="documents-loading">
               <Skeleton variant="card" className="h-20" />
               <Skeleton variant="card" className="h-20" />
               <Skeleton variant="card" className="h-20" />
-            </>
+            </div>
           ) : null}
           {docs.length === 0 && (
             <p className="py-8 text-center text-sm text-slate-400">尚未上傳任何文件</p>
