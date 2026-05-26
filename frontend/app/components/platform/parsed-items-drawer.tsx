@@ -96,7 +96,14 @@ export function ParsedItemsDrawer({ documentId, documentName, onClose, onConfirm
   const handleConfirm = async () => {
     setConfirming(true)
     try {
-      await api.confirmDocumentPost(documentId)
+      await api.confirmDocument(documentId, {
+        confirmed_data: {
+          items,
+          extracted_items: items.length,
+          abnormal_items: abnormalCount,
+          reviewed_at: new Date().toISOString(),
+        },
+      })
       onConfirmed()
     } finally {
       setConfirming(false)

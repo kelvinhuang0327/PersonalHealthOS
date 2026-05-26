@@ -18,6 +18,7 @@ interface Doc {
   confirmed_at: string | null
   uploaded_at: string
   category: string
+  confirmed_data?: { extracted_items?: number; abnormal_items?: number } | null
 }
 
 export default function DocumentsPage() {
@@ -163,6 +164,14 @@ export default function DocumentsPage() {
                 <p className="mt-0.5 text-xs text-slate-400">
                   {new Date(d.uploaded_at).toLocaleDateString('zh-TW')} · {d.category}
                 </p>
+                {d.parse_status === 'confirmed' && typeof d.confirmed_data?.extracted_items === 'number' ? (
+                  <p data-testid="documents-confirmed-summary" className="mt-0.5 text-xs text-slate-500">
+                    {d.confirmed_data.extracted_items} 項指標
+                    {typeof d.confirmed_data.abnormal_items === 'number' && d.confirmed_data.abnormal_items > 0
+                      ? ` · ${d.confirmed_data.abnormal_items} 項異常`
+                      : null}
+                  </p>
+                ) : null}
               </div>
 
               <div className="flex gap-2">
