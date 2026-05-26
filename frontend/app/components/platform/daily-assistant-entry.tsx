@@ -163,6 +163,34 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
             </div>
           )}
 
+          {/* ── Escalation notice (P72) ───────────────────────────────────────── */}
+          {summary?.escalation != null && summary.escalation.escalationLevel !== 'none' && (
+            <div
+              data-testid="daily-summary-escalation-notice"
+              className="flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3"
+            >
+              <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-amber-800">
+                  需要留意
+                  {summary.escalation.escalationLevel === 'urgent' && ' — 緊急'}
+                  {summary.escalation.escalationLevel === 'warning' && ' — 警告'}
+                  {summary.escalation.escalationLevel === 'watch' && ' — 觀察'}
+                </p>
+                {summary.escalation.reasons[0] && (
+                  <p className="mt-0.5 text-[11px] text-amber-700 leading-relaxed">
+                    {summary.escalation.reasons[0]}
+                  </p>
+                )}
+                {summary.escalation.recommendedAction && (
+                  <p className="mt-0.5 text-[11px] text-amber-600 leading-relaxed">
+                    建議：{summary.escalation.recommendedAction}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* ── Daily summary 3-grid ─────────────────────────────────────────── */}
           {hasDailySummary || topRec ? (
             <div className="grid gap-3 sm:grid-cols-3">
