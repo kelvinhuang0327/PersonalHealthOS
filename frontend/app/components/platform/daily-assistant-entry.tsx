@@ -165,6 +165,14 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                 <p className="text-xs text-slate-700 leading-relaxed line-clamp-3">
                   {summary?.topRisk || topRec?.why_now || '暫無風險資料'}
                 </p>
+                {summary?.whyNow && (
+                  <p
+                    data-testid="daily-summary-why-now"
+                    className="mt-1.5 text-[11px] text-slate-500 leading-relaxed italic border-t border-slate-50 pt-1.5 line-clamp-2"
+                  >
+                    為什麼重要：{summary.whyNow}
+                  </p>
+                )}
               </div>
 
               {/* Biggest change */}
