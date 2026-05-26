@@ -268,7 +268,7 @@ export default function ActionsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div data-testid="actions-loading" className="space-y-3">
         <Skeleton variant="card" className="h-20" />
         <Skeleton variant="card" className="h-36" />
         <Skeleton variant="card" className="h-36" />
@@ -277,7 +277,7 @@ export default function ActionsPage() {
   }
 
   return (
-    <ErrorBoundary><div className="space-y-6">
+    <ErrorBoundary><div data-testid="actions-page" className="space-y-6">
 
       {/* ── Upcoming actions reminder banner ─────────────────────────────────── */}
       <UpcomingActionsBanner />
