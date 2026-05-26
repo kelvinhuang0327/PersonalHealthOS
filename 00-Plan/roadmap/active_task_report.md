@@ -1,3 +1,93 @@
+# Active Task Report — P80 Actions Page Recommendation Smoke (2026-05-26)
+
+## P80 Actions Page Consistency Smoke — Recommendation History / Outcome Feedback / Loading (2026-05-26)
+
+**Final Classification: `P80_ACTIONS_RECOMMENDATION_SMOKE_READY`**
+
+---
+
+### 1. Pre-flight / P79 Postcheck
+
+| Check | Result |
+|-------|--------|
+| Repo / branch | `main` ✅ |
+| P79 commit (`e6fff4f`) | present ✅ |
+| Dirty files | governance-only ✅ |
+| `make daily-assistant-contract` | ✅ TSC + 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 2. Testid Discovery
+
+Inspected `frontend/app/platform/actions/page.tsx` (~600 lines) — **zero pre-existing `data-testid` attributes** found on the page itself.
+
+Existing testids in child components relevant to P80:
+
+| Testid | Location |
+|--------|----------|
+| `recommendation-history-card` | `recommendation-history-card.tsx:97,111` |
+| `history-summary-bar` | `recommendation-history-card.tsx:118` |
+
+**Decision: Option B** — Add 2 minimal page-level testids (no logic change), then write spec.
+
+---
+
+### 3. Testids Added
+
+| Testid | Element | Purpose |
+|--------|---------|---------|
+| `actions-loading` | Loading skeleton `<div>` | Confirm skeleton visible while dashboard API frozen |
+| `actions-page` | Root loaded `<div>` | Confirm page rendered without ErrorBoundary fallback |
+
+---
+
+### 4. Spec
+
+**File**: `frontend/tests/e2e/p80-actions-recommendation-smoke.spec.ts`
+
+| # | Test | Coverage |
+|---|------|----------|
+| 1 | Page renders without ErrorBoundary fallback | `actions-page` visible, no "Something went wrong" |
+| 2 | Loading skeleton while dashboard frozen | `actions-loading` visible before API unblocked |
+| 3 | `recommendation-history-card` visible with outcome data | historyData set → card renders |
+| 4 | `recommendation-history-card` empty state | Empty outcomes → card shows "目前還沒有足夠的建議回饋紀錄" |
+| 5 | `recommendation-history-card` absent on API 500 | historyData null → card not rendered |
+| 6 | Execution-center heading visible | `<h2>執行中心</h2>` found after load |
+| 7 | No medical overclaiming | Page body free of 6 diagnosis/effectiveness phrases |
+
+---
+
+### 5. Build and Validation
+
+| Gate | Result |
+|------|--------|
+| `npx tsc --noEmit` (pre-build) | ✅ clean |
+| `npx next build` | ✅ clean |
+| P80 spec (7 tests, Playwright) | ✅ 7/7 |
+| `make daily-assistant-contract` | ✅ TSC + 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+**Key fix discovered**: `route.fulfill({ json: null })` causes Playwright route hang — use `{ status: 500 }` to simulate API failure (same pattern as P63).
+
+---
+
+### 6. Commits
+
+| Commit | Message |
+|--------|---------|
+| `23dbe05` | feat(frontend): P80 actions page recommendation smoke testids and spec |
+
+---
+
+### 7. Known Limitations
+
+- `recommendation-history-card` empty-state test mirrors P62/P63 coverage; P80 adds the page-level integration lens not present in those component-isolated specs.
+- `decision-recommendation-layer` has no testid — not needed for P80 scope.
+- Snoozed action section (`grouped.snoozed`) is not independently smoke-tested; depends on actions mock data which defaults to `[]`.
+
+---
+
 # Active Task Report — P79 Daily Assistant Next Lane Decision (2026-05-26)
 
 ## P79 Daily Assistant Contract Guard Scope Decision / Next Product Lane Selection (2026-05-26)
