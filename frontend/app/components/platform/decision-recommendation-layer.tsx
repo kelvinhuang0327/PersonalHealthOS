@@ -11,8 +11,9 @@
  * CTA logic: createFromDecisionItem (deduplicates by source_id / title).
  */
 
+import Link from 'next/link'
 import { useState } from 'react'
-import { AlertCircle, ArrowRight, BookOpen, Brain, CheckCircle2, Clock3, FileText, Plus, Shield, Sparkles, TriangleAlert } from 'lucide-react'
+import { Activity, AlertCircle, ArrowRight, BookOpen, Brain, CheckCircle2, Clock3, ExternalLink, FileText, Plus, Shield, Sparkles, TriangleAlert } from 'lucide-react'
 import type { UnifiedDecisionItem } from '../../../lib/decision-support'
 import type { HealthAction } from '../../../lib/actions'
 import { Badge } from '../ui/badge'
@@ -23,11 +24,24 @@ import { RecommendationTrustBlock } from './recommendation-trust-block'
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const SOURCE_META: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
-  alert:          { label: '風險警示', icon: TriangleAlert, cls: 'bg-rose-50 border-rose-200 text-rose-700' },
-  insight:        { label: 'AI 洞察', icon: Brain,         cls: 'bg-violet-50 border-violet-200 text-violet-700' },
-  recommendation: { label: '系統建議', icon: Sparkles,     cls: 'bg-sky-50 border-sky-200 text-sky-700' },
-  trend:          { label: '趨勢預警', icon: Shield,       cls: 'bg-amber-50 border-amber-200 text-amber-700' },
-  action:         { label: '建議行動', icon: ArrowRight,   cls: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+  alert:             { label: '風險警示',   icon: TriangleAlert, cls: 'bg-rose-50 border-rose-200 text-rose-700' },
+  risk_alert:        { label: '風險警示',   icon: TriangleAlert, cls: 'bg-rose-50 border-rose-200 text-rose-700' },
+  insight:           { label: 'AI 洞察',   icon: Brain,         cls: 'bg-violet-50 border-violet-200 text-violet-700' },
+  recommendation:    { label: '系統建議',   icon: Sparkles,     cls: 'bg-sky-50 border-sky-200 text-sky-700' },
+  trend:             { label: '趨勢預警',   icon: Shield,       cls: 'bg-amber-50 border-amber-200 text-amber-700' },
+  action:            { label: '建議行動',   icon: ArrowRight,   cls: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+  lab_report_item:   { label: '健檢報告',   icon: FileText,     cls: 'bg-teal-50 border-teal-200 text-teal-700' },
+  lab_abnormality:   { label: '健檢報告',   icon: FileText,     cls: 'bg-teal-50 border-teal-200 text-teal-700' },
+  symptom:           { label: '症狀紀錄',   icon: Activity,     cls: 'bg-orange-50 border-orange-200 text-orange-700' },
+  long_term_symptom: { label: '持續症狀',   icon: Activity,     cls: 'bg-orange-50 border-orange-200 text-orange-700' },
+}
+
+// ── P89: Source-page navigation links (safe, page-level only) ────────────────
+const SOURCE_LINK: Record<string, { label: string; href: string }> = {
+  lab_report_item:   { label: '查看健檢報告', href: '/platform/documents' },
+  lab_abnormality:   { label: '查看健檢報告', href: '/platform/documents' },
+  symptom:           { label: '查看症狀紀錄', href: '/platform/symptoms' },
+  long_term_symptom: { label: '查看症狀紀錄', href: '/platform/symptoms' },
 }
 
 const PRIORITY_META = {
@@ -124,7 +138,17 @@ function RecommendationItem({
       {item.evidence_summary && (
         <div className="mt-2 flex items-start gap-1.5 rounded bg-white/60 px-2 py-1.5 text-[11px] text-slate-500">
           <FileText className="h-3 w-3 flex-shrink-0 mt-0.5" />
-          <span>{item.evidence_summary}</span>
+          <span className="flex-1">{item.evidence_summary}</span>
+          {SOURCE_LINK[item.source_type] && (
+            <Link
+              href={SOURCE_LINK[item.source_type].href}
+              data-testid="p89-source-page-link"
+              className="ml-1 flex items-center gap-0.5 shrink-0 text-[11px] text-slate-400 hover:text-blue-600 transition-colors"
+            >
+              <ExternalLink className="h-2.5 w-2.5" />
+              {SOURCE_LINK[item.source_type].label}
+            </Link>
+          )}
         </div>
       )}
 

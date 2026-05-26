@@ -109,8 +109,8 @@ export default function ActionsPage() {
     if (assistantRecs && Array.isArray(assistantRecs.recommendations) && assistantRecs.recommendations.length > 0) {
       return assistantRecs.recommendations.map((r: any, i: number) => ({
         id: r.action_id ? String(r.action_id) : `ha_${i}`,
-        source_type: 'recommendation',
-        source_id: r.action_id ? String(r.action_id) : `ha_rec_${r.rule_id ?? i}`,
+        source_type: r.source_type ?? 'recommendation',
+        source_id: r.source_id ? String(r.source_id) : (r.action_id ? String(r.action_id) : `ha_rec_${r.rule_id ?? i}`),
         title: String(r.title ?? ''),
         description: String(r.why_now ?? ''),
         priority: (r.priority as 'high' | 'medium' | 'low') ?? 'medium',
