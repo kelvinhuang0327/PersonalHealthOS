@@ -497,7 +497,7 @@ export default function ActionsPage() {
           <ActionList actions={grouped.completed.slice(0, 5)} onChangeStatus={updateStatus} />
         </Card>
         {grouped.snoozed.length > 0 && (
-          <Card className="rounded-2xl p-5 xl:col-span-3">
+          <Card data-testid="actions-snoozed-section" className="rounded-2xl p-5 xl:col-span-3">
             <h3 className="mb-2 text-lg font-semibold">稍後提醒</h3>
             <ActionList actions={grouped.snoozed} onChangeStatus={updateStatus} />
           </Card>
@@ -513,7 +513,7 @@ export default function ActionsPage() {
 
       {/* ── 4. Feedback Loop ────────────────────────────────────────────────────────── */}
       {grouped.completed.length > 0 && (
-        <Card className="rounded-2xl p-5">
+        <Card data-testid="actions-feedback-loop" className="rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             <h3 className="text-lg font-semibold">行動效果回饵</h3>
