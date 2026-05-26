@@ -164,6 +164,18 @@ make daily-assistant-contract
 ```
 Runs TypeScript check + P76 contract smoke (5 tests). Local/manual only — not wired into CI.
 
+### When to run `make daily-assistant-contract`
+
+| Trigger | Action |
+|---------|--------|
+| Before editing `daily-assistant-entry.tsx` | Run guard first — confirm baseline is green |
+| After adding / renaming any `data-testid` in that component | Run guard to catch contract drift |
+| After changing signal data conditions (`hasDailySummary`, `topRec`, `isFullyLoading`, etc.) | Run guard + update this contract doc |
+| After modifying fixtures in any P64–P76 spec | Run guard to confirm cross-spec consistency |
+| Full P64–P76 regression | Use `make frontend-e2e-local` (all specs, ~2 min) |
+
+Do **not** run this as a branch-protection gate — it is a developer-facing local sanity check only.
+
 ### Backend smoke
 ```bash
 make runtime-smoke
