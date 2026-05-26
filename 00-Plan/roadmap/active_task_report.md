@@ -1,3 +1,108 @@
+# Active Task Report — P87 Documents Confirmed-Data Re-feed (2026-05-26)
+
+## P87 Documents Confirmed-Data Re-feed (2026-05-26)
+
+**Final Classification: `P87_CONFIRMED_DATA_REFEED_FIXED`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `2a5c265` |
+| Dirty files | governance-only (CEO-Decision.md, CTO-Analysis.md, active_task.md, roadmap.md) |
+
+---
+
+### 2. Baseline Validation (before changes)
+
+| Gate | Result |
+|---|---|
+| `make documents-page-contract` | ✅ 4/4 |
+| `make symptoms-page-contract` | ✅ 4/4 |
+| `make actions-page-contract` (p82) | ✅ 5/5 |
+| p76 daily-assistant-signal | ✅ 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 3. Root Cause Analysis
+
+**Gap: P84 Gap G1 — confirmed_data from confirm not re-fed into document list rows.**
+
+| Layer | Finding |
+|---|---|
+| Backend | `POST /documents/{id}/confirm` stores only `{reviewed: True}` in `confirmed_data`. `PUT /documents/{id}/confirm` stores the full payload including `items`, `extracted_items`, `abnormal_items`. Both return `DocumentResponse` which includes `confirmed_data`. |
+| API client | `confirmDocumentPost` (POST, no body) and `confirmDocument` (PUT, with body) both exist in `lib/api.ts`. |
+| Frontend | `ParsedItemsDrawer.handleConfirm` was calling POST — so `confirmed_data` was always just `{reviewed: True}`, no item counts. |
+| Doc interface | `confirmed_data` field was absent from the `Doc` interface — even though `GET /documents` returns it in `DocumentResponse`. |
+| UI | Document list row showed only filename + 已確認 badge. No item count, no abnormal count. |
+
+**Evidence chain break:** User confirms lab report → drawer closes → list shows 已確認 → user has no idea how many items were confirmed or how many were abnormal without re-opening the drawer.
+
+---
+
+### 4. Changes Made
+
+#### `frontend/app/components/platform/parsed-items-drawer.tsx`
+
+Changed `handleConfirm` from:
+```
+api.confirmDocumentPost(documentId)   // POST, no body → confirmed_data = {reviewed:True}
+```
+to:
+```
+api.confirmDocument(documentId, {
+  confirmed_data: { items, extracted_items, abnormal_items, reviewed_at }
+})  // PUT with body → confirmed_data stored with full item counts
+```
+
+#### `frontend/app/platform/documents/page.tsx`
+
+- Added `confirmed_data?: { extracted_items?: number; abnormal_items?: number } | null` to `Doc` interface
+- Added `data-testid="documents-confirmed-summary"` row in confirmed doc: shows `N 項指標 · M 項異常` when `confirmed_data.extracted_items` is present
+
+#### `frontend/tests/e2e/p87-documents-confirmed-data-refeed.spec.ts` — created
+
+4 mocked contract tests:
+
+| # | Test | Key assertions |
+|---|---|---|
+| 1 | Pre-confirmed doc shows summary | `documents-confirmed-summary` visible, contains `8 項指標 · 3 項異常` |
+| 2 | Confirm action re-feeds confirmed_data | Click 審閱解析結果 → items load → click 確認並分析 → drawer closes → summary appears |
+| 3 | Legacy confirmed doc (no extracted_items) shows no summary | `documents-confirmed-summary` not visible |
+| 4 | Overclaim guard | No prohibited clinical phrases on confirmed doc page |
+
+#### `Makefile`
+
+Added `.PHONY` entry and `documents-confirmed-data-contract` target.
+
+---
+
+### 5. Validation Gates (after changes)
+
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | ✅ clean |
+| `npx next build` | ✅ clean |
+| P87 spec (4 tests) | ✅ 4/4 |
+| P85 documents-page-contract | ✅ 4/4 |
+| P86 symptoms-page-contract | ✅ 4/4 |
+| p82 actions-page-contract | ✅ 5/5 |
+| p76 daily-assistant-signal | ✅ 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 6. Commit
+
+`07b4b38` — `fix(frontend): P87 re-feed confirmed_data into document list row`
+
+---
+
 # Active Task Report — P86 Symptoms Page Contract Smoke (2026-05-26)
 
 ## P86 Symptoms Page Contract Smoke (2026-05-26)
