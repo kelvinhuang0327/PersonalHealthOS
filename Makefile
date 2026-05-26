@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
 
 up:
 	docker compose up -d --build
@@ -88,6 +88,14 @@ frontend-auth-smoke:
 # CI uses npm run e2e:ci (mocked-only subset) instead of this target
 frontend-e2e-local:
 	cd frontend && npm run e2e
+
+# P77 Daily Assistant signal contract guard — local/manual only, not CI-required
+# Runs typescript check + P76 contract smoke (5 tests).
+# Full P64–P76 regression: use frontend-e2e-local
+# See: docs/security/P76_DAILY_ASSISTANT_SIGNAL_CONTRACT.md
+daily-assistant-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p76-daily-assistant-signal-contract.spec.ts --reporter=line
 
 local-db-up:
 	docker compose -f docker-compose.local.yml up -d

@@ -158,6 +158,12 @@ cd frontend && npx playwright test \
 cd frontend && npx tsc --noEmit
 ```
 
+### P77 contract guard (one-command shortcut)
+```bash
+make daily-assistant-contract
+```
+Runs TypeScript check + P76 contract smoke (5 tests). Local/manual only — not wired into CI.
+
 ### Backend smoke
 ```bash
 make runtime-smoke
@@ -191,3 +197,4 @@ make runtime-smoke
 | P74 | `daily-assistant-loading` | CTO Agent |
 | P75 | Deepened empty-state coverage (tests-only) | CTO Agent |
 | P76 | This contract document + `p76-daily-assistant-signal-contract.spec.ts` | CTO Agent |
+| P77 | `make daily-assistant-contract` guard target (Makefile + doc update) | CTO Agent |
