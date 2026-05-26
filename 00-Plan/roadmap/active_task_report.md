@@ -2,6 +2,80 @@
 
 ---
 
+## P91 Daily Assistant Top-Rec Evidence Badge (2026-05-26)
+
+**Final Classification: `P91_DAILY_ASSISTANT_EVIDENCE_BADGE_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `23f9d6e` |
+| Dirty files | governance-only |
+
+---
+
+### 2. Baseline Gates (before)
+
+All 6 gates green. `57 passed` + `56 passed` + `29 passed` (combined Makefile targets).
+
+---
+
+### 3. Changes Made
+
+#### `frontend/app/components/platform/daily-assistant-entry.tsx`
+
+1. **Added lucide-react imports**: `ExternalLink`, `FileText`
+2. **Added `TOPREC_SOURCE_LINK` constant** (module-level, before component):
+   - `lab_report_item` / `lab_abnormality` → `/platform/documents` (查看健檢報告)
+   - `symptom` / `long_term_symptom` → `/platform/symptoms` (查看症狀紀錄)
+3. **Added evidence badge** after `topRec.why_now` paragraph:
+   - `data-testid="daily-toprec-evidence-badge"` wraps `FileText` icon + `參考依據：{topRec.evidence_summary}`
+   - Conditional `data-testid="p91-daily-source-page-link"` only when `TOPREC_SOURCE_LINK[topRec.source_type]` exists
+   - Pattern mirrors P89 `decision-recommendation-layer.tsx`
+
+#### `frontend/tests/e2e/p91-daily-assistant-evidence-badge.spec.ts` (NEW)
+
+4 tests, fully mocked, navigating to `/platform/dashboard`:
+- T1: `lab_report_item` → badge + documents link ✅
+- T2: `symptom` → badge + symptoms link ✅
+- T3: `recommendation` → badge only, no source-page link ✅
+- T4: no `evidence_summary` → no badge, no link ✅
+
+---
+
+### 4. Validation
+
+| Step | Result |
+|---|---|
+| `npx tsc --noEmit` | ✅ Clean |
+| P91 Playwright (4 tests) | ✅ 4/4 passed |
+| All 6 Makefile gates | ✅ All green (no regressions) |
+| `npx next build` | ✅ Clean |
+
+---
+
+### 5. Commit
+
+| Commit | Message |
+|---|---|
+| `9136327` | `feat(frontend): P91 daily assistant top-rec evidence badge` |
+
+---
+
+### 6. Known Limitations
+
+- `TOPREC_SOURCE_LINK` duplicated from `decision-recommendation-layer.tsx` — shared extraction deferred to P92+
+- 3-grid narrative cards (topRisk / biggestChange / todayAction) remain string-only — backend schema extension required for source refs
+- No deep-link to specific document or symptom item — page-level nav only
+- SOURCE_LINK covers 4 types; any new `source_type` silently shows badge without link
+
+---
+
 ## P90 Daily Assistant Evidence Traceability Discovery (2026-05-26)
 
 **Final Classification: `P90_FRONTEND_ONLY_DAILY_TRACEABILITY_READY`**
