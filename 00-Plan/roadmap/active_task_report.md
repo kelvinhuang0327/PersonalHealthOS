@@ -1,3 +1,68 @@
+# Active Task Report — P71 Daily Assistant Encouragement Message (2026-05-26)
+
+## P71 Daily Assistant Encouragement Message (2026-05-26)
+
+**Final Classification: `P71_DAILY_ASSISTANT_ENCOURAGEMENT_READY`**
+
+---
+
+### 1. Scope
+
+Added an encouragement block to the Daily Assistant section that surfaces
+`DailyHealthSummary.encouragement` (optional string from the daily-summary API)
+when present and non-empty. The field was already fetched every render but never
+displayed to the user. P71 closes that gap with a minimal guarded block:
+label "小助手鼓勵" + the trimmed encouragement text.
+
+Guard: `typeof summary?.encouragement === 'string' && summary.encouragement.trim().length > 0`
+Placement: after the P70 confidence signal, before the top-recommendation block.
+Whitespace-only strings are suppressed (`.trim().length > 0`).
+No backend changes. No API schema changes. No new dependencies. No new icon imports.
+
+---
+
+### 2. Files changed
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/daily-assistant-entry.tsx` | Add `<div data-testid="daily-summary-encouragement">` with label + trimmed text, guarded by non-empty string check |
+| `frontend/tests/e2e/p71-daily-assistant-encouragement.spec.ts` | 12 acceptance tests (new file) |
+
+---
+
+### 3. Test results
+
+| Suite | Result |
+|---|---|
+| P71 acceptance (12 tests) | ✅ 12/12 |
+| P70 regression (10 tests) | ✅ 10/10 |
+| P69 regression (7 tests) | ✅ 7/7 |
+| P68 regression (6 tests) | ✅ 6/6 |
+| P67 regression (5 tests) | ✅ 5/5 |
+| P66 regression (5 tests) | ✅ 5/5 |
+| P65 regression (4 tests) | ✅ 4/4 |
+| P64 regression (6 tests) | ✅ 6/6 |
+| Backend smoke (56 tests) | ✅ 56/56 |
+
+---
+
+### 4. Known limitations
+
+- The encouragement text comes verbatim from the AI-generated backend field; the
+  frontend does not validate or sanitize the content beyond trimming whitespace.
+- Empty string and whitespace-only values are correctly suppressed. Null is not
+  produced by the typed API but would also be suppressed by the string guard.
+- The label "小助手鼓勵" is hardcoded; if the backend were to produce encouragement
+  in another language, the label would still be Chinese.
+
+---
+
+### 5. Commit
+
+`b21e25e` — feat(frontend): P71 daily assistant encouragement message
+
+---
+
 # Active Task Report — P70 Daily Assistant Confidence Signal (2026-05-26)
 
 ## P70 Daily Assistant Confidence Signal (2026-05-26)
