@@ -1,4 +1,111 @@
-# Active Task Report — P84 Report/Symptom→Daily Recommendation Lane Discovery (2026-05-26)
+# Active Task Report — P85 Documents Page Contract Smoke (2026-05-26)
+
+## P85 Documents Page Contract Smoke (2026-05-26)
+
+**Final Classification: `P85_DOCUMENTS_PAGE_CONTRACT_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `f59778c` |
+| Dirty files | governance-only (no tracked file changes) |
+
+---
+
+### 2. Baseline Validation (before changes)
+
+| Gate | Result |
+|---|---|
+| `make actions-page-contract` | ✅ 4/4 |
+| `make daily-assistant-contract` | ✅ 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 3. Changes Made
+
+**Gap closed: P84 Gap G4 — `/platform/documents` had zero testids.**
+
+#### `frontend/app/platform/documents/page.tsx` — 4 testids added
+
+| testid | Element | Condition |
+|---|---|---|
+| `documents-page` | root `<div>` | always visible after load |
+| `documents-upload-section` | upload `<Card>` | always visible |
+| `documents-list-section` | list `<Card>` (tab=documents) | visible when tab active |
+| `documents-loading` | Skeleton wrapper `<div>` | `loading === true` only |
+
+No business logic changed. No backend changes.
+
+#### `frontend/tests/e2e/p85-documents-page-contract.spec.ts` — created
+
+4 mocked contract tests:
+
+| # | Test | Assertion |
+|---|---|---|
+| 1 | page renders | `documents-page` visible, no ErrorBoundary, no stale loading |
+| 2 | upload section discoverable | `documents-upload-section` + heading `健檢報告` + `上傳` visible |
+| 3 | list section with documents | `documents-list-section` + filenames + `已確認` badge visible |
+| 4 | API failure safe + overclaim guard | page survives 500, upload still accessible, no prohibited phrases |
+
+Fix applied during spec run: `健檢報告` text assertion scoped to `getByRole('heading')` to resolve strict-mode multi-match (heading + select option both contain the text).
+
+#### `Makefile` — `documents-page-contract` target added
+
+```
+make documents-page-contract   → npx tsc --noEmit + p85 spec (4 tests)
+```
+
+---
+
+### 4. Validation
+
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | ✅ 0 errors |
+| P85 spec (4 tests) | ✅ 4/4 |
+| `make documents-page-contract` | ✅ 4/4 |
+| `npx next build` | ✅ clean build |
+| `make actions-page-contract` | ✅ 4/4 (no regression) |
+| `make daily-assistant-contract` | ✅ 5/5 (no regression) |
+| `make runtime-smoke` | ✅ 56/56 (no regression) |
+
+---
+
+### 5. Commits
+
+| SHA | Message |
+|---|---|
+| `8ba5c56` | feat(frontend): P85 documents page contract smoke |
+
+---
+
+### 6. Gaps NOT addressed in P85
+
+- **Gap G1**: `confirmed_data` from `PUT /confirm` not re-fed into LabReportItem rows → out of scope
+- **Gap G5**: `/platform/symptoms` still has zero testids → P86 scope
+
+---
+
+### 7. CTO Summary
+
+1. P85 closes P84 Gap G4: `/platform/documents` now has 4 stable testids.
+2. Testids: `documents-page` (root), `documents-upload-section` (upload card), `documents-list-section` (doc list card), `documents-loading` (skeleton wrapper).
+3. Contract spec: 4 mocked tests — render safety, upload section discovery, list with documents, API failure + overclaim guard.
+4. No backend changes. No business logic changes. Testid-only surface addition.
+5. `make documents-page-contract` target added (TSC + 4 contract tests).
+6. `next build` required because component file modified — completed cleanly.
+7. All baselines maintained: actions-page-contract 4/4, daily-assistant-contract 5/5, runtime-smoke 56/56.
+8. Gap G1 (confirmed_data re-feed) NOT addressed — out of P85 scope.
+9. Gap G5 (symptoms page zero testids) NOT addressed — P86 scope.
+10. Next lane: P86 symptoms page testid surface + contract smoke (same pattern).
+
+---
 
 ## P84 Report/Symptom→Daily Recommendation Lane Discovery (2026-05-26)
 
