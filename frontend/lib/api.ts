@@ -138,6 +138,7 @@ export type LabAbnormality = {
 export type DailySummaryEvidenceRef = {
   source_type: string
   source_id?: string
+  document_id?: string | null
   summary?: string
 }
 

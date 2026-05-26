@@ -66,6 +66,7 @@ def _make_metric(days_ago=1, weight=70.5, bp_sys=130):
 def _make_lab_report(days_ago=5):
     r = SimpleNamespace()
     r.id = uuid4()
+    r.document_id = uuid4()
     r.created_at = _utc(days_ago)
     r.report_date = _utc(days_ago).date()
     return r
@@ -594,3 +595,71 @@ def test_today_action_empty_recs():
     assert action == "記錄今日健康狀況"
     assert len(why) > 0
     assert ref is None
+
+
+# ---------------------------------------------------------------------------
+# P97 Tests — document_id propagation through ref dicts
+# ---------------------------------------------------------------------------
+
+def test_derive_top_risk_lab_rec_ref_includes_document_id():
+    """High-priority lab rec with document_id propagates to topRisk ref."""
+    doc_id = str(uuid4())
+    recs = [{
+        "title": "HbA1c 偏高",
+        "priority": "high",
+        "source_type": "lab_report_item",
+        "source_id": str(uuid4()),
+        "document_id": doc_id,
+        "evidence_summary": "HbA1c 7.2%（H）",
+    }]
+    narrative, ref = _derive_top_risk([], recs, [], [])
+    assert ref is not None
+    assert ref["source_type"] == "lab_report_item"
+    assert ref["document_id"] == doc_id
+
+
+def test_derive_top_risk_lab_rec_ref_document_id_none_when_absent():
+    """Rec without document_id → ref document_id is None (graceful degradation)."""
+    recs = [{
+        "title": "HbA1c 偏高",
+        "priority": "high",
+        "source_type": "lab_report_item",
+        "source_id": str(uuid4()),
+        "evidence_summary": "HbA1c 7.2%（H）",
+    }]
+    narrative, ref = _derive_top_risk([], recs, [], [])
+    assert ref is not None
+    assert ref.get("document_id") is None
+
+
+def test_derive_today_action_lab_rec_ref_includes_document_id():
+    """Non-tracking lab_abnormality rec with document_id propagates to todayAction ref."""
+    doc_id = str(uuid4())
+    recs = [{
+        "title": "追蹤血糖",
+        "why_now": "血糖偏高",
+        "is_tracking": False,
+        "source_type": "lab_abnormality",
+        "source_id": str(uuid4()),
+        "document_id": doc_id,
+        "evidence_summary": "空腹血糖 106 mg/dL",
+    }]
+    action, why, ref = _derive_today_action_and_why(recs)
+    assert ref is not None
+    assert ref["source_type"] == "lab_abnormality"
+    assert ref["document_id"] == doc_id
+
+
+def test_derive_today_action_lab_rec_ref_document_id_none_graceful():
+    """Tracking lab rec without document_id → ref document_id is None, no crash."""
+    recs = [{
+        "title": "追蹤中行動",
+        "why_now": "已追蹤",
+        "is_tracking": True,
+        "source_type": "lab_report_item",
+        "source_id": str(uuid4()),
+        "evidence_summary": "HbA1c 偏高",
+    }]
+    action, why, ref = _derive_today_action_and_why(recs)
+    assert ref is not None
+    assert ref.get("document_id") is None

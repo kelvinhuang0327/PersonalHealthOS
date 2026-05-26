@@ -302,6 +302,7 @@ def build_evidence_bundle(
                 "source_type": "lab_report_item",
                 "source_id": str(item.id),
                 "report_id": str(report.id),
+                "document_id": str(report.document_id) if report.document_id else None,
                 "recency": _recency_label(
                     datetime(report.report_date.year, report.report_date.month,
                              report.report_date.day, tzinfo=timezone.utc)
@@ -930,6 +931,7 @@ def _build_recommendation_from_candidate(
         "suppression_reason": suppression_reason,
         "source_type": src_type,
         "source_id": src.get("source_id"),
+        "document_id": src.get("document_id"),
     }
 
 
@@ -1256,6 +1258,7 @@ def _derive_top_risk(
                 {
                     "source_type": rec["source_type"],
                     "source_id": str(rec["source_id"]) if rec.get("source_id") else None,
+                    "document_id": rec.get("document_id"),
                     "summary": rec.get("evidence_summary", ""),
                 },
             )
@@ -1278,6 +1281,7 @@ def _derive_top_risk(
                 {
                     "source_type": rec["source_type"],
                     "source_id": str(rec["source_id"]) if rec.get("source_id") else None,
+                    "document_id": rec.get("document_id"),
                     "summary": rec.get("evidence_summary", ""),
                 },
             )
@@ -1383,6 +1387,7 @@ def _derive_today_action_and_why(
                 {
                     "source_type": rec["source_type"],
                     "source_id": str(rec["source_id"]) if rec.get("source_id") else None,
+                    "document_id": rec.get("document_id"),
                     "summary": rec.get("evidence_summary", ""),
                 },
             )
@@ -1396,6 +1401,7 @@ def _derive_today_action_and_why(
                 {
                     "source_type": rec["source_type"],
                     "source_id": str(rec["source_id"]) if rec.get("source_id") else None,
+                    "document_id": rec.get("document_id"),
                     "summary": rec.get("evidence_summary", ""),
                 },
             )

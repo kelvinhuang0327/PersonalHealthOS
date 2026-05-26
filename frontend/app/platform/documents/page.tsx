@@ -1,6 +1,7 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useEffect, useState, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, AlertTriangle, Eye, Loader2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
@@ -22,6 +23,14 @@ interface Doc {
 }
 
 export default function DocumentsPage() {
+  return (
+    <Suspense fallback={null}>
+      <DocumentsPageInner />
+    </Suspense>
+  )
+}
+
+function DocumentsPageInner() {
   const [docs, setDocs] = useState<Doc[]>([])
   const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState('health_check')
@@ -31,12 +40,22 @@ export default function DocumentsPage() {
   const [reviewDoc, setReviewDoc] = useState<Doc | null>(null)
   const [tab, setTab] = useState<'documents' | 'history'>('documents')
 
+  const searchParams = useSearchParams()
+  const deepLinkDocId = searchParams?.get('document_id')
+
   const refresh = () => api.listDocuments().then((d: unknown) => setDocs(d as Doc[])).catch(() => setDocs([])).finally(() => setLoading(false))
 
   useEffect(() => {
     trackEvent('view_documents', { page: '/platform/documents' })
     refresh()
   }, [])
+
+  // P97: auto-open drawer when navigating from evidence deep-link
+  useEffect(() => {
+    if (loading || !deepLinkDocId || docs.length === 0) return
+    const match = docs.find((d) => d.id === deepLinkDocId)
+    if (match) setReviewDoc(match)
+  }, [loading, docs, deepLinkDocId])
 
   const onUpload = async (e: FormEvent) => {
     e.preventDefault()

@@ -28,3 +28,25 @@ export const EVIDENCE_SOURCE_META: Record<string, EvidenceSourceMeta> = {
   outcome:           { label: '健康成效紀錄' },
   recommendation:    { label: '行動建議來源' },
 }
+
+/** P97: compute the evidence navigation href, upgrading to a deep-link when
+ * `document_id` is available for lab-sourced evidence.
+ *
+ * Falls back to the page-level href from EVIDENCE_SOURCE_META when no
+ * document_id is present, and returns undefined when the source type has
+ * no navigation target at all.
+ */
+export function getEvidenceHref(
+  sourceType: string,
+  ref?: { document_id?: string | null },
+): string | undefined {
+  const meta = EVIDENCE_SOURCE_META[sourceType]
+  if (!meta?.href) return undefined
+  if (
+    (sourceType === 'lab_report_item' || sourceType === 'lab_abnormality') &&
+    ref?.document_id
+  ) {
+    return `/platform/documents?document_id=${ref.document_id}`
+  }
+  return meta.href
+}

@@ -129,6 +129,7 @@ export default function ActionsPage() {
         trust: r.trust ?? undefined,
         evidence_summary: r.evidence_summary ?? undefined,
         data_insufficiency_reason: r.data_insufficiency_reason ?? undefined,
+        document_id: r.document_id ?? undefined,
       }))
     }
     // Fallback: derive from dashboard data

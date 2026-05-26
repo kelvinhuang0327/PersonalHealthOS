@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract documents-evidence-deeplink-contract
 
 up:
 	docker compose up -d --build
@@ -104,6 +104,14 @@ daily-assistant-contract:
 daily-summary-evidence-contract:
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx playwright test tests/e2e/p94-daily-summary-3grid-evidence-refs.spec.ts --reporter=line
+
+# P97 Documents evidence deep link contract — local/manual only, not CI-required
+# Runs TypeScript check + P97 evidence deep-link smoke (4 tests).
+# Run after touching document_id propagation, evidence badge hrefs,
+# documents page useSearchParams, or getEvidenceHref logic.
+documents-evidence-deeplink-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p97-documents-evidence-deep-link.spec.ts --reporter=line
 
 # P83 Actions page contract guard — local/manual only, not CI-required
 # Runs typescript check + P82 actions page contract smoke (4 tests).

@@ -43,7 +43,7 @@ import { Skeleton } from '../ui/skeleton'
 import { RecommendationTrustBlock } from './recommendation-trust-block'
 import { api, type DailyHealthSummary, type OutcomeFeedback } from '../../../lib/api'
 import type { HealthAssistantData } from './health-assistant-panel'
-import { EVIDENCE_SOURCE_META } from '../../../lib/evidence-source-meta'
+import { EVIDENCE_SOURCE_META, getEvidenceHref } from '../../../lib/evidence-source-meta'
 
 
 // ── Missing data action links ─────────────────────────────────────────────────
@@ -228,7 +228,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                     </span>
                     {EVIDENCE_SOURCE_META[summary.topRiskRef.source_type]?.href && (
                       <Link
-                        href={EVIDENCE_SOURCE_META[summary.topRiskRef.source_type]!.href!}
+                        href={getEvidenceHref(summary.topRiskRef.source_type, summary.topRiskRef)!}
                         data-testid="p94-top-risk-ref-link"
                         className="shrink-0 text-slate-400 hover:text-blue-600"
                       >
@@ -269,7 +269,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                     </span>
                     {EVIDENCE_SOURCE_META[summary.biggestChangeRef.source_type]?.href && (
                       <Link
-                        href={EVIDENCE_SOURCE_META[summary.biggestChangeRef.source_type]!.href!}
+                        href={getEvidenceHref(summary.biggestChangeRef.source_type, summary.biggestChangeRef)!}
                         data-testid="p94-biggest-change-ref-link"
                         className="shrink-0 text-slate-400 hover:text-blue-600"
                       >
@@ -310,7 +310,7 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                     </span>
                     {EVIDENCE_SOURCE_META[summary.todayActionRef.source_type]?.href && (
                       <Link
-                        href={EVIDENCE_SOURCE_META[summary.todayActionRef.source_type]!.href!}
+                        href={getEvidenceHref(summary.todayActionRef.source_type, summary.todayActionRef)!}
                         data-testid="p94-today-action-ref-link"
                         className="shrink-0 text-slate-400 hover:text-blue-600"
                       >

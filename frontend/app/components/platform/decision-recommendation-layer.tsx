@@ -16,7 +16,7 @@ import { useState } from 'react'
 import { Activity, AlertCircle, ArrowRight, BookOpen, Brain, CheckCircle2, Clock3, ExternalLink, FileText, Plus, Shield, Sparkles, TriangleAlert } from 'lucide-react'
 import type { UnifiedDecisionItem } from '../../../lib/decision-support'
 import type { HealthAction } from '../../../lib/actions'
-import { EVIDENCE_SOURCE_META } from '../../../lib/evidence-source-meta'
+import { EVIDENCE_SOURCE_META, getEvidenceHref } from '../../../lib/evidence-source-meta'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card } from '../ui/card'
@@ -135,7 +135,7 @@ function RecommendationItem({
           <span className="flex-1">{item.evidence_summary}</span>
           {EVIDENCE_SOURCE_META[item.source_type]?.href && (
             <Link
-              href={EVIDENCE_SOURCE_META[item.source_type]!.href!}
+              href={getEvidenceHref(item.source_type, item)!}
               data-testid="p89-source-page-link"
               className="ml-1 flex items-center gap-0.5 shrink-0 text-[11px] text-slate-400 hover:text-blue-600 transition-colors"
             >

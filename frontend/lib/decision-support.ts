@@ -34,6 +34,8 @@ export type UnifiedDecisionItem = {
   evidence_summary?: string
   /** P51/P52: explains why confidence is limited and how to improve (C-level / fallback recs). */
   data_insufficiency_reason?: string
+  /** P97: MedicalDocument.id — present for lab_report_item / lab_abnormality sources. */
+  document_id?: string | null
 }
 
 /** Map a backend UnifiedDecisionItem → frontend ScoredDecisionItem. */

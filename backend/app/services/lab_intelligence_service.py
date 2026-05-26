@@ -360,6 +360,7 @@ def detect_lab_abnormalities(
             "currentValue": current_value,
             "referenceRange": ref_range_str or None,
             "reportId": most_recent.get("report_id"),
+            "document_id": most_recent.get("document_id"),
             "detectedAt": most_recent.get("report_date"),
             "whyDetected": why_detected,
             "suggestedAction": suggested_action,
