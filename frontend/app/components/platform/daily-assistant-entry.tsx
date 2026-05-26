@@ -211,6 +211,14 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                 <p className="text-xs text-slate-700 leading-relaxed line-clamp-3">
                   {summary?.todayAction || topRec?.next_action || '先從建議清單選一項開始'}
                 </p>
+                {summary?.todayAction && (
+                  <p
+                    data-testid="daily-summary-action-impact"
+                    className="mt-1.5 text-[11px] text-slate-500 leading-relaxed italic border-t border-slate-50 pt-1.5 line-clamp-2"
+                  >
+                    完成後，小助手可以把今日行動與後續結果連起來追蹤。
+                  </p>
+                )}
               </div>
             </div>
           ) : (
