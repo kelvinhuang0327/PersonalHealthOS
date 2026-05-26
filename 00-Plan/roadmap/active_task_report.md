@@ -1,4 +1,96 @@
-# Active Task Report — P75 Daily Assistant Empty State Testability (2026-05-26)
+# Active Task Report — P76 Daily Assistant Signal Contract (2026-05-26)
+
+## P76 Daily Assistant Signal Contract Consolidation (2026-05-26)
+
+**Final Classification: `P76_DAILY_ASSISTANT_SIGNAL_CONTRACT_READY`**
+
+---
+
+### 1. Scope
+
+After P64–P75, the Daily Assistant exposes 11 stable test ids. P76 consolidates
+them into one frontend signal contract document and one contract smoke test.
+No component changes. No backend changes.
+
+---
+
+### 2. Changes
+
+| File | Type |
+|---|---|
+| `docs/security/P76_DAILY_ASSISTANT_SIGNAL_CONTRACT.md` | New contract doc |
+| `frontend/tests/e2e/p76-daily-assistant-signal-contract.spec.ts` | New contract test |
+
+---
+
+### 3. Contract Test (`p76-daily-assistant-signal-contract.spec.ts`) — 5 tests
+
+| # | Test | Result |
+|---|------|--------|
+| 1 | Full signal happy path: all optional signals visible with fully-populated data | ✅ |
+| 2 | Loading state contract: `daily-assistant-loading` visible while API pending | ✅ |
+| 3 | Empty state contract: `daily-summary-empty` visible when no summary + no topRec | ✅ |
+| 4 | Negative contract: all optional signals absent when source fields absent/zero/none | ✅ |
+| 5 | ErrorBoundary contract: dashboard renders without error fallback | ✅ |
+
+---
+
+### 4. Contract Document
+
+Path: `docs/security/P76_DAILY_ASSISTANT_SIGNAL_CONTRACT.md`
+
+Covers:
+- Full test id table with data conditions, phase, required/optional status
+- 3 state model (loading / empty / loaded)
+- 6 invariant groups (state exclusivity, empty-state guard, optional signal guards,
+  escalation source, medical framing, naming conventions)
+- Validation commands
+- Known limitations
+
+---
+
+### 5. Test Gate Results
+
+| Gate | Result |
+|------|--------|
+| `npx tsc --noEmit` | ✅ 0 errors |
+| `npx next build` | ✅ clean |
+| P76 acceptance (5 tests) | ✅ 5/5 |
+| P64–P76 regression (110 tests) | ✅ 110/110 |
+| `make runtime-smoke` (56 Python tests) | ✅ 56/56 |
+
+---
+
+### 6. Commits
+
+| Commit | Message |
+|--------|---------|
+| `539ecec` | test(frontend): P76 daily assistant signal contract |
+| `75e2a6a` | docs(security): P76 daily assistant signal contract |
+
+---
+
+### 7. data-testid inventory (cumulative P64–P76)
+
+| testid | Phase | Required / Optional | Data condition |
+|--------|-------|---------------------|---------------|
+| `daily-assistant-entry` | baseline | required | always |
+| `daily-assistant-loading` | P74 | required during load | `isFullyLoading` |
+| `daily-summary-empty` | baseline | required when no data | `!hasDailySummary && !topRec` |
+| `daily-summary-why-now` | P65 | optional | `summary.whyNow` truthy |
+| `daily-summary-missing-data` | P66 | optional | `missingItems.length > 0` |
+| `daily-summary-missing-data-explanation` | P66 | optional | `missingItems.length > 0` |
+| `daily-summary-action-impact` | P67 | optional | `summary.todayAction` truthy |
+| `daily-summary-outcome-improved-badge` | P68 | optional | `hasFeedback && improved_count > 0` |
+| `daily-summary-biggest-change-context` | P69 | optional | `summary.biggestChange` truthy |
+| `daily-summary-confidence-signal` | P70 | optional | `confidence > 0` |
+| `daily-summary-encouragement` | P71 | optional | `encouragement` non-empty |
+| `daily-summary-escalation-notice` | P72 | optional | `escalationLevel !== 'none'` |
+| `daily-summary-next-checkin` | P73 | optional* | `trust.nextCheckInSuggestion \|\| summary` |
+
+---
+
+## P75 Daily Assistant Empty State Testability (2026-05-26)
 
 ## P75 Daily Assistant Empty State Testability / Copy Consistency (2026-05-26)
 
