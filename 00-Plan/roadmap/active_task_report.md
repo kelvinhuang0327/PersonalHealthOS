@@ -2,9 +2,84 @@
 
 ---
 
-## P93 DailyHealthSummary Structured Evidence Refs Discovery (2026-05-26)
+## P94 DailyHealthSummary Per-Card Evidence Refs (2025-07-14)
 
-**Final Classification: `P93_BACKEND_SCHEMA_GAP_CONFIRMED`**
+**Final Classification: `P94_3GRID_EVIDENCE_REFS_DONE`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `cec22df` (P93) |
+| HEAD at commit | `81a5228` |
+| Dirty files | governance-only |
+
+---
+
+### 2. Baseline Gates (before + after)
+
+| Gate | Before | After |
+|---|---|---|
+| daily-assistant-contract | 4 passed | 4 passed |
+| actions-page-contract | 3 passed | 3 passed |
+| documents-confirmed-data-contract | 41 passed, 2 skip | 41 passed, 2 skip |
+| documents-page-contract | 29 passed | 29 passed |
+| symptoms-page-contract | 57 passed | 57 passed |
+| runtime-smoke | 56 passed | 56 passed |
+
+---
+
+### 3. Changes Implemented
+
+**Backend** (`health_assistant_service.py`):
+- `_derive_top_risk` → now returns `tuple[str, dict | None]` with per-branch ref construction
+- `_derive_biggest_change` → now returns `tuple[str, dict | None]` with per-branch ref construction
+- `_derive_today_action_and_why` → now returns `tuple[str, str, dict | None]` with per-branch ref construction
+- `generate_daily_health_summary` → unpacks tuples, conditionally adds `topRiskRef`, `biggestChangeRef`, `todayActionRef` to response dict
+
+**Backend tests** (`test_daily_summary_service.py`):
+- 17 `_derive_*` unit tests updated to unpack tuples and assert ref type/None
+
+**Frontend** (`frontend/lib/api.ts`):
+- Added `DailySummaryEvidenceRef` type
+- Added 3 optional ref fields to `DailyHealthSummary`
+
+**Frontend** (`frontend/lib/evidence-source-meta.ts`):
+- Added `health_metric`, `outcome`, `recommendation` label-only entries
+
+**Frontend** (`frontend/app/components/platform/daily-assistant-entry.tsx`):
+- Added mini-badge to `daily-summary-top-risk` card
+- Added mini-badge to `daily-summary-biggest-change` card
+- Added mini-badge to `daily-summary-next-action` card
+
+**Frontend tests** (`tests/e2e/p94-daily-summary-3grid-evidence-refs.spec.ts`):
+- 4 new tests (T1–T4): badge visibility, link presence/absence by source_type
+
+---
+
+### 4. Test Results
+
+| Suite | Result |
+|---|---|
+| `pytest test_daily_summary_service.py` | 31 passed |
+| `npx tsc --noEmit` | clean |
+| `npx next build` | clean |
+| `playwright p94 + p76` | 9 passed |
+
+---
+
+### 5. Design Notes
+
+- **Non-breaking**: all 3 new fields are optional; P76 mock unaffected
+- **health_metric trend**: `source_id: None` (trend spans multiple records, no single UUID)
+- **No href** for `risk_alert`, `health_metric`, `outcome` — `ExternalLink` only renders when `href` present in `EVIDENCE_SOURCE_META`
+- **No changes** to trust-type-guards, P76 spec, API endpoints, or LLM prompts
+
+---
 
 ---
 
