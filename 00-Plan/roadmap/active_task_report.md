@@ -2,6 +2,83 @@
 
 ---
 
+## P102 — Lab Trend Visualization Discovery (2026-05-26)
+
+**Final Classification: `P102_FRONTEND_ONLY_TREND_FEASIBLE`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `38f7696` (P101) |
+| Dirty files | governance-only (3 files) |
+
+---
+
+### 2. Baseline Gates (all 9 green before and after docs work)
+
+| Gate | Before | After |
+|---|---|---|
+| report-symptom-recommendation-contract | 5 passed | 5 passed |
+| documents-evidence-deeplink-contract | 4 passed | 4 passed |
+| daily-summary-evidence-contract | 4 passed | 4 passed |
+| daily-assistant-contract | 5 passed | 5 passed |
+| actions-page-contract | 4 passed | 4 passed |
+| documents-confirmed-data-contract | 4 passed | 4 passed |
+| documents-page-contract | 4 passed | 4 passed |
+| symptoms-page-contract | 4 passed | 4 passed |
+| runtime-smoke | 56 passed | 56 passed |
+
+---
+
+### 3. Key Discovery Findings
+
+**Trend data is available today — feature partially implemented:**
+- `/documents/lab-history` endpoint exists in `backend/app/api/documents.py`
+- `LabComparisonTable` component fully built at `frontend/app/components/platform/lab-comparison-table.tsx`
+- "歷史比較" tab integrated in `frontend/app/platform/documents/page.tsx`
+- `api.getLabHistory()` implemented at `frontend/lib/api.ts:405`
+
+**Critical gap:** `report_date` is set to `date.today()` at parse time (not extracted from document). Multi-report chronology is upload-order, not health-check-order.
+
+**Trust gap:** "已改善/未改善" filter labels assume ↓ = better — incorrect for HDL, Hemoglobin.
+
+**No contract guard exists** for the "歷史比較" tab or `LabComparisonTable`.
+
+---
+
+### 4. Changes in This Task
+
+| File | Action |
+|---|---|
+| `docs/product/p102-lab-trend-visualization-discovery.md` | Created |
+| `00-Plan/roadmap/active_task_report.md` | Updated |
+
+---
+
+### 5. Recommended P103 Lane
+
+**P103 = Lab Trend Contract + Direction Framing Fix**
+1. Fix "已改善/未改善" → "數值下降/數值上升" in `LabComparisonTable`
+2. Add optional `report_date` capture in `ParsedItemsDrawer` confirm flow + backend field write
+3. Write `p103-lab-trend-comparison-contract.spec.ts` (4 tests)
+4. Add `lab-trend-comparison-contract` Makefile target
+5. Update guard index
+
+---
+
+### 6. Known Limitations
+
+- `report_date` accuracy requires user input; cannot be extracted from PDF reliably in v1
+- Unit normalization across reports (mg/dL vs mmol/L) deferred beyond P103
+- ALIAS_MAP coverage is manual; unrecognized item names pass through unnormalized
+
+---
+
 ## P101 Report + Symptom → Recommendation Integration Contract (2026-05-26)
 
 **Final Classification: `P101_REPORT_SYMPTOM_RECOMMENDATION_CONTRACT_READY`**
