@@ -2,6 +2,101 @@
 
 ---
 
+## P93 DailyHealthSummary Structured Evidence Refs Discovery (2026-05-26)
+
+**Final Classification: `P93_BACKEND_SCHEMA_GAP_CONFIRMED`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `587e452` |
+| Dirty files | governance-only |
+
+---
+
+### 2. Baseline Gates (before + after)
+
+All 6 gates green both runs. No failures. No code changes in P93.
+
+---
+
+### 3. Key Findings
+
+#### Backend generation path confirmed (service lines 1143–1386)
+
+| Card | Winning source | source_type | source_id available? | Navigation? |
+|---|---|---|---|---|
+| `topRisk` | `risk_alerts[max severity]` | `risk_alert` | ✅ UUID | ❌ No page |
+| `topRisk` (alt) | `recommendations[0]` | lab/symptom/etc | ✅ UUID | ✅ EVIDENCE_SOURCE_META |
+| `topRisk` (alt) | `device_escalation` | — | ❌ None | ❌ Signal only |
+| `biggestChange` | `outcomes[max delta]` | `outcome` | ✅ UUID | ❌ No page |
+| `biggestChange` (alt) | `health_metrics` trend | `health_metric` | ⚠️ No single UUID | ❌ No page |
+| `todayAction` + `whyNow` | `recommendations[0]` | lab/symptom/etc | ✅ UUID | ✅ EVIDENCE_SOURCE_META |
+
+#### Schema gap confirmed
+
+- `generate_daily_health_summary` returns 7 narrative strings, zero source refs
+- All three `_derive_*` helpers discard source identity at their return boundary
+- No hidden source fields exist in the current API response
+- Adding optional `topRiskRef?`, `biggestChangeRef?`, `todayActionRef?` is **non-breaking** for all existing tests
+
+---
+
+### 4. Recommended Evidence Ref Shape (for P94)
+
+```typescript
+export type DailySummaryEvidenceRef = {
+  source_type: string
+  source_id?: string    // absent for escalation / trend / fallback
+  summary?: string
+}
+
+// DailyHealthSummary gains (all optional):
+topRiskRef?:       DailySummaryEvidenceRef
+biggestChangeRef?: DailySummaryEvidenceRef
+todayActionRef?:   DailySummaryEvidenceRef
+```
+
+EVIDENCE_SOURCE_META additions (P94): `health_metric`, `outcome`, `recommendation` — label-only, no `href` (no pages exist).
+
+---
+
+### 5. P94 Implementation Plan Summary
+
+| Phase | Files | LOC |
+|---|---|---|
+| A — Backend helpers return tuples | `health_assistant_service.py` | ~45 |
+| B — Backend tests unpack tuples | `test_daily_summary_service.py` | ~20 |
+| C — Frontend type | `api.ts`, `trust-type-guards.ts` | ~10 |
+| D — Frontend UI badges | `daily-assistant-entry.tsx`, `evidence-source-meta.ts` | ~30 |
+| E — New Playwright spec | `p94-daily-summary-3grid-evidence-refs.spec.ts` | ~30 |
+
+---
+
+### 6. Validation
+
+| Step | Result |
+|---|---|
+| All 6 Makefile gates (before) | ✅ All green |
+| All 6 Makefile gates (after) | ✅ All green |
+| Code changes in P93 | None |
+
+---
+
+### 7. Commit
+
+| Commit | Message |
+|---|---|
+| (code) | None — discovery only |
+| `<this report>` | `docs(product): P93 daily summary structured evidence refs discovery` |
+
+---
+
 ## P92 Shared Evidence Source Metadata Refactor (2026-05-26)
 
 **Final Classification: `P92_EVIDENCE_SOURCE_META_REFACTOR_DONE`**
