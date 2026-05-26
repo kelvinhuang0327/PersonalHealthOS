@@ -1,3 +1,80 @@
+# Active Task Report — P73 Daily Assistant Next Check-in Suggestion (2026-05-26)
+
+## P73 Daily Assistant Next Check-in Suggestion (2026-05-26)
+
+**Final Classification: `P73_DAILY_ASSISTANT_NEXT_CHECKIN_READY`**
+
+---
+
+### 1. Scope
+
+The daily-assistant card had a bare next check-in block that rendered
+`trust.nextCheckInSuggestion` only when a top recommendation with a trust
+block was present (i.e., `trust?.nextCheckInSuggestion` truthy). In all
+test fixtures and real low-data scenarios where `recommendations: []`, this
+block was never visible — the user received no check-in guidance.
+
+P73 chose **Option B** (dynamic API field exists) plus a graceful fallback:
+- When `trust.nextCheckInSuggestion` is present: show it (existing behavior, now with `data-testid`)
+- When `trust` is null but `summary` is loaded + `todayAction` non-empty: show `完成今日行動後，回來更新記錄。`
+- When `trust` is null + `todayAction` empty/absent: show `今日資料已更新，明天繼續追蹤。`
+
+Guard: `(trust?.nextCheckInSuggestion || summary)` — element always visible
+when the daily summary is loaded.
+
+`data-testid="daily-summary-next-checkin"` added for acceptance coverage.
+
+No backend changes. No API schema changes. No new dependencies.
+
+---
+
+### 2. Files changed
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/daily-assistant-entry.tsx` | Replace bare next check-in block with guarded conditional + data-testid |
+| `frontend/tests/e2e/p73-daily-assistant-next-checkin.spec.ts` | 12 acceptance tests (new file) |
+
+---
+
+### 3. Test results
+
+| Suite | Result |
+|---|---|
+| P73 acceptance (12 tests) | ✅ 12/12 |
+| P72 regression (16 tests) | ✅ 16/16 |
+| P71 regression (12 tests) | ✅ 12/12 |
+| P70 regression (10 tests) | ✅ 10/10 |
+| P69 regression (7 tests) | ✅ 7/7 |
+| P68 regression (6 tests) | ✅ 6/6 |
+| P67 regression (5 tests) | ✅ 5/5 |
+| P66 regression (5 tests) | ✅ 5/5 |
+| P65 regression (4 tests) | ✅ 4/4 |
+| P64 regression (6 tests) | ✅ 6/6 |
+| Backend smoke (56 tests) | ✅ 56/56 |
+
+---
+
+### 4. Known limitations
+
+- The `todayAction` guard uses truthiness: an empty string (`''`) is treated
+  as absent. If the backend sends a whitespace-only `todayAction`, the fallback
+  "明天繼續追蹤" will render. This is the same pattern used by P71 encouragement
+  (`.trim().length > 0`) but P73 does not call `.trim()` — consistent with the
+  minimal-change policy; could be hardened in a future pass.
+- `trust.nextCheckInSuggestion` is always shown as-is (no trim). If the backend
+  returns an empty string, the logic falls through to the `summary?.todayAction`
+  check. This is correct behavior since an empty string is falsy in JS.
+- The fallback copy is static Chinese and will not localise if i18n is added.
+
+---
+
+### 5. Commit
+
+`8fc97a3` — feat(frontend): P73 daily assistant next check-in suggestion
+
+---
+
 # Active Task Report — P72 Daily Assistant Escalation Notice (2026-05-26)
 
 ## P72 Daily Assistant Escalation Notice (2026-05-26)
