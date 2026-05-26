@@ -1,4 +1,102 @@
-# Active Task Report — P74 Daily Assistant Loading State Testability (2026-05-26)
+# Active Task Report — P75 Daily Assistant Empty State Testability (2026-05-26)
+
+## P75 Daily Assistant Empty State Testability / Copy Consistency (2026-05-26)
+
+**Final Classification: `P75_DAILY_ASSISTANT_EMPTY_STATE_COVERAGE_READY`**
+
+---
+
+### 1. Scope
+
+The empty state branch in `DailyAssistantEntry` already had
+`data-testid="daily-summary-empty"` (introduced pre-P65). P74 covered two basic
+scenarios. P75 deepens empty state coverage and verifies copy consistency.
+
+**Decision: Option A (tests-only).** No component change was needed.
+The existing `daily-summary-empty` testid is stable; P74 tests depend on it.
+The naming difference (`daily-summary-empty` vs `daily-assistant-loading`) is
+cosmetic — `daily-summary-` is the intra-card namespace, `daily-assistant-` is
+the card-level namespace. Alias wrapper would add complexity without benefit.
+
+No component changes. No backend changes. No new dependencies.
+
+---
+
+### 2. Change
+
+None to production code. One test file added:
+`frontend/tests/e2e/p75-daily-assistant-empty-state.spec.ts`
+
+---
+
+### 3. Test Coverage (`p75-daily-assistant-empty-state.spec.ts`) — 11 tests
+
+| # | Test | Result |
+|---|------|--------|
+| 1 | Empty state visible: all summary fields empty strings + no recommendations | ✅ |
+| 2 | Empty state visible: daily-summary returns empty object + no recommendations | ✅ |
+| 3 | Empty state NOT visible when summary.topRisk is populated | ✅ |
+| 4 | Empty state NOT visible when topRec present even if summary empty (grid fallback) | ✅ |
+| 5 | Empty state heading copy is non-diagnostic ("今日摘要尚未生成") | ✅ |
+| 6 | CTA link points to /quick-check-in | ✅ |
+| 7 | Empty state NOT visible while loading (loading phase shown instead) | ✅ |
+| 8 | Loading → empty state transition: loading appears then resolves to empty state | ✅ |
+| 9 | P74 regression: daily-assistant-loading visible while API pending | ✅ |
+| 10 | P73 regression: next-checkin visible in normal loaded state | ✅ |
+| 11 | Dashboard renders without ErrorBoundary fallback | ✅ |
+
+**Key techniques:**
+- Promise-based route freeze for loading/empty transition tests (same as P74)
+- Fixture `DAILY_SUMMARY_NULL_BODY = {}` exercises undefined-field path
+- `RECOMMENDATIONS_WITH_ONE` verifies the `hasDailySummary || topRec` guard
+
+---
+
+### 4. Test Gate Results
+
+| Gate | Result |
+|------|--------|
+| `npx tsc --noEmit` | ✅ 0 errors |
+| `next build` (no rebuild — tests-only) | ✅ P74 build valid |
+| P75 acceptance (11 tests) | ✅ 11/11 |
+| P64–P75 regression (105 tests) | ✅ 105/105 |
+| `make runtime-smoke` (56 Python tests) | ✅ 56/56 |
+
+---
+
+### 5. Commits
+
+| Commit | Message |
+|--------|---------|
+| `c2c4a1a` | test(frontend): P75 daily assistant empty state coverage |
+
+---
+
+### 6. data-testid inventory (cumulative P64–P75)
+
+| testid | Phase | Component | Notes |
+|--------|-------|-----------|-------|
+| `daily-assistant-entry` | baseline | card root | |
+| `daily-summary-top-risk` | baseline | 3-card grid | |
+| `daily-summary-biggest-change` | baseline | 3-card grid | |
+| `daily-summary-next-action` | baseline | 3-card grid | |
+| `daily-summary-outcome-section` | baseline | outcome section | |
+| `daily-summary-empty` | baseline | empty branch | P75 deepened coverage |
+| `daily-summary-why-now` | P65 | top-risk card | |
+| `daily-summary-missing-data` | P66 | missing data list | |
+| `daily-summary-missing-data-explanation` | P66 | missing data copy | |
+| `daily-summary-action-impact` | P67 | todayAction card | |
+| `daily-summary-outcome-improved-badge` | P68 | outcome row | |
+| `daily-summary-biggest-change-context` | P69 | biggestChange card | |
+| `daily-summary-confidence-signal` | P70 | confidence pill | |
+| `daily-summary-encouragement` | P71 | encouragement block | |
+| `daily-summary-escalation-notice` | P72 | amber escalation block | |
+| `daily-summary-next-checkin` | P73 | next check-in line | |
+| `daily-assistant-loading` | P74 | loading skeleton | |
+
+---
+
+## P74 Daily Assistant Loading State Testability (2026-05-26)
 
 ## P74 Daily Assistant Loading State Testability (2026-05-26)
 
