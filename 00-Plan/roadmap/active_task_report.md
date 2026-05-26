@@ -1,4 +1,87 @@
-# Active Task Report — P77 Daily Assistant Contract Guard (2026-05-26)
+# Active Task Report — P78 Daily Assistant Contract Guard Discoverability (2026-05-26)
+
+## P78 Daily Assistant Contract Guard Adoption / Discoverability (2026-05-26)
+
+**Final Classification: `P78_DAILY_ASSISTANT_CONTRACT_DISCOVERABILITY_READY`**
+
+---
+
+### 1. Scope
+
+After P77 added `make daily-assistant-contract`, P78 makes it discoverable:
+when to run it and what it protects, co-located with the contract document.
+
+No component changes. No backend changes. No Makefile behavior changes.
+No new files created.
+
+---
+
+### 2. Pre-flight / P77 Postcheck
+
+| Check | Result |
+|-------|--------|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| P77 commits (`f0fd117`, `abebd9d`) | present ✅ |
+| Dirty files | governance-only ✅ |
+| `make daily-assistant-contract` | ✅ TSC + 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 3. Convention Inspection & Option Decision
+
+| Path | Finding |
+|------|---------|
+| `README.md` | Globally gitignored — cannot stage. Option A excluded. |
+| `Makefile` `daily-assistant-contract` comments | Already 4-line block. No further comment needed. |
+| `docs/security/P76_DAILY_ASSISTANT_SIGNAL_CONTRACT.md` §6 | Had command but no "When to run" guidance |
+
+**Chosen: Option B — contract doc only.**
+Added a "When to run" table to §6 Validation Commands of the P76 contract doc.
+This is where future CTO agents working on Daily Assistant signals will naturally look.
+
+---
+
+### 4. Changes
+
+| File | Change |
+|------|--------|
+| `docs/security/P76_DAILY_ASSISTANT_SIGNAL_CONTRACT.md` | Added "When to run `make daily-assistant-contract`" table to §6 |
+
+**"When to run" table covers:**
+- Before editing `daily-assistant-entry.tsx`
+- After adding / renaming any `data-testid` in that component
+- After changing signal data conditions
+- After modifying fixtures in P64–P76 specs
+- Full regression → `make frontend-e2e-local`
+- Explicit "do not use as branch-protection gate" note
+
+---
+
+### 5. Validation
+
+| Gate | Result |
+|------|--------|
+| `make daily-assistant-contract` (TSC + 5 contract tests) | ✅ 5/5 |
+| `make runtime-smoke` (56 Python tests) | ✅ 56/56 |
+
+---
+
+### 6. Known Limitations
+
+- README.md is in `~/.gitignore_global` and cannot be staged. A pointer there was attempted and reverted cleanly.
+- Discoverability for workers who never open the contract doc remains low. Mitigation: future Makefile help output or CONTRIBUTING.md could link to it if warranted.
+
+---
+
+### 7. Commits
+
+| Commit | Message |
+|--------|---------|
+| `59befbb` | docs(security): P78 daily assistant contract guard discoverability |
+
+---
 
 ## P77 Daily Assistant Contract Drift Guard (2026-05-26)
 
