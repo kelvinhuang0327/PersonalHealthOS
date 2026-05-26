@@ -1,3 +1,105 @@
+# Active Task Report — P74 Daily Assistant Loading State Testability (2026-05-26)
+
+## P74 Daily Assistant Loading State Testability (2026-05-26)
+
+**Final Classification: `P74_DAILY_ASSISTANT_LOADING_STATE_READY`**
+
+---
+
+### 1. Scope
+
+The loading skeleton in `DailyAssistantEntry` (`isFullyLoading` branch) had no
+`data-testid`, making it untestable in Playwright without brittle element
+selectors. The empty state already had `data-testid="daily-summary-empty"` from
+an earlier phase. Primary target: add `data-testid="daily-assistant-loading"` to
+the skeleton container div.
+
+No backend changes. No API schema changes. No new dependencies. No logic changes.
+
+---
+
+### 2. Change
+
+**Component** (`daily-assistant-entry.tsx`):
+```tsx
+// Before
+<div className="space-y-3">
+
+// After (P74)
+<div data-testid="daily-assistant-loading" className="space-y-3">
+```
+
+One attribute added to one element in the `isFullyLoading` branch.
+
+---
+
+### 3. Test Coverage (`p74-daily-assistant-loading-state.spec.ts`) — 11 tests
+
+| # | Test | Result |
+|---|------|--------|
+| 1 | Loading skeleton visible (testid) while daily-summary pending | ✅ |
+| 2 | Loading skeleton is child of daily-assistant-entry | ✅ |
+| 3 | After loading resolves: daily-summary-next-checkin visible (P73 regression) | ✅ |
+| 4 | Empty state (daily-summary-empty) visible when APIs return no content | ✅ |
+| 5 | Empty state not visible in normal loaded state | ✅ |
+| 6 | P73 regression: trust.nextCheckInSuggestion shown | ✅ |
+| 7 | P72 regression: escalation notice visible | ✅ |
+| 8 | P71 regression: encouragement visible | ✅ |
+| 9 | P70 regression: confidence signal visible | ✅ |
+| 10 | P69 regression: biggest-change context visible | ✅ |
+| 11 | Dashboard renders without ErrorBoundary fallback | ✅ |
+
+**Key technique**: frozen daily-summary route using `Promise` in Playwright route
+handler — holds `sumLoading=true`, keeping `isFullyLoading=true` until explicitly
+unblocked, ensuring loading state is assertable without timing hacks.
+
+---
+
+### 4. Test Gate Results
+
+| Gate | Result |
+|------|--------|
+| `npx tsc --noEmit` | ✅ 0 errors |
+| `npx next build` | ✅ clean |
+| P74 acceptance (11 tests) | ✅ 11/11 |
+| P64–P73 regression (83 tests) | ✅ 83/83 |
+| Full P64–P74 regression (94 tests) | ✅ 94/94 |
+| `make runtime-smoke` (56 Python tests) | ✅ 56/56 |
+
+---
+
+### 5. Commits
+
+| Commit | Message |
+|--------|---------|
+| `952cfb2` | feat(frontend): P74 daily assistant loading state testid |
+
+---
+
+### 6. data-testid inventory (cumulative P64–P74)
+
+| testid | Phase | Component | Notes |
+|--------|-------|-----------|-------|
+| `daily-assistant-entry` | baseline | card root | |
+| `daily-summary-top-risk` | baseline | 3-card grid | |
+| `daily-summary-biggest-change` | baseline | 3-card grid | |
+| `daily-summary-next-action` | baseline | 3-card grid | |
+| `daily-summary-outcome-section` | baseline | outcome section | |
+| `daily-summary-empty` | baseline | empty branch | already existed |
+| `daily-summary-why-now` | P65 | top-risk card | |
+| `daily-summary-missing-data` | P66 | missing data list | |
+| `daily-summary-missing-data-explanation` | P66 | missing data copy | |
+| `daily-summary-action-impact` | P67 | todayAction card | |
+| `daily-summary-outcome-improved-badge` | P68 | outcome row | |
+| `daily-summary-biggest-change-context` | P69 | biggestChange card | |
+| `daily-summary-confidence-signal` | P70 | confidence pill | |
+| `daily-summary-encouragement` | P71 | encouragement block | |
+| `daily-summary-escalation-notice` | P72 | amber escalation block | |
+| `daily-summary-next-checkin` | P73 | next check-in line | |
+| `daily-assistant-loading` | **P74** | loading skeleton | **new** |
+
+---
+
 # Active Task Report — P73 Daily Assistant Next Check-in Suggestion (2026-05-26)
 
 ## P73 Daily Assistant Next Check-in Suggestion (2026-05-26)
