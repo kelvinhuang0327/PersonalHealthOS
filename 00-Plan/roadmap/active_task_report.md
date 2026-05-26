@@ -2,6 +2,78 @@
 
 ---
 
+## P101 Report + Symptom → Recommendation Integration Contract (2026-05-26)
+
+**Final Classification: `P101_REPORT_SYMPTOM_RECOMMENDATION_CONTRACT_READY`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `aa04e44` (P100) |
+| Dirty files | governance-only (4 files) |
+
+---
+
+### 2. Baseline Gates (all 8 green before edits)
+
+| Gate | Before | After |
+|---|---|---|
+| documents-evidence-deeplink-contract | 4 passed | 4 passed |
+| daily-summary-evidence-contract | 4 passed | 4 passed |
+| daily-assistant-contract | 5 passed | 5 passed |
+| actions-page-contract | 4 passed | 4 passed |
+| documents-confirmed-data-contract | 4 passed | 4 passed |
+| documents-page-contract | 4 passed | 4 passed |
+| symptoms-page-contract | 4 passed | 4 passed |
+| runtime-smoke | 56 passed | 56 passed |
+| **report-symptom-recommendation-contract (new)** | — | **5 passed** |
+
+---
+
+### 3. Deliverable
+
+`frontend/tests/e2e/p101-report-symptom-recommendation-integration.spec.ts` — 5 tests:
+- T1: Daily Assistant `p94-top-risk-ref-link` (lab `topRiskRef`) href contains `?document_id=`
+- T2: Daily Assistant `p94-today-action-ref-link` (symptom `todayActionRef`) href is `/platform/symptoms`, no `document_id`
+- T3: Actions page `p89-source-page-link` (lab rec with `document_id`) href contains `?document_id=`
+- T4: Documents page auto-opens `[role="dialog"]` drawer when `?document_id=` matches document
+- T5: Documents page does not crash on unknown `?document_id=` (no drawer, list visible)
+
+New Makefile guard: `make report-symptom-recommendation-contract` (tsc + 5 tests)
+
+Guard index updated: `docs/product/local-contract-guard-index.md` — row + bundle + quick-ref
+
+`active_task.md` refreshed from stale P64 content to P101 (authorized per P100 roadmap checkpoint)
+
+---
+
+### 4. Changes in This Task
+
+| File | Action |
+|---|---|
+| `frontend/tests/e2e/p101-report-symptom-recommendation-integration.spec.ts` | Created — 5 integration tests |
+| `Makefile` | Added `report-symptom-recommendation-contract` target + `.PHONY` |
+| `docs/product/local-contract-guard-index.md` | Added P101 guard row, when-to-run, related-files, bundle, quick-ref |
+| `00-Plan/roadmap/active_task.md` | Refreshed stale P64 → P101 task |
+| `00-Plan/roadmap/active_task_report.md` | P101 entry prepended |
+
+---
+
+### 5. Key Technical Facts
+
+- Mock pattern: `addInitScript` + `page.route('**/api/v1/**', ...)` — same as P97
+- `topRiskRef.source_type = 'lab_report_item'` + `document_id` → `getEvidenceHref()` returns `/platform/documents?document_id=<id>` ✅
+- `todayActionRef.source_type = 'symptom'` (no `document_id`) → `getEvidenceHref()` returns `/platform/symptoms` ✅ (no fake deeplink)
+- `ParsedItemsDrawer` mock: `json: []` (array, NOT `{ items: [] }`) — learned from P97
+- `next build` NOT required — spec-only change (no frontend code modified)
+
+---
+
 ## P100 Product Lane Reset / Roadmap Checkpoint (2026-05-26)
 
 **Final Classification: `P100_PRODUCT_LANE_RESET_READY`**
