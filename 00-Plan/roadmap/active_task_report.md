@@ -1,3 +1,50 @@
+# Active Task Report — P84 Report/Symptom→Daily Recommendation Lane Discovery (2026-05-26)
+
+## P84 Report/Symptom→Daily Recommendation Lane Discovery (2026-05-26)
+
+**Final Classification: `P84_REPORT_SYMPTOM_DAILY_RECOMMENDATION_DISCOVERY_READY`**
+
+---
+
+### 1. Baseline Validation
+
+| Command | Result |
+|---------|--------|
+| `make actions-page-contract` (4 tests) | ✅ PASS |
+| `make daily-assistant-contract` (5 tests) | ✅ PASS |
+| `make runtime-smoke` (56 tests) | ✅ PASS |
+
+No code or test files changed. Discovery only.
+
+---
+
+### 2. Key Findings
+
+- Report path (upload → parse → confirm → evidence bundle → recommendations → daily summary) is **fully wired end-to-end**.
+- Symptom path (create → temporal parse → evidence bundle → symptom_timeline/patterns → recommendations) is **fully wired end-to-end**.
+- Daily Assistant consumes both paths deterministically (no LLM) and exposes `confidence`, `whyNow`, `topRisk`, `missingData` with actionable links.
+- **Gap G1 (medium):** `confirmed_data` from `PUT /confirm` is NOT re-fed into `LabReportItem` rows — evidence bundle uses original parse values.
+- **Gap G4 (medium):** `/platform/documents` page has zero `data-testid` attributes — core report path untestable by Playwright.
+- **Gap G5 (low):** `/platform/symptoms` page has zero `data-testid` attributes.
+
+---
+
+### 3. Files Changed
+
+| File | Change |
+|------|--------|
+| `docs/security/P84_REPORT_SYMPTOM_DAILY_RECOMMENDATION_DISCOVERY.md` | Created — full discovery report |
+
+---
+
+### 4. Next Recommended Lane
+
+**P85 — Documents Page Testid Surface + Upload→Parse Contract Smoke**  
+Add 4 testids to `documents/page.tsx`, write 4-test mocked Playwright spec, add `make documents-page-contract` to Makefile.  
+See §8 of P84 report for the copy-paste prompt.
+
+---
+
 # Active Task Report — P83 Actions Page Contract Local Guard (2026-05-26)
 
 ## P83 Actions Page Contract Local Guard (2026-05-26)
