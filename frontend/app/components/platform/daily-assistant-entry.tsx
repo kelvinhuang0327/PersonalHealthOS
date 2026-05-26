@@ -198,6 +198,14 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                 <p className="text-xs text-slate-700 leading-relaxed line-clamp-3">
                   {summary?.biggestChange || '尚無明顯變化資料'}
                 </p>
+                {summary?.biggestChange && (
+                  <p
+                    data-testid="daily-summary-biggest-change-context"
+                    className="mt-1.5 text-[11px] text-slate-500 leading-relaxed italic border-t border-slate-50 pt-1.5 line-clamp-2"
+                  >
+                    此為近 7 天最顯著的健康趨勢變化。
+                  </p>
+                )}
               </div>
 
               {/* Today's primary action */}
