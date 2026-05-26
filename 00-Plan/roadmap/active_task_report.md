@@ -1,4 +1,130 @@
-# Active Task Report
+# Active Task Report — P64-RECOVERY (2026-05-26)
+
+## P64-RECOVERY (2026-05-26)
+
+**Final Classification: `P64_RECOVERY_READY`**
+
+---
+
+### Branch Governance Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD | `f0678d3` — docs(report): P63 recommendation history card acceptance closure |
+| Dirty files at start | 7 expected (4 governance M, 1 M daily-assistant-entry, 2 ?? spec files) — no scope conflict |
+
+---
+
+### Step 1A — Diag Intent Extracted
+
+`frontend/tests/e2e/p64-diag.spec.ts` was a runtime crash investigation tool,
+not an acceptance test. Design intent extracted to `docs/security/P64_RECOVERY_DIAGNOSIS.md`:
+- `page.on('pageerror', ...)` + `page.on('console', ...)` capture pattern
+- localStorage auth bypass via `addInitScript`
+- 8-second wait + body text dump strategy
+- Route stubs for all `/api/v1/**` paths (5 lines corrupted by copy-paste damage)
+
+File physically removed (`rm`) — was untracked, no `git rm` needed.
+
+### Step 1C — TypeScript
+
+`npx tsc --noEmit` → **Exit 0, 0 errors** ✅
+
+---
+
+### Step 2A — Baseline Failure
+
+`npx playwright test ...p64-daily-assistant-summary-quality.spec.ts` → **5 failed, 1 passed**
+
+All 5 failures: `[data-testid="daily-assistant-entry"]` not visible (12s timeout).
+Error-context snapshot confirmed: `載入失敗，請重新整理` — ErrorBoundary fallback active.
+
+Test 2 ("missing data state") uniquely passed because its mock stub included `missing_data: [...]`.
+
+### Step 2B — PageError Stack
+
+```
+TypeError: Cannot read properties of undefined (reading 'length')
+    at sC (dashboard/page-9f34c3fea89de3b0.js:1:99153)
+    [React render stack — rE → l$ → iZ → ia]
+```
+
+### Step 2D — [Decision]: `both`
+
+**Production-side (real bug):**
+`frontend/app/components/platform/health-assistant-panel.tsx:268`
+```ts
+const hasMissing = data && data.missing_data.length > 0 && !hasRecs;
+//                                           ^^^^^^^^ undefined when API omits field
+```
+`data.missing_data` is `undefined` when the recommendations API response lacks the field.
+Accessing `.length` on `undefined` throws `TypeError` → React catches → `ErrorBoundary`.
+
+**Mock-side (test gap):**
+Default stub `{ person_id, recommendations: [], total: 0 }` omitted `missing_data`,
+making 5/6 tests exercise the crash path every run.
+
+---
+
+### Step 3 — Minimum Fix
+
+**Fix 1 — `health-assistant-panel.tsx:267–268` (production null guard):**
+```ts
+// Before:
+const hasRecs = data && data.recommendations.length > 0;
+const hasMissing = data && data.missing_data.length > 0 && !hasRecs;
+// After:
+const hasRecs = data && (data.recommendations?.length ?? 0) > 0;
+const hasMissing = data && (data.missing_data?.length ?? 0) > 0 && !hasRecs;
+```
+
+**Fix 2 — `p64-daily-assistant-summary-quality.spec.ts` default stub:**
+Added `missing_data: []` to default recommendations in `stubRoutes()`.
+
+**Diagnostic cleanup:** Removed `page.on('pageerror', ...)` / `page.on('console', ...)` instrumentation before commit.
+
+---
+
+### Step 3C — Full Validation
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit` | Exit 0 ✅ |
+| P64 `p64-daily-assistant-summary-quality.spec.ts` | **6/6 PASS** ✅ |
+| P55 `p55-action-feedback-loop.spec.ts` | 9/9 PASS ✅ |
+| P56 `p56-recommendation-feedback-persistence.spec.ts` | 4/4 PASS ✅ |
+| P57 `p57-snooze-persistence.spec.ts` | 4/4 PASS ✅ |
+| `make runtime-smoke` | 56 passed, 0 failed ✅ |
+
+---
+
+### Commits
+
+- **C2** `fix(frontend): P64 daily assistant guard + acceptance recovery`
+  — `frontend/app/components/platform/health-assistant-panel.tsx` (null guard)
+  — `frontend/app/components/platform/daily-assistant-entry.tsx` (P64 data-testid hooks)
+  — `frontend/tests/e2e/p64-daily-assistant-summary-quality.spec.ts` (mock fix, diagnostic removed)
+
+- **C3** `docs(security): add P64 recovery diagnosis evidence`
+  — `docs/security/P64_RECOVERY_DIAGNOSIS.md`
+
+- **C4** `docs(report): P64 recovery handoff`
+  — `00-Plan/roadmap/active_task_report.md`
+
+---
+
+### Known Limitations
+
+1. `p64-diag.spec.ts` syntax corruption root cause not confirmed — likely copy-paste accident during P64 handoff; no tracking needed.
+2. `health-assistant-panel.tsx` `generated_at` field also absent from mocks — `data?.generated_at` already uses optional chain (safe); no action needed.
+3. `HealthAssistantData.missing_data` is typed as required (`string[]`) in the interface but absent from API in low-data states. A follow-up could update the interface to `missing_data?: string[]` for better type accuracy.
+4. Backend regression (723 PASS from P13) not re-run in this session — backend untouched, `make runtime-smoke` 56/56 confirms no regression.
+
+---
+
+--- # Appendix: Prior Sprint Reports ---
 
 ## P63-RECOMMENDATION-HISTORY-ACCEPTANCE (2026-05-25)
 
