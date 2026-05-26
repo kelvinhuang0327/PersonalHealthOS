@@ -338,6 +338,17 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
                   查看詳情 →
                 </Link>
               </div>
+              {fbSummary!.improved_count > 0 && (
+                <div
+                  data-testid="daily-summary-outcome-improved-badge"
+                  className="mt-2 flex items-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-100 px-2.5 py-1"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                  <span className="text-[11px] font-medium text-emerald-700">
+                    已改善 {fbSummary!.improved_count} 項，持續追蹤中
+                  </span>
+                </div>
+              )}
               {(fbSummary!.tracking_count > 0 || fbSummary!.insufficient_data_count > 0) && (
                 <p data-testid="daily-summary-outcome-unknown" className="mt-2 text-[11px] text-slate-400">
                   目前尚無足夠後續資料判斷效果
