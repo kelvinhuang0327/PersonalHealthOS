@@ -1,4 +1,96 @@
-# Active Task Report — P78 Daily Assistant Contract Guard Discoverability (2026-05-26)
+# Active Task Report — P79 Daily Assistant Next Lane Decision (2026-05-26)
+
+## P79 Daily Assistant Contract Guard Scope Decision / Next Product Lane Selection (2026-05-26)
+
+**Final Classification: `P79_DAILY_ASSISTANT_NEXT_LANE_DECISION_READY`**
+
+---
+
+### 1. Pre-flight / P78 Postcheck
+
+| Check | Result |
+|-------|--------|
+| Repo / branch | `main` ✅ |
+| P78 commits (`59befbb`, `c034640`) | present ✅ |
+| Dirty files | governance-only ✅ |
+| `make daily-assistant-contract` | ✅ TSC + 5/5 |
+| `make runtime-smoke` | ✅ 56/56 |
+
+---
+
+### 2. Contract Gap Audit
+
+Full audit of the P76 contract spec vs the testid inventory:
+
+| Area | Verdict |
+|------|---------|
+| Loading/empty/loaded state exclusivity | ✅ fully covered |
+| All 9 optional signals positive path | ✅ fully covered |
+| All optional signals negative path | ✅ fully covered |
+| ErrorBoundary safety | ✅ fully covered |
+| Grid card ids (`top-risk`, `biggest-change`, `next-action`) | inherently covered by full-state test |
+| `daily-summary-missing-data` co-render | covered in P66 spec, not a P76 gap |
+
+**Result: No missing invariants. Contract test NOT modified.**
+
+---
+
+### 3. Decision
+
+**STOP Daily Assistant micro-polish.**
+
+Reason: All 13 testids are documented and tested. Signal inflation risk increases with each addition.
+Contract guard (`make daily-assistant-contract`) is sufficient as local/manual.
+
+**Next lane: P80 — Recommendation History / Actions Page Consistency Smoke**
+
+Basis: roadmap P1 explicitly states "Keep recommendation history, outcome feedback, and trust UI consistent across Dashboard and Actions." P55–P63 built the foundations; no cross-page E2E smoke exists yet.
+
+---
+
+### 4. Decision Artifact
+
+Path: `docs/security/P79_DAILY_ASSISTANT_NEXT_LANE_DECISION.md`
+
+Sections:
+- Current closure state
+- What P64–P78 completed (15-phase table)
+- Contract guard status
+- Contract gap audit result
+- Stop decision with rationale
+- Recommended next lane (P80)
+- P80 bounded scope
+- Risk table: continuing micro-polish vs moving to P80
+- Validation commands
+- Next 24h prompt pointer
+
+---
+
+### 5. Tests
+
+| Gate | Result |
+|------|--------|
+| `make daily-assistant-contract` (P79 validation) | ✅ TSC + 5/5 |
+| `make runtime-smoke` (P79 validation) | ✅ 56/56 |
+| Contract spec changes | NOT NEEDED — no gaps found |
+
+---
+
+### 6. Commits
+
+| Commit | Message |
+|--------|---------|
+| `e6fff4f` | docs(security): P79 daily assistant next lane decision |
+
+---
+
+### 7. Known Limitations
+
+- `docs/product/` directory does not exist; decision artifact placed in `docs/security/` with P76 contract.
+- Actions page (`/platform/actions`) testid inventory was not inspected in P79 — that is P80's first step.
+- README.md remains globally gitignored and cannot be staged.
+
+---
 
 ## P78 Daily Assistant Contract Guard Adoption / Discoverability (2026-05-26)
 
