@@ -2,6 +2,49 @@
 
 ---
 
+## P106 — Suppress Mixed-Unit Lab Trend Delta (2026-05-26)
+
+**Classification:** `P106_UNIT_MISMATCH_SUPPRESSION_READY`
+**Commit:** _(see below)_
+**Branch:** `main`
+
+### Summary
+
+Frontend-only fix: `LabComparisonTable` no longer computes or displays `delta%` when the latest and previous readings for the same metric have different unit strings. Raw values with their respective units remain fully visible. The delta cell shows `單位不同，暫不比較` as a neutral, non-alarming message.
+
+### Changes
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/lab-comparison-table.tsx` | Added `normalizeUnit` helper + `unitsMatch` / `unitMismatch` guards in `tableRows` useMemo; updated delta column render |
+| `frontend/tests/e2e/p103-lab-trend-comparison-contract.spec.ts` | Added T5: mixed-unit glucose fixture asserts `unit-mismatch-label` visible and no `↑`/`↓` in table |
+| `00-Plan/roadmap/active_task_report.md` | Updated |
+
+### Validation
+
+| Contract | Pre-flight | Post-implementation |
+|---|---|---|
+| `lab-trend-comparison-contract` (T1–T5) | ✅ 4/4 | ✅ **5/5** |
+| `lab-trend-report-date-contract` | ✅ PASS | ✅ PASS |
+| `documents-confirmed-data-contract` | ✅ PASS | ✅ PASS |
+| `documents-page-contract` | ✅ PASS | ✅ PASS |
+| `report-symptom-recommendation-contract` | ✅ PASS | ✅ PASS |
+| `documents-evidence-deeplink-contract` | ✅ PASS | ✅ PASS |
+| `daily-summary-evidence-contract` | ✅ PASS | ✅ PASS |
+| `daily-assistant-contract` | ✅ PASS | ✅ PASS |
+| `actions-page-contract` | ✅ PASS | ✅ PASS |
+| `symptoms-page-contract` | ✅ PASS | ✅ PASS |
+| `runtime-smoke` | ✅ 56/56 | ✅ 56/56 |
+| `next build` | — | ✅ clean |
+
+### Known Limitations
+
+- Unit normalization is case+whitespace only (`trim().toLowerCase()`). Unit aliases (e.g. `IU/L` ≡ `U/L`) are not handled — deferred to P107.
+- Null unit on either side is treated as a match (suppression skipped) to avoid false positives on legacy rows with missing unit strings.
+- Abnormal flag accuracy when unit scale differs (e.g. mmol/L value flagged against mg/dL threshold) is a backend concern — deferred to P108.
+
+---
+
 ## P105 — Lab Item Unit Normalization Discovery (2026-05-26)
 
 **Classification:** `P105_UNIT_MISMATCH_RISK_CONFIRMED`

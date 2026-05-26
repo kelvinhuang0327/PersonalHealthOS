@@ -226,4 +226,54 @@ test.describe('P103 — Lab Trend Comparison Contract', () => {
       await expect(body).not.toContainText(phrase)
     }
   })
+
+  /**
+   * T5 — Mixed-unit delta suppression.
+   * When the same metric has different units across reports:
+   * - delta cell shows "單位不同，暫不比較" (unit-mismatch-label)
+   * - delta cell does NOT show ↑ or ↓ directional arrows
+   * Raw values are still visible in latest/prev columns.
+   */
+  test('T5: mixed-unit rows suppress delta% and show 單位不同，暫不比較', async ({ page }) => {
+    const MIXED_UNIT_ROWS = [
+      {
+        metric: 'Glucose',
+        report_date: '2026-03-15',
+        document_id: 'doc-p106-new',
+        document_name: '2026_外國健檢.pdf',
+        value: 100.0,
+        unit: 'mg/dL',
+        is_abnormal: false,
+        reference_range: '70-100 mg/dL',
+      },
+      {
+        metric: 'Glucose',
+        report_date: '2025-03-10',
+        document_id: 'doc-p106-prev',
+        document_name: '2025_健檢報告.pdf',
+        value: 5.5,
+        unit: 'mmol/L',
+        is_abnormal: false,
+        reference_range: '3.9-5.5 mmol/L',
+      },
+    ]
+
+    await stubRoutes(page, { labHistory: MIXED_UNIT_ROWS })
+    await page.goto('/platform/documents')
+    await page.getByRole('button', { name: '歷史比較' }).click()
+    await expect(page.getByTestId('lab-comparison-table')).toBeVisible()
+
+    // Mismatch label must be present
+    await expect(page.getByTestId('unit-mismatch-label')).toBeVisible()
+    await expect(page.getByTestId('unit-mismatch-label')).toContainText('單位不同')
+
+    // Directional arrows must NOT appear anywhere in the table
+    const table = page.getByTestId('lab-comparison-table')
+    await expect(table).not.toContainText('↑')
+    await expect(table).not.toContainText('↓')
+
+    // Raw values must still be visible
+    await expect(table).toContainText('100')
+    await expect(table).toContainText('5.5')
+  })
 })

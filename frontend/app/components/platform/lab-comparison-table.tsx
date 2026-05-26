@@ -43,15 +43,19 @@ export function LabComparisonTable() {
   }, [rows])
 
   const tableRows = useMemo(() => {
+    const normalizeUnit = (u?: string | null) => (u ?? '').trim().toLowerCase()
+
     const base = Array.from(grouped.entries()).map(([metric, values]) => {
       const latest = values[0]
       const prev = values[1]
       const latestNum = typeof latest?.value === 'number' ? latest.value : Number(latest?.value)
       const prevNum = typeof prev?.value === 'number' ? prev.value : Number(prev?.value)
       const hasNumbers = Number.isFinite(latestNum) && Number.isFinite(prevNum)
-      const deltaPct = hasNumbers && prevNum !== 0 ? ((latestNum - prevNum) / prevNum) * 100 : null
+      const unitsMatch = normalizeUnit(latest?.unit) === normalizeUnit(prev?.unit)
+      const unitMismatch = hasNumbers && !unitsMatch
+      const deltaPct = hasNumbers && prevNum !== 0 && unitsMatch ? ((latestNum - prevNum) / prevNum) * 100 : null
       const improved = deltaPct !== null ? deltaPct < 0 : null
-      return { metric, values, latest, prev, deltaPct, improved }
+      return { metric, values, latest, prev, deltaPct, improved, unitMismatch }
     })
 
     if (filter === 'abnormal') return base.filter((r) => r.latest?.is_abnormal)
@@ -106,8 +110,10 @@ export function LabComparisonTable() {
                     <td className="px-3 py-2 font-medium">{row.metric}</td>
                     <td className="px-3 py-2">{row.latest?.value ?? '—'} {row.latest?.unit || ''}</td>
                     <td className="px-3 py-2">{row.prev?.value ?? '尚無歷史資料'} {row.prev?.unit || ''}</td>
-                    <td className={`px-3 py-2 ${deltaClass(row.deltaPct)}`}>
-                      {row.deltaPct === null ? '—' : `${row.deltaPct > 0 ? '↑' : '↓'} ${Math.abs(row.deltaPct).toFixed(1)}%`}
+                    <td className={`px-3 py-2 ${row.unitMismatch ? 'text-slate-400' : deltaClass(row.deltaPct)}`}>
+                      {row.unitMismatch
+                        ? <span className="text-xs" data-testid="unit-mismatch-label">單位不同，暫不比較</span>
+                        : row.deltaPct === null ? '—' : `${row.deltaPct > 0 ? '↑' : '↓'} ${Math.abs(row.deltaPct).toFixed(1)}%`}
                     </td>
                     <td className="px-3 py-2 text-slate-500">{row.latest?.reference_range || '—'}</td>
                     <td className="px-3 py-2 text-right">
