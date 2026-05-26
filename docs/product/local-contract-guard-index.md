@@ -1,6 +1,6 @@
 # Local Contract Guard Index
 
-**Last updated:** P101 (2026-05-26)
+**Last updated:** P103 (2026-05-26)
 **Status:** Authoritative runbook for all local/manual Makefile contract guards.
 
 ---
@@ -37,6 +37,7 @@ All frontend guards run `npx tsc --noEmit` first, then the Playwright spec.
 | `documents-confirmed-data-contract` | `p87-documents-confirmed-data-refeed.spec.ts` | 4 | **Yes** — if any frontend file changed | `ParsedItemsDrawer` confirm flow, `Doc` interface confirmed-data display, overclaim guard |
 | `documents-page-contract` | `p85-documents-page-contract.spec.ts` | 4 | **Yes** — if any frontend file changed | `/platform/documents` list render, upload/parse flow, `LabReportItem` display, 500 failure safe |
 | `symptoms-page-contract` | `p86-symptoms-page-contract.spec.ts` | 4 | **Yes** — if any frontend file changed | `/platform/symptoms` render, quick-symptom chips, heatmap, severity/duration selectors, 500 failure safe |
+| `lab-trend-comparison-contract` | `p103-lab-trend-comparison-contract.spec.ts` | 4 | **Yes** — if any frontend file changed | `LabComparisonTable` render, neutral direction labels (數值下降/數值上升), empty state, overclaim guard |
 | `runtime-smoke` | `tests/test_runtime_smoke.py` + security/config/validation/outcome suites | 56+ | **No** (backend pytest only) | All backend pytest suites — API contracts, security audit, config schema, validation rules, outcome feedback |
 
 ### When to run each guard
@@ -51,6 +52,7 @@ All frontend guards run `npx tsc --noEmit` first, then the Playwright spec.
 | `documents-confirmed-data-contract` | `parsed-items-drawer.tsx`, `Doc` interface, confirmed-data re-feed API, `documents-confirmed-data-refeed` service |
 | `documents-page-contract` | `documents/page.tsx` (non-deeplink), document list components, upload API, `LabReportItem` display |
 | `symptoms-page-contract` | `symptoms/page.tsx`, symptom chip components, heatmap, severity/duration selectors, symptoms API |
+| `lab-trend-comparison-contract` | `lab-comparison-table.tsx`, `LabComparisonTable` direction labels, `/documents/lab-history` API shape, `歷史比較` tab behaviour |
 | `runtime-smoke` | Any backend service, model, API route, config schema, validation rule, or security audit path |
 
 ### Related files per guard
@@ -65,6 +67,7 @@ All frontend guards run `npx tsc --noEmit` first, then the Playwright spec.
 | `documents-confirmed-data-contract` | `components/platform/parsed-items-drawer.tsx`, `lib/api.ts` | document parsing services | P87 |
 | `documents-page-contract` | `app/platform/documents/page.tsx`, document list components | document API routes | P85 |
 | `symptoms-page-contract` | `app/platform/symptoms/page.tsx`, symptom chip/heatmap components | symptoms API routes | P86 |
+| `lab-trend-comparison-contract` | `app/components/platform/lab-comparison-table.tsx`, `app/platform/documents/page.tsx` | `backend/app/api/documents.py` (`/documents/lab-history`) | P103 |
 | `runtime-smoke` | _(backend only)_ | `tests/test_runtime_smoke.py`, security/config/validation/outcome test suites | P65+ |
 
 ---
@@ -90,6 +93,12 @@ make actions-page-contract
 make documents-page-contract
 make documents-confirmed-data-contract
 make documents-evidence-deeplink-contract
+```
+
+### Documents — lab trend comparison (touched LabComparisonTable, lab-history API, direction labels)
+```bash
+make lab-trend-comparison-contract
+make documents-page-contract
 ```
 
 ### Documents — deeplink only (touched `document_id` propagation or `getEvidenceHref`)
@@ -134,9 +143,10 @@ make documents-confirmed-data-contract
 make documents-page-contract
 make symptoms-page-contract
 make report-symptom-recommendation-contract
+make lab-trend-comparison-contract
 make runtime-smoke
 ```
-Total wall-clock time: ~60–70 seconds.
+Total wall-clock time: ~65–80 seconds.
 
 ---
 
@@ -217,6 +227,10 @@ make documents-page-contract
 make documents-confirmed-data-contract
 make documents-evidence-deeplink-contract
 
+# Paste after touching LabComparisonTable or lab-history:
+make lab-trend-comparison-contract
+make documents-page-contract
+
 # Paste before any commit that touches 3+ surfaces:
-make documents-evidence-deeplink-contract daily-summary-evidence-contract daily-assistant-contract actions-page-contract documents-confirmed-data-contract documents-page-contract symptoms-page-contract report-symptom-recommendation-contract runtime-smoke
+make documents-evidence-deeplink-contract daily-summary-evidence-contract daily-assistant-contract actions-page-contract documents-confirmed-data-contract documents-page-contract symptoms-page-contract report-symptom-recommendation-contract lab-trend-comparison-contract runtime-smoke
 ```

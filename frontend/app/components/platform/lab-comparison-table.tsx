@@ -16,7 +16,7 @@ type Row = {
   reference_range: string | null
 }
 
-type FilterKey = 'all' | 'abnormal' | 'improved' | 'not_improved'
+type FilterKey = 'all' | 'abnormal' | 'value_down' | 'value_up'
 
 export function LabComparisonTable() {
   const [rows, setRows] = useState<Row[]>([])
@@ -55,8 +55,8 @@ export function LabComparisonTable() {
     })
 
     if (filter === 'abnormal') return base.filter((r) => r.latest?.is_abnormal)
-    if (filter === 'improved') return base.filter((r) => r.improved === true)
-    if (filter === 'not_improved') return base.filter((r) => r.improved === false)
+    if (filter === 'value_down') return base.filter((r) => r.improved === true)
+    if (filter === 'value_up') return base.filter((r) => r.improved === false)
     return base
   }, [grouped, filter])
 
@@ -66,13 +66,13 @@ export function LabComparisonTable() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid="lab-comparison-table">
       <div className="flex flex-wrap gap-2">
         {[
           ['all', '全部'],
           ['abnormal', '異常指標'],
-          ['improved', '已改善'],
-          ['not_improved', '未改善'],
+          ['value_down', '數值下降'],
+          ['value_up', '數值上升'],
         ].map(([key, label]) => (
           <button
             key={key}

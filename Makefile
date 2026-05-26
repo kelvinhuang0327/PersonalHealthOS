@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract documents-evidence-deeplink-contract report-symptom-recommendation-contract
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract documents-evidence-deeplink-contract report-symptom-recommendation-contract lab-trend-comparison-contract
 
 up:
 	docker compose up -d --build
@@ -123,6 +123,14 @@ documents-evidence-deeplink-contract:
 report-symptom-recommendation-contract:
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx playwright test tests/e2e/p101-report-symptom-recommendation-integration.spec.ts --reporter=line
+
+# P103 Lab trend comparison contract guard — local/manual only, not CI-required
+# Runs TypeScript check + P103 lab trend comparison smoke (4 tests).
+# Run after touching LabComparisonTable, /documents/lab-history endpoint,
+# direction framing labels, or lab history / comparison tab logic.
+lab-trend-comparison-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p103-lab-trend-comparison-contract.spec.ts --reporter=line
 
 # P83 Actions page contract guard — local/manual only, not CI-required
 # Runs typescript check + P82 actions page contract smoke (4 tests).
