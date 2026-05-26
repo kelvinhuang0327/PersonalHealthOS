@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract documents-evidence-deeplink-contract report-symptom-recommendation-contract lab-trend-comparison-contract
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract documents-evidence-deeplink-contract report-symptom-recommendation-contract lab-trend-comparison-contract lab-trend-report-date-contract
 
 up:
 	docker compose up -d --build
@@ -131,6 +131,14 @@ report-symptom-recommendation-contract:
 lab-trend-comparison-contract:
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx playwright test tests/e2e/p103-lab-trend-comparison-contract.spec.ts --reporter=line
+
+# P104 Lab trend report date contract guard — local/manual only, not CI-required
+# Runs TypeScript check + P104 report date capture contract smoke (4 tests).
+# Run after touching ParsedItemsDrawer confirm flow, PUT document confirm endpoint,
+# LabReport.report_date logic, or lab trend chronology.
+lab-trend-report-date-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p104-lab-trend-report-date-contract.spec.ts --reporter=line
 
 # P83 Actions page contract guard — local/manual only, not CI-required
 # Runs typescript check + P82 actions page contract smoke (4 tests).

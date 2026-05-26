@@ -176,6 +176,15 @@ def confirm_document(
     doc.confirmed_data = payload.confirmed_data
     doc.confirmed_at = datetime.now(timezone.utc)
     doc.parse_status = 'confirmed'
+    if payload.report_date is not None:
+        lab_report = (
+            db.query(LabReport)
+            .filter(LabReport.document_id == doc.id)
+            .order_by(LabReport.created_at.desc())
+            .first()
+        )
+        if lab_report is not None:
+            lab_report.report_date = payload.report_date
     db.commit()
     db.refresh(doc)
     cache_invalidate(f'dashboard:{current_user.id}:')

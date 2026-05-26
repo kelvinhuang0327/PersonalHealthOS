@@ -28,6 +28,7 @@ export function ParsedItemsDrawer({ documentId, documentName, onClose, onConfirm
   const [items, setItems] = useState<ParsedItem[]>([])
   const [loading, setLoading] = useState(true)
   const [confirming, setConfirming] = useState(false)
+  const [reportDate, setReportDate] = useState<string>('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState<{ value: string; unit: string; reference_range: string }>({
     value: '',
@@ -103,6 +104,7 @@ export function ParsedItemsDrawer({ documentId, documentName, onClose, onConfirm
           abnormal_items: abnormalCount,
           reviewed_at: new Date().toISOString(),
         },
+        report_date: reportDate || null,
       })
       onConfirmed()
     } finally {
@@ -268,21 +270,36 @@ export function ParsedItemsDrawer({ documentId, documentName, onClose, onConfirm
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t bg-white px-6 py-4">
-          <p className="text-xs text-slate-400">
-            {item_confidence_note(items)}
-          </p>
-          <div className="flex gap-3">
-            <Button variant="ghost" onClick={onClose}>
-              稍後確認
-            </Button>
-            <Button
-              onClick={() => void handleConfirm()}
-              disabled={confirming || loading || items.length === 0}
-            >
-              {confirming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-              確認並分析
-            </Button>
+        <div className="flex flex-col gap-3 border-t bg-white px-6 py-4">
+          <div className="flex items-center gap-3">
+            <label htmlFor="report-date-input" className="text-xs text-slate-500 whitespace-nowrap">
+              健檢日期（選填）
+            </label>
+            <input
+              id="report-date-input"
+              data-testid="report-date-input"
+              type="date"
+              value={reportDate}
+              onChange={(e) => setReportDate(e.target.value)}
+              className="rounded border px-2 py-1 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-400">
+              {item_confidence_note(items)}
+            </p>
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={onClose}>
+                稍後確認
+              </Button>
+              <Button
+                onClick={() => void handleConfirm()}
+                disabled={confirming || loading || items.length === 0}
+              >
+                {confirming ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                確認並分析
+              </Button>
+            </div>
           </div>
         </div>
       </div>

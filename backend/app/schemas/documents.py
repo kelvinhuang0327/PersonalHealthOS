@@ -1,5 +1,5 @@
 from typing import Optional, Any
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -58,6 +58,7 @@ class ParseResponse(BaseModel):
 
 class DocumentConfirmRequest(BaseModel):
     confirmed_data: dict[str, Any]
+    report_date: Optional[date] = None
 
 
 class ConfirmSimpleRequest(BaseModel):
