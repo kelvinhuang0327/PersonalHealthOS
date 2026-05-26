@@ -2,7 +2,58 @@
 
 ---
 
-## P94 DailyHealthSummary Per-Card Evidence Refs (2025-07-14)
+## P95 Daily Summary Evidence Refs Contract Guard (2026-05-26)
+
+**Final Classification: `P95_CONTRACT_GUARD_DONE`**
+
+---
+
+### 1. Pre-flight
+
+| Check | Result |
+|---|---|
+| Repo | PersonalHealthOS |
+| Branch | main |
+| HEAD at start | `d3d81f6` (P94 report) |
+| Dirty files | governance-only |
+
+---
+
+### 2. Baseline Gates (before + after)
+
+All 6 gates green both runs — no regressions.
+
+---
+
+### 3. Changes
+
+**`Makefile`**:
+- Added `daily-summary-evidence-contract` to `.PHONY`
+- Added new target: `tsc --noEmit` + P94 Playwright spec (4 tests)
+
+---
+
+### 4. New Target
+
+```make
+daily-summary-evidence-contract:
+    cd frontend && npx tsc --noEmit
+    cd frontend && npx playwright test tests/e2e/p94-daily-summary-3grid-evidence-refs.spec.ts --reporter=line
+```
+
+Run after touching: `DailyHealthSummary` evidence refs, Daily Assistant 3-grid cards, `EVIDENCE_SOURCE_META`, or source-link behavior.
+
+---
+
+### 5. Smoke Result
+
+```
+4 passed (4.2s)
+```
+
+---
+
+
 
 **Final Classification: `P94_3GRID_EVIDENCE_REFS_DONE`**
 

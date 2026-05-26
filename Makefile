@@ -1,4 +1,4 @@
-.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract
 
 up:
 	docker compose up -d --build
@@ -96,6 +96,14 @@ frontend-e2e-local:
 daily-assistant-contract:
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx playwright test tests/e2e/p76-daily-assistant-signal-contract.spec.ts --reporter=line
+
+# P95 Daily summary evidence refs contract guard — local/manual only, not CI-required
+# Runs TypeScript check + P94 Daily Assistant 3-grid evidence refs smoke.
+# Run after touching DailyHealthSummary evidence refs, Daily Assistant 3-grid cards,
+# evidence-source metadata, or related source-link behavior.
+daily-summary-evidence-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p94-daily-summary-3grid-evidence-refs.spec.ts --reporter=line
 
 # P83 Actions page contract guard — local/manual only, not CI-required
 # Runs typescript check + P82 actions page contract smoke (4 tests).
