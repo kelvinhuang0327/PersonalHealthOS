@@ -1,3 +1,46 @@
+# Active Task Report — P67 Daily Assistant Action Impact Clarity (2026-05-26)
+
+## P67 Daily Assistant Action Impact Clarity (2026-05-26)
+
+**Final Classification: `P67_DAILY_ASSISTANT_ACTION_IMPACT_CLARITY_READY`**
+
+---
+
+### 1. Scope
+
+Added a short expected-impact line below the "今日主要行動" (recommended next action) text.
+The line renders only when `summary.todayAction` is non-empty — same conditional guard as
+the P65 `whyNow` pattern. Static copy only; no backend changes, no new API fields.
+
+---
+
+### 2. Files changed
+
+| File | Change |
+|---|---|
+| `frontend/app/components/platform/daily-assistant-entry.tsx` | Add `<p data-testid="daily-summary-action-impact">` inside the next-action card, guarded by `summary?.todayAction` |
+| `frontend/tests/e2e/p67-daily-assistant-action-impact-clarity.spec.ts` | 5 acceptance tests (new file) |
+
+---
+
+### 3. Test results
+
+| Suite | Result |
+|---|---|
+| P67 acceptance (5 tests) | ✅ 5/5 |
+| P66 regression (5 tests) | ✅ 5/5 |
+| P65 regression (4 tests) | ✅ 4/4 |
+| P64 regression (6 tests) | ✅ 6/6 |
+| Backend smoke (56 tests) | ✅ 56/56 |
+
+---
+
+### 4. Commit
+
+`0a58f5d` — feat(frontend): P67 daily assistant action impact clarity
+
+---
+
 # Active Task Report — P66 Daily Assistant Missing Data Explanation (2026-05-26)
 
 ## P66 Daily Assistant Missing Data Explanation (2026-05-26)
