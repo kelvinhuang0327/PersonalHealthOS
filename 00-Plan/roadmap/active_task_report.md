@@ -2,6 +2,63 @@
 
 ---
 
+## P107 — Unit Alias Normalization Discovery (2026-05-27)
+
+**Classification:** `P107_UNIT_ALIAS_DISCOVERY_READY`
+**Commit:** _(see below)_
+**Branch:** `main`
+
+### Summary
+
+Discovery-only (no runtime code changed). Surveyed all backend config, seeds, backend tests, and frontend Playwright mocks for lab unit strings. Found the codebase uses a small, consistent set: `mg/dL`, `U/L`, `g/dL`, `mmol/L`, `%`. No `IU/L`, `μmol/L`, or `umol/L` occurrences exist today — alias risk is prospective. P106 `trim().toLowerCase()` already handles all case variants. Remaining alias gaps are `IU/L↔U/L` and Unicode micro prefix (`μ/µ` vs `u`). Defined a safe P108 implementation plan using a new `frontend/lib/lab-unit-normalization.ts` helper.
+
+### Safe Alias Candidates
+
+| Alias A | Alias B | Safe? | Reason |
+|---|---|---|---|
+| `IU/L` | `U/L` | ✅ Yes | Same quantity; different abbreviation for enzyme assay units |
+| `μmol/L` | `umol/L` | ✅ Yes | Unicode Greek mu vs ASCII u — same prefix |
+| `µmol/L` | `umol/L` | ✅ Yes | Unicode micro sign vs ASCII u — same prefix |
+| `mg/dL` | `mmol/L` | ❌ No — conversion | ~18× scale for glucose; must remain suppressed |
+| `g/dL` | `g/L` | ❌ No — conversion | 10× scale; must remain suppressed |
+
+### Recommended P108 Plan
+
+- Create `frontend/lib/lab-unit-normalization.ts` with `normalizeUnitForCompare()`
+- Three `.replace()` calls: Unicode micro sign → `u`, Greek mu → `u`, `iu/` → `u/`
+- Update `lab-comparison-table.tsx` to import the helper (replaces inline `normalizeUnit`)
+- Add T6 (IU/L ≡ U/L) and T7 (μmol/L ≡ umol/L) to p103 spec
+- No backend changes; raw unit display unchanged
+
+### Files Changed
+
+| File | Action |
+|---|---|
+| `docs/product/p107-unit-alias-normalization-discovery.md` | Created |
+| `00-Plan/roadmap/active_task_report.md` | Updated |
+
+### Validation
+
+All 11 baseline contracts PASS before and after docs creation (docs-only, no `next build` required).
+
+### CTO Agent 5-line Summary
+
+1. P107 完成，分類：`P107_UNIT_ALIAS_DISCOVERY_READY`。
+2. 全域掃描：codebase 現有單位為 `mg/dL`、`U/L`、`g/dL`、`mmol/L`、`%`；`IU/L`、`μmol/L` 均不存在，風險屬前瞻性。
+3. P106 `trim().toLowerCase()` 已處理所有大小寫變體；剩餘 gap：`iu/l` vs `u/l`（IU/L↔U/L）與 Unicode mu 前綴。
+4. P108 推薦：`frontend/lib/lab-unit-normalization.ts` + 三行 `.replace()`；`lab-comparison-table.tsx` import 取代 inline helper；新增 T6/T7 contract tests。
+5. `mmol/L` vs `mg/dL` 屬真實轉換，P106 suppression 必須維持；abnormal flag 精確度問題延後至 P109。
+
+### CEO Agent 5-line Summary
+
+1. P107 確認系統單位十分統一，主要只有四種，無亂用現象。
+2. 唯一假性壓制風險：`IU/L` vs `U/L` 與 Unicode 編碼差異，但目前均未出現。
+3. P108 只需 ~5 行新函數，即可消除這些假壓制，讓 ALT/AST 跨報告比較更順暢。
+4. `mmol/L` vs `mg/dL` 的壓制保護必須維持，不可混淆。
+5. P108 可安全實施，風險極低，建議優先推進。
+
+---
+
 ## P106 — Suppress Mixed-Unit Lab Trend Delta (2026-05-26)
 
 **Classification:** `P106_MIXED_UNIT_DELTA_SUPPRESSED`
