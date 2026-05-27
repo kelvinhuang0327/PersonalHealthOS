@@ -139,6 +139,7 @@ def parse_document(
                 value_num=float(item.value_num) if item.value_num is not None else None,
                 value_text=item.value_text,
                 unit=item.unit,
+                normalized_unit=item.normalized_unit,
                 abnormal_flag=item.abnormal_flag,
             )
             for item in item_rows[:20]
@@ -240,6 +241,7 @@ def get_parsed_items(
                 value_num=float(item.value_num) if item.value_num is not None else None,
                 value_text=item.value_text,
                 unit=item.unit,
+                normalized_unit=item.normalized_unit,
                 ref_range=item.ref_range,
                 abnormal_flag=item.abnormal_flag,
                 parser_confidence=float(item.parser_confidence) if item.parser_confidence is not None else None,
@@ -310,6 +312,7 @@ def update_parsed_item(
         value_num=float(item.value_num) if item.value_num is not None else None,
         value_text=item.value_text,
         unit=item.unit,
+        normalized_unit=item.normalized_unit,
         ref_range=item.ref_range,
         abnormal_flag=item.abnormal_flag,
         parser_confidence=float(item.parser_confidence) if item.parser_confidence is not None else None,
@@ -378,6 +381,7 @@ def get_lab_history(
                 'document_name': document.original_filename,
                 'value': float(item.value_num) if item.value_num is not None else item.value_text,
                 'unit': item.unit,
+                'normalized_unit': item.normalized_unit,
                 'is_abnormal': item.abnormal_flag in {'H', 'L'},
                 'reference_range': item.ref_range,
             }

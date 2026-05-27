@@ -12,6 +12,7 @@ class ParsedItemResponse(BaseModel):
     value_num: Optional[float] = None
     value_text: Optional[str] = None
     unit: Optional[str] = None
+    normalized_unit: Optional[str] = None
     ref_range: Optional[str] = None
     abnormal_flag: Optional[str] = None
     parser_confidence: Optional[float] = None
@@ -45,6 +46,7 @@ class ParsedItemPreview(BaseModel):
     value_num: Optional[float] = None
     value_text: Optional[str] = None
     unit: Optional[str] = None
+    normalized_unit: Optional[str] = None
     abnormal_flag: Optional[str] = None
 
 

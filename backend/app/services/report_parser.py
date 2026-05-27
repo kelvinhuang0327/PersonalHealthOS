@@ -81,6 +81,23 @@ def extract_text(file_bytes: bytes, mime_type: str) -> str:
     return text
 
 
+def normalize_unit(unit: str | None) -> str | None:
+    if not unit:
+        return None
+    stripped = unit.strip()
+    if not stripped:
+        return None
+    lower = stripped.lower()
+    # IU/L → U/L (case-insensitive)
+    if lower == 'iu/l':
+        return 'U/L'
+    # Replace Unicode mu/micro-sign prefix with ASCII u
+    normalized = stripped
+    if normalized[0] in ('μ', 'µ'):
+        normalized = 'u' + normalized[1:]
+    return normalized
+
+
 def normalize_item_name(raw_name: str) -> str:
     text = raw_name.strip()
     for alias, canonical in ALIAS_MAP.items():
@@ -196,6 +213,7 @@ def parse_lab_items(raw_text: str, gender: str | None = None) -> list[dict[str, 
             'value_num': value_num,
             'value_text': None,
             'unit': unit,
+            'normalized_unit': normalize_unit(unit),
             'ref_range': ref_range,
             'ref_low': ref_low,
             'ref_high': ref_high,

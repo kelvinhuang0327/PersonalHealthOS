@@ -166,6 +166,7 @@ class LabReportItem(Base):
     value_num = Column(Numeric(10, 3))
     value_text = Column(String(120))
     unit = Column(String(30))
+    normalized_unit = Column(String(30), nullable=True)
     ref_range = Column(String(120))
     ref_low = Column(Numeric(10, 3))
     ref_high = Column(Numeric(10, 3))

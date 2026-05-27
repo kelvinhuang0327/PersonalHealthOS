@@ -22,6 +22,7 @@ def main() -> None:
         ('symptom_logs', 'estimated_duration_days'),
         ('medical_documents', 'confirmed_data'),
         ('health_insights', 'evidence_json'),
+        ('lab_report_items', 'normalized_unit'),
     ]
     drift = [(t, c) for t, c in required if not has_column(t, c)]
     if drift:
