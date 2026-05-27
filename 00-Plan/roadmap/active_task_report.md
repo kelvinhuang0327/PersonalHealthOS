@@ -2,6 +2,71 @@
 
 ---
 
+## P109 — Report Parser Unit Field Normalization at Ingest: Discovery (2026-05-27)
+
+**Classification:** `P109_BACKEND_NORMALIZED_UNIT_FIELD_RECOMMENDED`
+**Commit:** _(follows)_
+**Branch:** `main`
+
+### 1. Pre-flight Result
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD | attached ✅ |
+| P108 commit `a229d1c` | present ✅ |
+| Dirty files | Only governance/roadmap files ✅ |
+
+### 2. Discovery Result
+
+- `parse_lab_items()` captures `unit` via regex group(3) — no normalization applied (`report_parser.py:171`)
+- `parse_document()` unpacks parser dict directly into `LabReportItem(**row)` — blind pass-through (`documents.py:115-118`)
+- `LabReportItem.unit` is a single `String(30)` column storing raw OCR/PDF string verbatim
+- `normalize_item_name()` resolves name aliases but no parallel exists for unit
+- Frontend `normalizeUnitForCompare()` is the only normalization layer today
+
+### 3. Recommended P110 Lane
+
+**Option C: Add `normalized_unit` field (nullable) to `LabReportItem`**
+
+- Raw `unit` preserved for display — no UX regression
+- `normalized_unit` populated at parse time by new `normalize_unit()` helper
+- Historical NULL rows fall back to frontend `normalizeUnitForCompare()`
+- Enables backend grouping, trending, and analytics without unit ambiguity
+
+### 4. Validation Table
+
+| Gate | Result |
+|---|---|
+| `lab-trend-comparison-contract` (7 tests) | PASS |
+| `lab-trend-report-date-contract` (4 tests) | PASS |
+| `documents-confirmed-data-contract` (4 tests) | PASS |
+| `documents-page-contract` (4 tests) | PASS |
+| `report-symptom-recommendation-contract` (5 tests) | PASS |
+| `documents-evidence-deeplink-contract` (4 tests) | PASS |
+| `daily-summary-evidence-contract` (4 tests) | PASS |
+| `daily-assistant-contract` (5 tests) | PASS |
+| `actions-page-contract` (4 tests) | PASS |
+| `symptoms-page-contract` (4 tests) | PASS |
+| `runtime-smoke` (56 tests) | PASS |
+| Code changes | NOT RUN — docs-only |
+
+### 5. Files Changed
+
+| File | Action |
+|---|---|
+| `docs/product/p109-report-parser-unit-normalization-discovery.md` | Created |
+| `00-Plan/roadmap/active_task_report.md` | Updated |
+
+### 6. Known Limitations
+
+- Existing `LabReportItem` rows have raw unit strings; backfill deferred to P110
+- Mid-string mu (e.g., `g/μmol`) not covered by current prefix-only alias approach
+- Alias list is IU/L ↔ U/L and μ/µ → u only; other aliases not evaluated
+
+---
+
 ## P108 — Unit Alias Normalization Implementation (2026-05-27)
 
 **Classification:** `P108_UNIT_ALIAS_NORMALIZATION_READY`
