@@ -2,10 +2,106 @@
 
 ---
 
+## P108 — Unit Alias Normalization Implementation (2026-05-27)
+
+**Classification:** `P108_UNIT_ALIAS_NORMALIZATION_READY`
+**Commits:** `8d82bbc` (code/test) · _(report commit follows)_
+**Branch:** `main`
+
+### 1. Pre-flight Result
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD | attached ✅ |
+| P107 commit `6030f14` | present ✅ |
+| Dirty files | Only governance/roadmap files (CEO-Decision.md, CTO-Analysis.md, roadmap.md) ✅ |
+
+### 2. Unit Alias Normalization Behavior
+
+`normalizeUnitForCompare()` in `frontend/lib/lab-unit-normalization.ts` applies three normalizations in sequence:
+
+| Input | Normalized | Rule |
+|---|---|---|
+| `IU/L` | `u/l` | `iu/` prefix → `u/` |
+| `iu/l` | `u/l` | lowercase then `iu/` prefix → `u/` |
+| `μmol/L` | `umol/l` | Greek mu (U+03BC) → `u` |
+| `µmol/L` | `umol/l` | Micro sign (U+00B5) → `u` |
+| `umol/L` | `umol/l` | trim + lowercase |
+| `mg/dL` | `mg/dl` | trim + lowercase (no alias) |
+| `mmol/L` | `mmol/l` | trim + lowercase (no alias) |
+
+`mg/dL` vs `mmol/L` continues to show 單位不同，暫不比較. Raw display strings unchanged.
+
+### 3. Tests Added / Updated
+
+| Test | Description | Status |
+|---|---|---|
+| T1–T4 | Existing P103 tests | PASS (unchanged) |
+| T5 | mg/dL vs mmol/L suppresses delta (P106) | PASS (unchanged) |
+| T6 (new) | IU/L + U/L treated as alias → delta shown, no mismatch label | PASS |
+| T7 (new) | μmol/L + umol/L treated as alias → delta shown, no mismatch label | PASS |
+
+### 4. Validation Table
+
+| Gate | Result |
+|---|---|
+| `npx tsc --noEmit` | PASS |
+| `npx next build` | PASS |
+| `p103-lab-trend-comparison-contract` (7 tests) | PASS |
+| `lab-trend-report-date-contract` (4 tests) | PASS |
+| `documents-confirmed-data-contract` | PASS |
+| `documents-page-contract` | PASS |
+| `report-symptom-recommendation-contract` | PASS |
+| `documents-evidence-deeplink-contract` | PASS |
+| `daily-summary-evidence-contract` | PASS |
+| `daily-assistant-contract` | PASS |
+| `actions-page-contract` | PASS |
+| `symptoms-page-contract` | PASS |
+| `runtime-smoke` (56 tests) | PASS |
+
+### 5. Files Changed
+
+| File | Action |
+|---|---|
+| `frontend/lib/lab-unit-normalization.ts` | Created — exports `normalizeUnitForCompare()` |
+| `frontend/app/components/platform/lab-comparison-table.tsx` | Modified — removes inline helper, imports from lib |
+| `frontend/tests/e2e/p103-lab-trend-comparison-contract.spec.ts` | Modified — adds T6 and T7 |
+| `00-Plan/roadmap/active_task_report.md` | Modified — this report |
+
+### 6. Commits
+
+- `8d82bbc` — `feat(frontend): P108 unit alias normalization IU/L and Unicode mu`
+- _(report commit)_ — `docs(report): P108 unit alias normalization report`
+
+### 7. Known Limitations
+
+- Only handles prefix-level alias patterns (`iu/` → `u/`, `μ` → `u`). Alias pairs with identical prefix but different suffixes (e.g., future `μg/L` vs `ug/L`) are covered by the same regex but were not explicitly tested.
+- Does not handle mixed case middle variants like `IU/l` — covered by `.toLowerCase()` step.
+- Real unit conversion (mg/dL ↔ mmol/L, g/dL ↔ g/L) remains out of scope and suppressed.
+
+### 8. Next Recommended Lane
+
+**P109 — Report Parser Unit Field Normalization at Ingest**
+Ensure report parsing pipeline normalizes `IU/L` → `U/L` at storage time so future DB records use canonical spellings. This decouples display-layer normalization from parser variance and prepares for clinical reference range validation.
+
+---
+
+### CTO Agent Summary (5 lines)
+
+P108 ships a pure frontend alias normalization layer. A single `normalizeUnitForCompare()` helper in `frontend/lib/lab-unit-normalization.ts` applies trim + lowercase + three targeted `.replace()` calls (IU/L→U/L, μ→u, µ→u). `lab-comparison-table.tsx` now imports this helper, eliminating the inline `normalizeUnit` closure. Existing T1–T5 unchanged; T6 and T7 added to guard IU/L and Unicode mu alias correctness. All 13 contract gates pass, 0 regressions.
+
+### CEO Agent Summary (5 lines)
+
+Users who imported foreign or older lab reports with IU/L enzyme units or Unicode micro-symbol concentrations will now see delta% comparisons instead of a "units differ" suppression message. This removes a friction point that caused clinically equivalent data to appear incomparable. No backend changes, no conversion logic, no risk of false cross-unit comparisons (mg/dL vs mmol/L still suppressed). Shipped in one commit, fully covered by contract tests. Ready to extend toward unit normalization at report parse time in P109.
+
+---
+
 ## P107 — Unit Alias Normalization Discovery (2026-05-27)
 
 **Classification:** `P107_UNIT_ALIAS_DISCOVERY_READY`
-**Commit:** _(see below)_
+**Commit:** `6030f14`
 **Branch:** `main`
 
 ### Summary
