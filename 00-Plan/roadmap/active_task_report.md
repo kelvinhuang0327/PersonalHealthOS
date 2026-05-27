@@ -4,8 +4,9 @@
 
 ## P106 — Suppress Mixed-Unit Lab Trend Delta (2026-05-26)
 
-**Classification:** `P106_UNIT_MISMATCH_SUPPRESSION_READY`
-**Commit:** _(see below)_
+**Classification:** `P106_MIXED_UNIT_DELTA_SUPPRESSED`
+**Commit 1 (code/test):** `006b723` — `fix(frontend): P106 suppress delta when lab units differ`
+**Commit 2 (report):** _(this commit)_
 **Branch:** `main`
 
 ### Summary
@@ -42,6 +43,29 @@ Frontend-only fix: `LabComparisonTable` no longer computes or displays `delta%` 
 - Unit normalization is case+whitespace only (`trim().toLowerCase()`). Unit aliases (e.g. `IU/L` ≡ `U/L`) are not handled — deferred to P107.
 - Null unit on either side is treated as a match (suppression skipped) to avoid false positives on legacy rows with missing unit strings.
 - Abnormal flag accuracy when unit scale differs (e.g. mmol/L value flagged against mg/dL threshold) is a backend concern — deferred to P108.
+
+### Next Recommended Lane
+
+**P107 — Unit Alias Normalization Discovery**
+- Map common alias equivalences (e.g. `IU/L` ≡ `U/L`, `umol/L` ≡ `μmol/L`, `10^9/L` ≡ `10⁹/L`) in a frontend normalization table.
+- Expand `normalizeUnitForCompare` so that clinically equivalent units are treated as matching, reducing false suppression.
+- No backend API changes required; pure frontend mapping.
+
+### CTO Agent 5-line Summary
+
+1. P106 完成，分類：`P106_MIXED_UNIT_DELTA_SUPPRESSED`。
+2. Root cause：`LabComparisonTable` 在 `tableRows` useMemo 中對任意兩個數值計算 delta%，無單位一致性檢查，glucose mg/dL vs mmol/L 產生約 +1718% 假訊號。
+3. Fix：`normalizeUnit`（trim+lowercase）+ `unitsMatch` guard；`deltaPct` 僅在單位相符時計算；不符時 delta cell 改為 `<span data-testid="unit-mismatch-label">單位不同，暫不比較</span>`，class 改為 `text-slate-400`（中性樣式）。
+4. T5 (mixed-unit Glucose 100 mg/dL vs 5.5 mmol/L) 新增並通過；T1–T4 全部維持通過；11 個 baseline contract 全部 PASS；`next build` 零錯誤；`runtime-smoke` 56/56。
+5. 僅改動 2 個文件（`lab-comparison-table.tsx`、`p103` spec）+ report；不開新 branch，不修改後端，null unit 視為相符以避免舊資料誤觸發；單位別名正規化延後至 P107。
+
+### CEO Agent 5-line Summary
+
+1. P106 解決了一個會讓使用者看到「血糖暴增 +1700%」假警告的前端顯示 bug，現已上線。
+2. 核心改動：相同指標的最新與前次報告若單位不同（如 mg/dL vs mmol/L），趨勢欄位改顯示「單位不同，暫不比較」，不再顯示誤導性百分比。
+3. 原始數值（含各自單位）仍完整顯示，使用者仍可手動判讀；不影響正常同單位比較流程。
+4. 100% 前端修改，零後端變動，11 項自動化合約測試全部通過，風險極低。
+5. 下一步 P107：建立單位別名正規化表（IU/L ≡ U/L 等），進一步減少不必要的「暫不比較」顯示。
 
 ---
 
