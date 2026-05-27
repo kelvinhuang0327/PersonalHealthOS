@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Fragment } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { api } from '../../../lib/api'
+import { normalizeUnitForCompare } from '../../../lib/lab-unit-normalization'
 
 type Row = {
   metric: string
@@ -43,15 +44,13 @@ export function LabComparisonTable() {
   }, [rows])
 
   const tableRows = useMemo(() => {
-    const normalizeUnit = (u?: string | null) => (u ?? '').trim().toLowerCase()
-
     const base = Array.from(grouped.entries()).map(([metric, values]) => {
       const latest = values[0]
       const prev = values[1]
       const latestNum = typeof latest?.value === 'number' ? latest.value : Number(latest?.value)
       const prevNum = typeof prev?.value === 'number' ? prev.value : Number(prev?.value)
       const hasNumbers = Number.isFinite(latestNum) && Number.isFinite(prevNum)
-      const unitsMatch = normalizeUnit(latest?.unit) === normalizeUnit(prev?.unit)
+      const unitsMatch = normalizeUnitForCompare(latest?.unit) === normalizeUnitForCompare(prev?.unit)
       const unitMismatch = hasNumbers && !unitsMatch
       const deltaPct = hasNumbers && prevNum !== 0 && unitsMatch ? ((latestNum - prevNum) / prevNum) * 100 : null
       const improved = deltaPct !== null ? deltaPct < 0 : null

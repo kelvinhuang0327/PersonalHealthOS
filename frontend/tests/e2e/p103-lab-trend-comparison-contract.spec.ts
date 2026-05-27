@@ -276,4 +276,90 @@ test.describe('P103 — Lab Trend Comparison Contract', () => {
     await expect(table).toContainText('100')
     await expect(table).toContainText('5.5')
   })
+
+  /**
+   * T6 — IU/L and U/L compare as alias (P108 unit alias normalization).
+   * When latest unit is U/L and previous unit is IU/L (or vice versa):
+   * - delta% is calculated and shown
+   * - "單位不同，暫不比較" must NOT appear for that row
+   */
+  test('T6: IU/L and U/L compare as alias — delta calculated, no unit-mismatch label', async ({ page }) => {
+    const IU_ALIAS_ROWS = [
+      {
+        metric: 'ALT',
+        report_date: '2026-03-15',
+        document_id: 'doc-p108-new',
+        document_name: '2026_健檢報告.pdf',
+        value: 30.0,
+        unit: 'U/L',
+        is_abnormal: false,
+        reference_range: '7-40 U/L',
+      },
+      {
+        metric: 'ALT',
+        report_date: '2025-03-10',
+        document_id: 'doc-p108-prev',
+        document_name: '2025_健檢報告.pdf',
+        value: 25.0,
+        unit: 'IU/L',
+        is_abnormal: false,
+        reference_range: '7-40 IU/L',
+      },
+    ]
+
+    await stubRoutes(page, { labHistory: IU_ALIAS_ROWS })
+    await page.goto('/platform/documents')
+    await page.getByRole('button', { name: '歷史比較' }).click()
+    await expect(page.getByTestId('lab-comparison-table')).toBeVisible()
+
+    // Unit-mismatch label must NOT appear (IU/L ≡ U/L after normalization)
+    await expect(page.getByTestId('unit-mismatch-label')).not.toBeVisible()
+
+    // Delta must be visible (30 vs 25 → +20%)
+    const table = page.getByTestId('lab-comparison-table')
+    await expect(table).toContainText('20.0%')
+  })
+
+  /**
+   * T7 — Unicode μ and ASCII u compare as alias (P108 unit alias normalization).
+   * When latest unit is umol/L and previous unit is μmol/L (or µmol/L):
+   * - delta% is calculated and shown
+   * - "單位不同，暫不比較" must NOT appear for that row
+   */
+  test('T7: Unicode mu and ASCII u compare as alias — delta calculated, no unit-mismatch label', async ({ page }) => {
+    const MU_ALIAS_ROWS = [
+      {
+        metric: 'Bilirubin',
+        report_date: '2026-03-15',
+        document_id: 'doc-p108-mu-new',
+        document_name: '2026_健檢報告.pdf',
+        value: 18.0,
+        unit: 'umol/L',
+        is_abnormal: false,
+        reference_range: '3-21 umol/L',
+      },
+      {
+        metric: 'Bilirubin',
+        report_date: '2025-03-10',
+        document_id: 'doc-p108-mu-prev',
+        document_name: '2025_健檢報告.pdf',
+        value: 15.0,
+        unit: 'μmol/L',
+        is_abnormal: false,
+        reference_range: '3-21 μmol/L',
+      },
+    ]
+
+    await stubRoutes(page, { labHistory: MU_ALIAS_ROWS })
+    await page.goto('/platform/documents')
+    await page.getByRole('button', { name: '歷史比較' }).click()
+    await expect(page.getByTestId('lab-comparison-table')).toBeVisible()
+
+    // Unit-mismatch label must NOT appear (μmol/L ≡ umol/L after normalization)
+    await expect(page.getByTestId('unit-mismatch-label')).not.toBeVisible()
+
+    // Delta must be visible (18 vs 15 → +20%)
+    const table = page.getByTestId('lab-comparison-table')
+    await expect(table).toContainText('20.0%')
+  })
 })
