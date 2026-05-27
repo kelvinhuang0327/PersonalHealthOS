@@ -2,6 +2,120 @@
 
 ---
 
+## P110 — Backend normalized_unit Field for LabReportItem (2026-05-27)
+
+**Classification:** `P110_BACKEND_NORMALIZED_UNIT_FIELD_READY`
+**Commit:** `0f3348c`
+**Branch:** `main`
+
+### 1. Pre-flight Result
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| HEAD | attached ✅ |
+| P109 commit `ce096a5` | present ✅ |
+| Dirty files | Only governance/roadmap files (not staged) ✅ |
+| All 11 baseline contracts | PASS ✅ |
+
+### 2. Implementation Summary
+
+Implemented Option C from P109 discovery: added a nullable `normalized_unit` field alongside the existing raw `unit` field in `LabReportItem`. Newly parsed rows carry both the original OCR/PDF display string and its canonical comparison form. Historical rows keep `normalized_unit = NULL` and continue to fall back to frontend `normalizeUnitForCompare()`.
+
+### 3. normalize_unit() Behavior Table
+
+| Input | Output |
+|---|---|
+| `"IU/L"` | `"U/L"` |
+| `"iu/l"` | `"U/L"` |
+| `"IU/l"` | `"U/L"` |
+| `"U/L"` | `"U/L"` |
+| `"μmol/L"` | `"umol/L"` |
+| `"µmol/L"` | `"umol/L"` |
+| `"umol/L"` | `"umol/L"` |
+| `"mg/dL"` | `"mg/dL"` |
+| `"mmol/L"` | `"mmol/L"` |
+| `None` | `None` |
+| `""` | `None` |
+| `"   "` | `None` |
+
+mg/dL and mmol/L are explicitly NOT aliased to each other.
+
+### 4. Migration Summary
+
+- Created `backend/scripts/migrate_p110_normalized_unit.py` — idempotent `ADD COLUMN normalized_unit VARCHAR(30) NULL` with upgrade/downgrade.
+- Updated `backend/scripts/self_heal_db.py` drift check to include `('lab_report_items', 'normalized_unit')`.
+- No Alembic runtime in this project — migration follows the existing `self_heal_db.py` / raw SQL pattern.
+- Migration runtime check: NOT RUN (no Alembic CLI; test suites use in-memory SQLite `create_all` which picks up the new column from the model automatically).
+
+### 5. API / Schema Propagation Summary
+
+| Layer | Change |
+|---|---|
+| `report_parser.py` | Added `normalize_unit()`, emits `normalized_unit` in `parse_lab_items()` output dict |
+| `entities.py` | `normalized_unit = Column(String(30), nullable=True)` on `LabReportItem` |
+| `schemas/documents.py` | `normalized_unit: Optional[str] = None` in `ParsedItemResponse` and `ParsedItemPreview` |
+| `api/documents.py` | `normalized_unit` propagated in parse preview, parsed-items list, update-item response, lab-history response |
+
+### 6. Validation Table
+
+| Gate | Result |
+|---|---|
+| `lab-trend-comparison-contract` (7 tests) | PASS |
+| `lab-trend-report-date-contract` (4 tests) | PASS |
+| `documents-confirmed-data-contract` (4 tests) | PASS |
+| `documents-page-contract` (4 tests) | PASS |
+| `report-symptom-recommendation-contract` (5 tests) | PASS |
+| `documents-evidence-deeplink-contract` (4 tests) | PASS |
+| `daily-summary-evidence-contract` (4 tests) | PASS |
+| `daily-assistant-contract` (5 tests) | PASS |
+| `actions-page-contract` (4 tests) | PASS |
+| `symptoms-page-contract` (4 tests) | PASS |
+| `runtime-smoke` (56 tests) | PASS |
+| `test_report_parser_stage2.py` (21 tests) | PASS |
+| Migration runtime check | NOT RUN — no Alembic CLI; model `create_all` used in tests |
+
+### 7. Files Changed
+
+| File | Action |
+|---|---|
+| `backend/app/services/report_parser.py` | Added `normalize_unit()`, updated `parse_lab_items()` |
+| `backend/app/models/entities.py` | Added `normalized_unit` column |
+| `backend/app/schemas/documents.py` | Added `normalized_unit` to `ParsedItemResponse` and `ParsedItemPreview` |
+| `backend/app/api/documents.py` | Propagated `normalized_unit` in 3 response sites + lab-history |
+| `backend/scripts/migrate_p110_normalized_unit.py` | Created — upgrade/downgrade migration script |
+| `backend/scripts/self_heal_db.py` | Updated drift check list |
+| `backend/tests/test_report_parser_stage2.py` | 20 new tests added (21 total) |
+| `00-Plan/roadmap/active_task_report.md` | Updated |
+
+### 8. Commit Hashes
+
+| Commit | Description |
+|---|---|
+| `0f3348c` | feat(backend): P110 normalized_unit field at ingest for LabReportItem |
+| _(follows)_ | docs(report): P110 normalized_unit ingest report |
+
+### 9. Known Limitations
+
+- Historical `lab_report_items` rows have `normalized_unit = NULL`. Frontend `normalizeUnitForCompare()` remains the fallback.
+- `migrate_p110_normalized_unit.py` uses raw `ADD COLUMN` SQL — not Alembic managed. Safe for PostgreSQL; SQLite doesn't support `DROP COLUMN` on older versions (downgrade path is PostgreSQL-only).
+- `normalize_unit()` handles IU/L and Unicode mu prefix only. Other alias forms (e.g., `g/L`, `pg/mL`) pass through unchanged and are not normalized.
+
+### 10. Next Recommended Lane
+
+**P111 — Backend unit comparison using normalized_unit**: Update `get_lab_history()` and the lab-trend comparison logic to group/compare using `normalized_unit` where non-null, falling back to `normalizeUnitForCompare()` for NULL rows. This closes the remaining gap where the comparison is still done entirely in the frontend.
+
+### 11. CTO Agent Summary
+
+P110 complete. `normalize_unit()` added to parser with full alias coverage (IU/L→U/L, Unicode μ/µ→ASCII u). `LabReportItem` model gains nullable `normalized_unit` column populated at parse time; raw `unit` untouched for display. Propagated through schemas and 4 API response sites. 21/21 backend tests PASS; 11/11 contract gates PASS with zero regressions. Migration script follows project's existing raw-SQL / self_heal pattern (no Alembic). Historical rows remain NULL — frontend normalizeUnitForCompare() is still the fallback.
+
+### 12. CEO Agent Summary
+
+Lab unit normalization is now happening at data ingest, not just in the browser. When a new lab report is uploaded, the system records both the original unit string and its canonical form side by side. IU/L and U/L are already treated as the same thing at the data layer. Existing historical records are untouched and still work. Next step (P111) is to use the backend-normalized unit for actual comparison logic, fully removing the dependency on frontend normalization for accuracy.
+
+---
+
 ## P109 — Report Parser Unit Field Normalization at Ingest: Discovery (2026-05-27)
 
 **Classification:** `P109_BACKEND_NORMALIZED_UNIT_FIELD_RECOMMENDED`
