@@ -2,6 +2,123 @@
 
 ---
 
+## P113 — Abnormal Flag Unit-Scale Safety Discovery (2026-05-28)
+
+**Classification:** `P113_ABNORMAL_FLAG_UNIT_SCALE_DISCOVERY_COMPLETE_LATENT_RISK`  
+**Commits:** _(test + report commit)_ · _(active_task_report commit — this file)_  
+**Branch:** `main`
+
+### 1. Pre-flight Result
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| git-dir | `.git` (not a worktree) ✅ |
+| P111 commits `3d0043e` + `6da3125` | present ✅ |
+| P112 commits `0358d41` + `90cd36f` | present ✅ |
+
+### 2. Dirty File / Restricted Governance File Status
+
+| File | Status |
+|---|---|
+| `00-Plan/roadmap/CEO-Decision.md` | Modified (pre-existing) — **NOT touched by P113** |
+| `00-Plan/roadmap/CTO-Analysis.md` | Modified (pre-existing) — **NOT touched by P113** |
+| `00-Plan/roadmap/roadmap.md` | Modified (pre-existing) — **NOT touched by P113** |
+| No other unrelated dirty files | ✅ |
+
+### 3. Baseline Validation (Pre-discovery)
+
+| Suite | Result |
+|---|---|
+| All 10 E2E contracts | ✅ PASS |
+| `make runtime-smoke` | 56 passed ✅ |
+| `test_report_parser_stage2.py` | 21 passed ✅ |
+| `test_lab_history_unit_comparison.py` | 11 passed ✅ |
+| `test_p112_normalized_unit_migration_runtime.py` | 4 passed ✅ |
+
+### 4. Discovery Findings
+
+**Risk Status: LATENT_RISK**
+
+**Root cause**: `compute_abnormal_flag(value, low, high)` has no `unit` parameter.
+`infer_reference_range(item_name, gender, unit)` accepts `unit` but uses it only
+for display — rule thresholds (calibrated in mg/dL) are applied verbatim
+regardless of the sample's unit.
+
+**False positive path**: Glucose 5.5 mmol/L → rule {low=70, high=99 mg/dL} →
+`5.5 < 70` → `abnormal_flag='L'` (clinically normal value wrongly flagged).
+
+**False negative path**: LDL 3.4 mmol/L → rule {high=130 mg/dL} →
+`3.4 < 130` → `abnormal_flag='N'` (borderline-high missed).
+
+**`normalized_unit` (P110)**: stored in DB but never consulted during flag
+derivation or downstream severity classification.
+
+**Downstream propagation** confirmed: `detect_lab_abnormalities` returns
+`severity='medium'` from the false-positive 'L' flag — surfaced to Daily
+Assistant, notifications, `whyDetected` narrative.
+
+**Activation conditions** (latent → active):
+1. Lab report uses non-standard unit (mmol/L, g/L, µmol/L…)
+2. No explicit reference range embedded in report text
+3. Item name present in `lab_reference_ranges.json`
+
+### 5. Characterization Tests Created
+
+File: `backend/tests/test_p113_abnormal_flag_unit_scale_discovery.py`
+
+| Test | Finding |
+|---|---|
+| A1–A3 | Same-scale (mg/dL + explicit range) → correct flags (baseline) |
+| B1 | Glucose 5.5 mmol/L → false positive 'L' |
+| B2 | `infer_reference_range` returns mg/dL thresholds for mmol/L caller |
+| B3 | LDL 3.4 mmol/L → false negative 'N' |
+| B4 | `compute_abnormal_flag` has no `unit` parameter (root cause) |
+| C1 | `normalized_unit` and false-positive flag coexist (not cross-checked) |
+| C2 | Same thresholds returned regardless of unit arg |
+| D1 | False-positive → medium severity in `detect_lab_abnormalities` |
+| D2 | False-positive propagates into `whyDetected` narrative |
+| D3 | Extra `normalized_unit` field in evidence dict does not suppress severity |
+
+**All 12 tests: PASS**
+
+### 6. Discovery Report
+
+`docs/product/p113-abnormal-flag-unit-scale-safety-discovery.md`
+
+### 7. Post-Validation
+
+| Suite | Result |
+|---|---|
+| All 10 E2E contracts | ✅ PASS |
+| `make runtime-smoke` | 56 passed ✅ |
+| `test_report_parser_stage2.py` | 21 passed ✅ |
+| `test_lab_history_unit_comparison.py` | 11 passed ✅ |
+| `test_p112_normalized_unit_migration_runtime.py` | 4 passed ✅ |
+| `test_p113_abnormal_flag_unit_scale_discovery.py` | 12 passed ✅ |
+| `cd frontend && npx next build` | ✅ PASS |
+
+### 8. Non-Goals
+
+- No production code modified
+- No parser behaviour changed
+- No DB migration added
+- No historical data backfilled
+- No unit conversion logic implemented
+- No frontend runtime changes
+
+### 9. Recommended Next Lanes
+
+| Lane | Approach |
+|---|---|
+| A (preferred) | Threshold scaling via unit conversion table in `infer_reference_range` |
+| B | Unit guard: suppress flag (set `None`) when unit mismatch detected |
+| C | Add `unit_mismatch_warning` field; display caution in frontend only |
+| D | Route to manual re-review queue on mismatch at ingest |
+
+---
+
 ## P112 — normalized_unit Migration Runtime Assurance (2026-05-28)
 
 **Classification:** `P112_NORMALIZED_UNIT_MIGRATION_RUNTIME_ASSURED`
