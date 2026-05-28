@@ -2,6 +2,93 @@
 
 ---
 
+## P114 — Abnormal Flag Unit-Scale Guard (2026-05-28)
+
+**Classification:** `P114_ABNORMAL_FLAG_UNIT_SCALE_GUARD_READY`  
+**Commits:** `654bcc2` fix(backend): P114 guard abnormal flag unit-scale mismatch · _(this report commit)_  
+**Branch:** `main`
+
+### 1. Pre-flight Result
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| git-dir | `.git` (not a worktree) ✅ |
+| P113 commits present | `7c3f230` + `aa6fc6f` ✅ |
+
+### 2. Dirty File / Restricted Governance File Status
+
+| File | Status |
+|---|---|
+| `00-Plan/roadmap/CEO-Decision.md` | Modified (pre-existing) — **NOT touched by P114** |
+| `00-Plan/roadmap/CTO-Analysis.md` | Modified (pre-existing) — **NOT touched by P114** |
+| `00-Plan/roadmap/roadmap.md` | Modified (pre-existing) — **NOT touched by P114** |
+
+### 3. Baseline Validation (Pre-implementation)
+
+| Suite | Count | Result |
+|---|---|---|
+| runtime-smoke (10 E2E contracts) | 56 passed | ✅ |
+| test_p113_abnormal_flag_unit_scale_discovery | 12 | ✅ |
+| test_report_parser_stage2 | 21 | ✅ |
+| test_lab_history_unit_comparison | 11 | ✅ |
+| test_p112_normalized_unit_migration_runtime | 4 | ✅ |
+
+### 4. What Was Implemented
+
+**Root cause** (confirmed in P113): `compute_abnormal_flag` has no unit parameter. `infer_reference_range` returns raw rule thresholds (e.g. 70–99 mg/dL) regardless of the sample's unit, producing false positives (Glucose 5.5 mmol/L → 'L') and false negatives (LDL 3.4 mmol/L → 'N').
+
+**Guard added in `backend/app/services/report_parser.py`:**
+
+1. `_get_rule_unit(item_name, gender) -> str | None`  
+   Looks up the canonical unit from `lab_reference_ranges.json`. Gender-aware for items with male/female sub-rules.
+
+2. `_unit_scale_compatible(sample_normalized_unit, rule_unit) -> bool`  
+   Returns `True` when units are absent or canonically equal (via `normalize_unit()`).  
+   Returns `False` when both present and different scale (e.g. mmol/L vs mg/dL).
+
+3. Guard inserted in `parse_lab_items` before `compute_abnormal_flag`:
+   - Fires only when `range_source == 'default_rule'`
+   - Mismatch → `abnormal_flag = None` (suppressed, not 'clinically normal')
+   - IU/L alias preserved: `normalize_unit('IU/L')` = `'U/L'` = rule_unit → compatible
+   - Explicit report ranges bypassed (range_source = 'extracted')
+
+**No unit conversion performed. No historical backfill. No schema changes.**
+
+### 5. Post-implementation Validation
+
+| Suite | Count | Result |
+|---|---|---|
+| test_p114_abnormal_flag_unit_scale_guard (new, A–F) | **25** | ✅ |
+| test_p113_abnormal_flag_unit_scale_discovery (updated b1, b3, c1) | 12 | ✅ |
+| test_report_parser_stage2 | 21 | ✅ |
+| test_lab_history_unit_comparison | 11 | ✅ |
+| test_p112_normalized_unit_migration_runtime | 4 | ✅ |
+| **Total backend** | **73** | ✅ |
+| runtime-smoke | 56 | ✅ |
+
+### 6. Files Changed
+
+| File | Action |
+|---|---|
+| `backend/app/services/report_parser.py` | Modified — added `_get_rule_unit`, `_unit_scale_compatible`, guard in `parse_lab_items` |
+| `backend/tests/test_p114_abnormal_flag_unit_scale_guard.py` | Created — 25 guard tests (groups A–F) |
+| `backend/tests/test_p113_abnormal_flag_unit_scale_discovery.py` | Updated — b1, b3, c1 updated to reflect fixed behaviour |
+| `docs/product/p114-abnormal-flag-unit-scale-guard.md` | Created — implementation report, decision table, known limitations |
+
+### 7. Known Limitations
+
+- No unit conversion (no conversion table): mmol/L samples remain `None` until upstream provides mg/dL value.
+- No `abnormal_flag_reason` field: `None` does not distinguish "mismatch" from "no range". Schema extension is Lane B.
+- No historical backfill: pre-P114 stored `abnormal_flag='L'` records not corrected. Migration is Lane D.
+
+### 8. Classification
+
+`P114_ABNORMAL_FLAG_UNIT_SCALE_GUARD_READY`
+
+---
+
 ## P113 — Abnormal Flag Unit-Scale Safety Discovery (2026-05-28)
 
 **Classification:** `P113_ABNORMAL_FLAG_UNIT_SCALE_DISCOVERY_COMPLETE_LATENT_RISK`  
