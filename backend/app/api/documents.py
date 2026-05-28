@@ -22,6 +22,18 @@ from app.services.storage_service import download_file, upload_file, validate_up
 router = APIRouter(prefix='/documents', tags=['documents'])
 
 
+def lab_unit_equivalence_key(normalized_unit: Optional[str]) -> Optional[str]:
+    """Return the canonical key used for backend unit-equivalence decisions.
+
+    Both NULL and whitespace-only values return None — None is NOT a wildcard
+    match; callers receiving None must defer comparison to the frontend
+    normalizeUnitForCompare() fallback.
+    """
+    if not normalized_unit or not normalized_unit.strip():
+        return None
+    return normalized_unit.strip()
+
+
 @router.post('/upload', response_model=DocumentResponse)
 async def upload_document(
     category: Annotated[str, Form(..., min_length=1, max_length=60)],
@@ -382,6 +394,7 @@ def get_lab_history(
                 'value': float(item.value_num) if item.value_num is not None else item.value_text,
                 'unit': item.unit,
                 'normalized_unit': item.normalized_unit,
+                'unit_equivalence_key': lab_unit_equivalence_key(item.normalized_unit),
                 'is_abnormal': item.abnormal_flag in {'H', 'L'},
                 'reference_range': item.ref_range,
             }
