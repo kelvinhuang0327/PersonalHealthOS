@@ -2,6 +2,122 @@
 
 ---
 
+## P111 — Backend Lab Comparison Uses normalized_unit (2026-05-28)
+
+**Classification:** `P111_BACKEND_NORMALIZED_UNIT_COMPARISON_READY`
+**Commit:** `3d0043e`
+**Branch:** `main`
+
+### 1. Pre-flight Result
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| git-dir | `.git` (not a worktree) ✅ |
+| P110 code commit `0f3348c` | present ✅ |
+| P110 report commit `28ec88e` | present ✅ |
+| Dirty files | Only forbidden governance files (CEO-Decision.md, CTO-Analysis.md, roadmap.md) — not staged ✅ |
+| All 11 baseline contracts | PASS ✅ |
+| runtime-smoke (56 tests) | PASS ✅ |
+
+### 2. Implementation Summary
+
+This task is **case (a)**: `get_lab_history()` already returned rows; all comparison logic lived in the frontend. P111 adds backend canonical truth without breaking the frontend fallback path.
+
+**Added `lab_unit_equivalence_key()` helper** in `backend/app/api/documents.py`:
+- Accepts `normalized_unit` (the P110 column value).
+- Returns `None` for `NULL`, empty string, and whitespace-only inputs — `None` is **not** a wildcard match.
+- Returns the stripped string for any real value.
+- Callers receiving `None` must defer equivalence decisions to frontend `normalizeUnitForCompare()`.
+
+**Updated `get_lab_history()` response** to include `unit_equivalence_key` alongside the existing `unit` and `normalized_unit` fields per row.
+
+**No frontend code was touched.** `normalizeUnitForCompare()` (P108) remains the NULL-row fallback exactly as required.
+
+### 3. Comparison Decision Table
+
+| Scenario | key_a | key_b | Decision |
+|---|---|---|---|
+| IU/L (P110 normalizes → U/L) vs U/L | `"U/L"` | `"U/L"` | `comparable` |
+| Historical NULL row vs post-P110 row | `None` | `"U/L"` | `unknown_fallback` (defer to frontend) |
+| mg/dL vs mmol/L | `"mg/dL"` | `"mmol/L"` | `not_comparable` |
+| Empty string vs any unit | `None` | `"U/L"` | `unknown_fallback` |
+| Whitespace-only vs any unit | `None` | `"U/L"` | `unknown_fallback` |
+| Two blank/whitespace rows | `None` | `None` | `unknown_fallback` |
+
+### 4. API / Schema Propagation Summary
+
+`GET /documents/lab-history` response per row now includes:
+
+| Field | Type | Source | Notes |
+|---|---|---|---|
+| `unit` | `string \| null` | `LabReportItem.unit` | Raw display string — never mutated |
+| `normalized_unit` | `string \| null` | `LabReportItem.normalized_unit` | Written at P110 ingest; NULL for historical rows |
+| `unit_equivalence_key` | `string \| null` | `lab_unit_equivalence_key(normalized_unit)` | Backend canonical comparison key; None = defer to frontend |
+
+No Alembic migration was added (column exists from P110). No schema version bump needed.
+
+### 5. Validation Table
+
+| Gate | Before | After |
+|---|---|---|
+| `lab-trend-comparison-contract` (7 tests) | PASS | PASS |
+| `lab-trend-report-date-contract` (4 tests) | PASS | PASS |
+| `documents-confirmed-data-contract` (4 tests) | PASS | PASS |
+| `documents-page-contract` (4 tests) | PASS | PASS |
+| `report-symptom-recommendation-contract` (5 tests) | PASS | PASS |
+| `documents-evidence-deeplink-contract` (4 tests) | PASS | PASS |
+| `daily-summary-evidence-contract` (4 tests) | PASS | PASS |
+| `daily-assistant-contract` (5 tests) | PASS | PASS |
+| `actions-page-contract` (4 tests) | PASS | PASS |
+| `symptoms-page-contract` (4 tests) | PASS | PASS |
+| `runtime-smoke` (56 tests) | PASS | PASS |
+| `test_report_parser_stage2.py` (21 tests) | PASS | PASS |
+| `test_lab_history_unit_comparison.py` (11 tests) | N/A | PASS |
+| `next build` | PASS | PASS |
+| Alembic migration runtime check | NOT RUN (no Alembic in project) | NOT RUN |
+
+### 6. Files Changed
+
+| File | Change |
+|---|---|
+| `backend/app/api/documents.py` | Added `lab_unit_equivalence_key()` helper; added `unit_equivalence_key` field to `get_lab_history()` response rows |
+| `backend/tests/test_lab_history_unit_comparison.py` | New — 11 tests covering comparison branches A, B, C, D |
+
+### 7. Commit Hashes
+
+| # | Hash | Message |
+|---|---|---|
+| 1 | `3d0043e` | `feat(backend): P111 lab comparison uses LabReportItem.normalized_unit` |
+| 2 | _(this commit)_ | `docs(report): P111 backend lab comparison normalized_unit consumption` |
+
+### 8. Known Limitations
+
+- `unit_equivalence_key` is a passthrough of `normalized_unit` for non-alias values. More complex alias resolution (e.g., `IU/L → U/L`) is handled at P110 ingest time by `normalize_unit()` in `report_parser.py`, not here.
+- Historical rows (pre-P110) will always yield `unit_equivalence_key = null` until re-ingested; no backfill was performed per task governance.
+- The comparison decision (`comparable / not_comparable / unknown_fallback`) is computed client-side using the returned `unit_equivalence_key`. If a dedicated comparison endpoint is needed in future, P112 should add it.
+
+### 9. Next Recommended Lane
+
+**P112** — Expose a structured `/lab-history/compare` backend endpoint that accepts two row identifiers and returns an explicit `comparable / not_comparable / unknown_fallback` status. This removes the need for clients to re-implement comparison logic and enables server-side audit logging of unit mismatch events.
+
+### 10. Governance Notes
+
+- `00-Plan/roadmap/roadmap.md` is still timestamped 2026-05-25 (P61 refocus) and does **NOT** reflect P107–P111. Next CTO review must update.
+- `00-Plan/roadmap/CTO-Analysis.md` is still dated 2026-05-23 (P13 era). Next CTO review must rewrite.
+- P111 worker did **NOT** touch either file (out of CEO scope).
+
+### 11. CTO Agent Summary
+
+P111 adds `lab_unit_equivalence_key()` to `documents.py` — a null-safe helper that converts `LabReportItem.normalized_unit` (written at P110 ingest) into a backend comparison key exposed per row in `GET /lab-history`. NULL and whitespace are explicitly not wildcard matches; callers receiving `None` defer to frontend `normalizeUnitForCompare()`. No DB migration, no frontend changes, no new routes — strictly additive. 11 new unit tests cover all four mandated comparison branches. All 11 contracts and 56 smoke tests pass before and after.
+
+### 12. CEO Agent Summary
+
+P111 closes the loop on the P107–P110 lab unit normalization lane. The backend now surfaces a canonical `unit_equivalence_key` for every lab result row, giving the app a reliable server-side signal for whether two test values used the same unit. Historical records are handled safely: when the key is absent, the app falls back to the existing frontend logic with no crash or silent mismatch. The change is invisible to users but enables correct automated comparison across all future lab uploads. All tests green; two clean commits.
+
+---
+
 ## P110 — Backend normalized_unit Field for LabReportItem (2026-05-27)
 
 **Classification:** `P110_BACKEND_NORMALIZED_UNIT_FIELD_READY`
