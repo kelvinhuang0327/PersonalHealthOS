@@ -85,26 +85,26 @@ class TestA_SameScaleExplicitRange:
 class TestB_CrossScaleMismatch:
     """Glucose / LDL in mmol/L without explicit range → rule applied in mg/dL."""
 
-    def test_b1_glucose_5_5_mmol_l_produces_false_positive_L(self):
+    def test_b1_glucose_5_5_mmol_l_false_positive_suppressed_by_p114(self):
         """5.5 mmol/L is clinically NORMAL Glucose (~99 mg/dL equivalent).
 
-        CURRENT BEHAVIOUR (documented, not fixed):
-          infer_reference_range('Glucose', None, 'mmol/L')
-            → rule {low=70.0, high=99.0, unit='mg/dL'} (ignores caller unit)
-          compute_abnormal_flag(5.5, 70.0, 99.0) → 5.5 < 70.0 → 'L'
+        PRE-P114 BEHAVIOUR (documented in P113):
+          compute_abnormal_flag(5.5, 70.0, 99.0) → 'L' (false positive)
 
-        This is a FALSE POSITIVE abnormal flag.
+        POST-P114 BEHAVIOUR (P114 unit-scale guard active):
+          normalized_unit='mmol/L', rule_unit='mg/dL' → mismatch detected
+          → _unit_scale_compatible returns False
+          → abnormal_flag = None  (suppressed, not a clinical 'normal')
         """
         items = parse_lab_items("Glucose 5.5 mmol/L")
         assert len(items) == 1
         item = items[0]
-        # Unit is correctly captured …
         assert item["unit"] == "mmol/L"
         assert item["normalized_unit"] == "mmol/L"
-        # … but flag is wrong: false positive 'L'
-        assert item["abnormal_flag"] == "L", (
-            "CHARACTERIZATION: Glucose 5.5 mmol/L → false-positive 'L' because "
-            "mg/dL rule thresholds (70–99) are applied without unit-scale conversion"
+        # P114 guard: false-positive 'L' is now suppressed → None
+        assert item["abnormal_flag"] is None, (
+            "P114 guard: Glucose 5.5 mmol/L unit-scale mismatch suppresses flag "
+            "(abnormal_flag=None means 'not flagged by local rule', not 'clinically normal')"
         )
 
     def test_b2_infer_reference_range_returns_mg_dl_thresholds_for_mmol_l_unit(self):
@@ -123,22 +123,26 @@ class TestB_CrossScaleMismatch:
             "not the actual sample unit 'mmol/L'"
         )
 
-    def test_b3_ldl_3_4_mmol_l_produces_false_negative(self):
-        """LDL 3.4 mmol/L ≈ 131 mg/dL (borderline-high) gets NO flag.
+    def test_b3_ldl_3_4_mmol_l_false_negative_suppressed_by_p114(self):
+        """LDL 3.4 mmol/L ≈ 131 mg/dL (borderline-high) previously got wrong 'N'.
 
-        CURRENT BEHAVIOUR:
-          LDL rule = {low=0, high=130, unit='mg/dL'}
-          compute_abnormal_flag(3.4, 0.0, 130.0) → 3.4 < 130 → 'N'
+        PRE-P114 BEHAVIOUR (documented in P113):
+          compute_abnormal_flag(3.4, 0.0, 130.0) → 'N' (false negative)
 
-        This is a FALSE NEGATIVE — a borderline-high LDL is missed entirely.
+        POST-P114 BEHAVIOUR (P114 unit-scale guard active):
+          normalized_unit='mmol/L', rule_unit='mg/dL' → mismatch detected
+          → abnormal_flag = None  (suppressed — cannot safely apply mg/dL threshold)
+
+        None is safer than 'N': it does NOT assert the value is normal.
         """
         items = parse_lab_items("LDL 3.4 mmol/L")
         assert len(items) == 1
         item = items[0]
         assert item["normalized_unit"] == "mmol/L"
-        assert item["abnormal_flag"] in ("N", None), (
-            "CHARACTERIZATION: LDL 3.4 mmol/L → false negative, no flag raised "
-            "despite borderline-high value when converted to mg/dL (~131)"
+        # P114 guard: no longer produces misleading 'N' from mg/dL threshold
+        assert item["abnormal_flag"] is None, (
+            "P114 guard: LDL 3.4 mmol/L unit-scale mismatch → flag suppressed (None), "
+            "not 'N' as though the mg/dL threshold confirmed normal"
         )
 
     def test_b4_compute_abnormal_flag_signature_has_no_unit_parameter(self):
@@ -161,19 +165,21 @@ class TestC_NormalizedUnitNotConsulted:
     """normalized_unit is present in the parsed item dict but is unused during
     abnormal_flag computation.  No part of the parse pipeline reads it back."""
 
-    def test_c1_false_positive_and_normalized_unit_coexist_in_parsed_item(self):
-        """Parsed item carries normalized_unit='mmol/L' and abnormal_flag='L' simultaneously.
+    def test_c1_normalized_unit_now_consulted_by_p114_guard(self):
+        """P114 guard uses normalized_unit to detect and suppress the mismatch.
 
-        CURRENT BEHAVIOUR: These two fields are present together, but the system
-        never cross-checks normalized_unit against the rule's expected unit to
-        prevent the false-positive flag.
+        PRE-P114: normalized_unit='mmol/L' and abnormal_flag='L' coexisted
+          (normalized_unit was stored but never checked).
+
+        POST-P114: normalized_unit='mmol/L' is compared against rule_unit='mg/dL';
+          mismatch detected → abnormal_flag suppressed to None.
         """
         items = parse_lab_items("Glucose 5.5 mmol/L")
         assert len(items) == 1
         item = items[0]
-        # Both fields coexist — normalized_unit was not consulted to suppress the flag
         assert item["normalized_unit"] == "mmol/L"
-        assert item["abnormal_flag"] == "L"
+        # Guard now active: normalized_unit is consulted and mismatch suppresses flag
+        assert item["abnormal_flag"] is None
 
     def test_c2_same_item_name_same_rule_different_unit_same_wrong_thresholds(self):
         """Regardless of whether unit is 'mmol/L' or 'mg/dL', the same rule is returned.

@@ -98,6 +98,66 @@ def normalize_unit(unit: str | None) -> str | None:
     return normalized
 
 
+# ---------------------------------------------------------------------------
+# P114 — Unit-scale guard helpers
+# ---------------------------------------------------------------------------
+
+def _get_rule_unit(item_name: str, gender: str | None = None) -> str | None:
+    """Return the canonical unit declared in lab_reference_ranges.json for item_name.
+
+    Returns None when the item has no rule or the rule omits a unit.
+    Gender is used only to select the gender-specific sub-rule for items
+    like Hemoglobin that carry separate male/female entries.
+    """
+    ranges = _load_default_ranges()
+    rule = ranges.get(item_name)
+    if not rule:
+        return None
+    if isinstance(rule.get('male'), dict) or isinstance(rule.get('female'), dict):
+        gender_key = (gender or '').lower()
+        if gender_key in {'male', 'm', '男'}:
+            sub = rule.get('male')
+        elif gender_key in {'female', 'f', '女'}:
+            sub = rule.get('female')
+        else:
+            sub = rule.get('male') or rule.get('female')
+        rule = sub if sub else {}
+    return rule.get('unit') if rule else None
+
+
+def _unit_scale_compatible(sample_normalized_unit: str | None, rule_unit: str | None) -> bool:
+    """Return True when sample and rule unit are in the same (or alias-safe) scale.
+
+    Guard semantics (P114)
+    ----------------------
+    True  → allow threshold comparison (safe to compute abnormal_flag)
+    False → suppress threshold comparison (unit-scale mismatch confirmed)
+
+    Rules
+    -----
+    * Either unit absent → True
+      (cannot confirm mismatch; preserves pre-P114 behaviour for missing units)
+    * Both present + identical after canonicalization → True (same scale)
+    * Both present + different after canonicalization → False (mismatch)
+
+    Canonicalization re-uses normalize_unit() so aliases already handled by the
+    P108 pipeline (e.g. IU/L ↔ U/L) are treated as equivalent.
+
+    Important: a False return does NOT mean the value is clinically normal.
+    It means the local rule cannot safely classify the value because the unit
+    scales differ.  The resulting abnormal_flag=None should be interpreted as
+    "not flagged by local rule due to unit-scale mismatch", not as "normal".
+    No clinical unit conversion is performed here.
+    """
+    if sample_normalized_unit is None or rule_unit is None:
+        # Cannot confirm mismatch — preserve existing (pre-P114) behaviour.
+        return True
+    # sample_normalized_unit is already the output of normalize_unit(); apply
+    # the same normalization to rule_unit so aliases match correctly.
+    canonical_rule = normalize_unit(rule_unit) or rule_unit
+    return sample_normalized_unit == canonical_rule
+
+
 def normalize_item_name(raw_name: str) -> str:
     text = raw_name.strip()
     for alias, canonical in ALIAS_MAP.items():
@@ -196,7 +256,28 @@ def parse_lab_items(raw_text: str, gender: str | None = None) -> list[dict[str, 
         if ref_range is None:
             ref_low, ref_high, ref_range, range_source = infer_reference_range(item_name, gender, unit)
 
-        abnormal_flag = compute_abnormal_flag(value_num, ref_low, ref_high) if (ref_low is not None or ref_high is not None) else None
+        # P114 unit-scale guard ─────────────────────────────────────────────
+        # When the reference range is taken from the rule file (not extracted
+        # from the report text itself), only compute abnormal_flag when the
+        # sample's normalized_unit is scale-compatible with the rule's declared
+        # unit.  This prevents false positives (e.g. Glucose 5.5 mmol/L wrongly
+        # flagged 'L' against a 70–99 mg/dL rule) and false negatives (e.g.
+        # LDL 3.4 mmol/L passing a 130 mg/dL upper threshold as though normal).
+        #
+        # Suppressed: abnormal_flag = None
+        #   Meaning "not flagged by local rule — unit-scale mismatch", NOT
+        #   "clinically normal".  No unit conversion is performed here.
+        _can_flag = True
+        if range_source == 'default_rule':
+            _norm_unit = normalize_unit(unit)
+            _rule_unit = _get_rule_unit(item_name, gender)
+            _can_flag = _unit_scale_compatible(_norm_unit, _rule_unit)
+
+        abnormal_flag = (
+            compute_abnormal_flag(value_num, ref_low, ref_high)
+            if _can_flag and (ref_low is not None or ref_high is not None)
+            else None
+        )
 
         confidence = 0.55
         if unit:
