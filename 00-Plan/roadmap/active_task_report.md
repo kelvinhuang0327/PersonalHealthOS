@@ -1,3 +1,40 @@
+# P119 — Evidence Surface Suppression Reason Propagation Discovery (2026-05-31)
+
+**Classification:** `P119_EVIDENCE_SURFACE_SUPPRESSION_REASON_DISCOVERY_COMPLETE`
+**Branch:** `main`
+
+### 1. Objective
+Map how `abnormal_flag_reason` (especially `suppressed_unit_scale_mismatch`) propagates across all evidence surfaces. Classify each as: reason available and consumed, reason available but ignored, reason not available in data path, reason collapsed into abnormal_flag null, or unknown/needs fixture evidence.
+
+### 2. Methodology
+- Grep/code archaeology for `abnormal_flag_reason`, `suppressed_unit_scale_mismatch`, `abnormal_flag`, `is_abnormal` across backend, frontend, and tests.
+- Reviewed all evidence surface components and their data contracts.
+- Confirmed actual UI rendering and test coverage.
+
+### 3. Findings
+- Only the Documents/parsed-items-drawer surface exposes and renders suppression reasons (P118).
+- All other evidence surfaces ignore or do not receive `abnormal_flag_reason`.
+- No evidence of accidental/implicit propagation or UI rendering outside parsed-items-drawer.
+- Backend only includes `abnormal_flag_reason` in parsed items API; other surfaces do not receive or propagate this field.
+- Only parsed-items-drawer and its E2E test cover suppression reason rendering; all other surfaces/tests only check `abnormal_flag`/`is_abnormal`.
+
+### 4. Summary Table
+| Evidence Surface                | abnormal_flag_reason surfaced? | Consumed in UI? | Classification                  |
+|---------------------------------|-------------------------------|-----------------|----------------------------------|
+| Documents (parsed-items-drawer) | Yes                           | Yes             | Reason available and consumed    |
+| Daily Assistant Evidence        | No                            | N/A             | Reason not available in data path|
+| Actions Evidence                | No                            | N/A             | Reason not available in data path|
+| Lab Trend/History Evidence      | No                            | N/A             | Reason not available in data path|
+| Symptom Recommendation         | No                            | N/A             | Reason not available in data path|
+| Documents Evidence Table        | No                            | N/A             | Reason not available in data path|
+| Summary Card Evidence           | No                            | N/A             | Reason not available in data path|
+
+### 5. Conclusion
+- No evidence surface except parsed-items-drawer currently surfaces or renders suppression reasons.
+- Propagation to other surfaces would require backend and contract changes.
+
+### 6. Reference
+See `docs/product/p119-evidence-surface-suppression-reason-propagation-discovery.md` for full details.
 # P118 — Frontend Suppression Reason Badge Contract (2026-05-31)
 
 **Classification:** `P118_FRONTEND_SUPPRESSION_REASON_BADGE_READY`
