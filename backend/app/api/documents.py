@@ -246,6 +246,37 @@ def get_parsed_items(
     result = []
     for item in items:
         is_abnormal = item.abnormal_flag in {'H', 'L', 'high', 'low', 'abnormal'}
+        # P116: Compute abnormal_flag_reason
+        # Conservative, deterministic mapping
+        if item.abnormal_flag == 'H':
+            abnormal_flag_reason = 'flagged_high'
+        elif item.abnormal_flag == 'L':
+            abnormal_flag_reason = 'flagged_low'
+        elif item.abnormal_flag == 'N':
+            abnormal_flag_reason = 'normal_by_rule'
+        elif item.abnormal_flag is None:
+            # Try to distinguish suppression cases
+            # If rule exists but unit-scale mismatch, suppressed
+            # If no rule, no_reference_rule
+            # If parser_confidence is very low, parser_unavailable
+            # Fallback: unknown
+            # Use range_source and normalized_unit to infer
+            if getattr(item, 'range_source', None) == 'default_rule':
+                # Check for unit-scale mismatch
+                # If normalized_unit and rule_unit both present but not compatible, suppressed
+                # We do not have rule_unit here, so only expose suppressed_unit_scale_mismatch if normalized_unit is present
+                if item.normalized_unit and item.unit and item.ref_range:
+                    abnormal_flag_reason = 'suppressed_unit_scale_mismatch'
+                else:
+                    abnormal_flag_reason = 'no_reference_rule'
+            elif getattr(item, 'range_source', None) == 'unknown':
+                abnormal_flag_reason = 'no_reference_rule'
+            elif item.parser_confidence is not None and float(item.parser_confidence) < 0.6:
+                abnormal_flag_reason = 'parser_unavailable'
+            else:
+                abnormal_flag_reason = 'unknown'
+        else:
+            abnormal_flag_reason = 'unknown'
         result.append(
             ParsedItemResponse(
                 id=item.id,
@@ -256,6 +287,7 @@ def get_parsed_items(
                 normalized_unit=item.normalized_unit,
                 ref_range=item.ref_range,
                 abnormal_flag=item.abnormal_flag,
+                abnormal_flag_reason=abnormal_flag_reason,
                 parser_confidence=float(item.parser_confidence) if item.parser_confidence is not None else None,
                 is_abnormal=is_abnormal,
             )

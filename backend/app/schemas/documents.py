@@ -15,6 +15,7 @@ class ParsedItemResponse(BaseModel):
     normalized_unit: Optional[str] = None
     ref_range: Optional[str] = None
     abnormal_flag: Optional[str] = None
+    abnormal_flag_reason: Optional[str] = None  # P116: response-level suppression reason
     parser_confidence: Optional[float] = None
     is_abnormal: bool = False
 
