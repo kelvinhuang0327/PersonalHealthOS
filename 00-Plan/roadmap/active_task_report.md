@@ -1,3 +1,77 @@
+
+# P120 — Daily Assistant Suppression Reason Warning — Blocked by Evidence Gap (2026-05-31)
+
+**Final Classification:** `P120_BLOCKED_BY_IMPLEMENTATION_EVIDENCE_GAP`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: /Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS
+- Branch: main
+- Git dir: .git
+- P118/P119 commits present
+- Only restricted governance files and known runtime/test artifacts dirty/untracked
+
+## Baseline Validation Table
+| Check                        | Result |
+|------------------------------|--------|
+| Contract/smoke tests         | PASS   |
+| Backend regression           | PASS   |
+| P118 E2E                     | PASS   |
+| Next.js build                | PASS   |
+
+## Evidence Discovery Summary
+- `lab_report_items` includes `abnormal_flag_reason` (from backend/app/api/documents.py)
+- `lab_abnormalities` does **not** propagate `abnormal_flag_reason`
+- Daily Assistant summary/recommendation evidence consumes `lab_abnormalities` or derived evidence, not `lab_report_items`
+- `suppressed_unit_scale_mismatch` is **unavailable** to Daily Assistant evidence surface
+
+## Data Path Gap Table
+| Evidence Surface                | abnormal_flag_reason surfaced? | Consumed in UI? | Classification                  |
+|---------------------------------|-------------------------------|-----------------|----------------------------------|
+| Documents (parsed-items-drawer) | Yes                           | Yes             | Reason available and consumed    |
+| Daily Assistant Evidence        | No                            | N/A             | Reason not available in data path|
+| Actions Evidence                | No                            | N/A             | Reason not available in data path|
+| Lab Trend/History Evidence      | No                            | N/A             | Reason not available in data path|
+| Symptom Recommendation         | No                            | N/A             | Reason not available in data path|
+| Documents Evidence Table        | No                            | N/A             | Reason not available in data path|
+| Summary Card Evidence           | No                            | N/A             | Reason not available in data path|
+
+## Why Implementation Stopped
+- Frontend cannot safely infer or guess suppression reason for Daily Assistant evidence
+- Backend evidence path needs explicit propagation of `abnormal_flag_reason` to `lab_abnormalities`/evidence bundle
+- No DB/API/schema expansion authorized in P120
+
+## Files Changed
+- docs/product/p120-daily-assistant-suppression-reason-warning.md
+- 00-Plan/roadmap/active_task_report.md
+
+## Commit Hash After Created
+(pending, see git log after commit)
+
+## Next Recommended Lane
+**P121 Backend Evidence Bundle Suppression Reason Propagation Contract**
+Goal: propagate `abnormal_flag_reason` from `lab_report_items` into `lab_abnormalities`/Daily Assistant evidence bundle without DB migration, if source data already contains it.
+
+## Governance Notes
+- P120 did NOT touch roadmap.md
+- P120 did NOT touch CTO-Analysis.md
+- P120 did NOT touch CEO-Decision.md
+- P120 did NOT touch active_task.md
+
+## CTO 5-line Summary
+- Evidence gap blocks safe propagation of suppression reason to Daily Assistant evidence.
+- No backend or frontend runtime code was changed.
+- Only documentation and report files were updated.
+- Next step is backend contract propagation (P121).
+- Governance and validation rules strictly followed.
+
+## CEO 5-line Summary
+- P120 implementation halted due to evidence path gap.
+- No workaround or unsafe propagation allowed.
+- All baseline and governance checks passed.
+- Evidence gap and next steps fully documented.
+- Ready for P121 backend contract scope.
+
 # P119 — Evidence Surface Suppression Reason Propagation Discovery (2026-05-31)
 
 **Classification:** `P119_EVIDENCE_SURFACE_SUPPRESSION_REASON_DISCOVERY_COMPLETE`
