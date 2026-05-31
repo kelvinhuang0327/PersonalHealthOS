@@ -1,3 +1,63 @@
+# P118 — Frontend Suppression Reason Badge Contract (2026-05-31)
+
+**Classification:** `P118_FRONTEND_SUPPRESSION_REASON_BADGE_READY`
+**Commits:**
+- Implementation: bc2abe5
+- Report: (pending)
+**Branch:** `main`
+
+### 1. Implementation Summary
+- Frontend displays abnormal_flag_reason = suppressed_unit_scale_mismatch as「單位不同，暫不判斷異常」
+- Copy does not imply clinically normal
+- Same-unit normal remains unchanged
+- High/low abnormal flags remain unchanged
+- P118 E2E selector fixed by clicking「審閱解析結果」button instead of filename <p>
+- No backend runtime code change
+- No DB migration
+- No new DB column
+- No real unit conversion
+- No historical backfill
+- No package or Playwright config change
+
+### 2. Validation Summary
+- P118 E2E PASS
+- Baseline contracts PASS
+- Backend regression PASS
+- Next.js build PASS
+
+### 3. Files Changed in Implementation
+- frontend/app/components/platform/parsed-items-drawer.tsx
+- frontend/tests/e2e/p118-suppression-reason-badge-contract.spec.ts
+- docs/product/p118-frontend-suppression-reason-badge-contract.md
+
+### 4. Known Limitations
+- P118 covers parsed-items drawer / documents review surface only
+- Broader evidence surfaces may need later propagation
+
+### 5. Next Recommended Lane
+- P119 First-run report upload onboarding
+- Or P119 evidence-surface suppression reason propagation discovery if safety remains priority
+
+### 6. Governance Notes
+- P118 did NOT touch roadmap.md
+- P118 did NOT touch CTO-Analysis.md
+- P118 did NOT touch CEO-Decision.md
+- P118 did NOT touch active_task.md
+
+### 7. CTO 5-line Summary
+- Frontend now displays suppression reason badge for suppressed_unit_scale_mismatch
+- No clinical normal implied for suppressed items
+- All contract, regression, and build validations pass
+- No backend, DB, or config changes
+- Next: propagate suppression reason to broader evidence surfaces if needed
+
+### 8. CEO 5-line Summary
+- User-facing clarity improved for suppressed lab results
+- Suppression reason now visible in documents review
+- No backend or DB changes required
+- All tests and builds pass, no regressions
+- Next: expand clarity to more evidence surfaces if needed
+
 # P116 — Abnormal Flag Suppression Reason Response Contract (2026-05-31)
 
 # P117 — Suppression Reason Visibility Discovery (2026-05-31)
