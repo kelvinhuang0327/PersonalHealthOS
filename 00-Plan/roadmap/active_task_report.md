@@ -1,3 +1,56 @@
+# P116 — Abnormal Flag Suppression Reason Response Contract (2026-05-31)
+
+**Classification:** `P116_ABNORMAL_FLAG_SUPPRESSION_REASON_RESPONSE_READY`
+**Commits:** `e57dafb` feat(backend): P116 expose abnormal flag suppression reason
+**Branch:** `main`
+
+### 1. Summary
+- Response-level abnormal flag suppression reason/status was added
+- `suppressed_unit_scale_mismatch` distinguishes P114 unit mismatch suppression from normal
+- Same-unit normal remains distinguishable from suppressed mismatch
+- High/low abnormal flags remain distinguishable
+- No DB migration
+- No new DB column
+- No frontend runtime change
+- No real unit conversion
+- No historical backfill
+
+### 2. Validation Summary
+- backend tests PASS
+- contract tests PASS
+- runtime-smoke PASS
+- frontend next build PASS
+
+### 3. Files Changed in Implementation
+- backend/app/schemas/documents.py
+- backend/app/api/documents.py
+- backend/tests/test_p116_abnormal_flag_suppression_reason_response_contract.py
+- docs/product/p116-abnormal-flag-suppression-reason-response-contract.md
+
+### 4. Known Limitations
+- Response-level reason is not persisted in DB
+- Frontend display is not changed in P116
+
+### 5. Governance Notes
+- P116 did NOT touch roadmap.md
+- P116 did NOT touch CTO-Analysis.md
+- P116 did NOT touch CEO-Decision.md
+- P116 did NOT touch active_task.md
+
+### 6. CTO 5-line Summary
+- Response-level abnormal_flag_reason now exposed for suppressed, normal, high, low, and no-rule cases
+- No DB or schema migration required
+- All backend and contract tests pass
+- No frontend or historical data impact
+- Implementation strictly follows governance
+
+### 7. CEO 5-line Summary
+- Ambiguity in abnormal_flag=None resolved at API response level
+- Downstream can now distinguish suppression, normal, and no-rule cases
+- No user-facing or data migration risk
+- All tests and validation gates pass
+- Ready for next lane or UI/UX coordination
+
 # P115 — Abnormal Flag Suppression Reason Discovery (2026-05-31)
 
 **Classification:** `P115_ABNORMAL_FLAG_SUPPRESSION_REASON_DISCOVERY_COMPLETE_ACTIVE_AMBIGUITY`
