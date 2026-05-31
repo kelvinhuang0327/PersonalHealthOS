@@ -1,3 +1,137 @@
+# P115 — Abnormal Flag Suppression Reason Discovery (2026-05-31)
+
+**Classification:** `P115_ABNORMAL_FLAG_SUPPRESSION_REASON_DISCOVERY_COMPLETE_ACTIVE_AMBIGUITY`
+**Commits:** `f2734e0` test(backend): P115 characterize abnormal flag suppression reason · _(this report commit)_
+**Branch:** `main`
+
+### 1. Pre-flight Result
+
+| Check | Result |
+|---|---|
+| Repo | `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` ✅ |
+| Branch | `main` ✅ |
+| git-dir | `.git` (not a worktree) ✅ |
+| P114 commits present | `e0bf937` + `654bcc2` ✅ |
+
+### 2. Dirty File / Restricted Governance File Status
+
+| File | Status |
+|---|---|
+| `00-Plan/roadmap/CEO-Decision.md` | Modified (pre-existing) — **NOT touched by P115** |
+| `00-Plan/roadmap/CTO-Analysis.md` | Modified (pre-existing) — **NOT touched by P115** |
+| `00-Plan/roadmap/roadmap.md` | Modified (pre-existing) — **NOT touched by P115** |
+| No other unrelated dirty files | ✅ |
+
+### 3. Import Path Fix Summary
+
+- Fixed import in `test_p115_abnormal_flag_suppression_reason_discovery.py` from `from backend.app.models` to `from app.models` (matches backend test convention).
+- No production code or global config changed.
+
+### 4. Baseline Validation Table
+
+| Suite | Count | Result |
+|---|---|---|
+| test_report_parser_stage2 | 21 | ✅ |
+| test_lab_history_unit_comparison | 11 | ✅ |
+| test_p112_normalized_unit_migration_runtime | 4 | ✅ |
+| test_p113_abnormal_flag_unit_scale_discovery | 12 | ✅ |
+| test_p114_abnormal_flag_unit_scale_guard | 25 | ✅ |
+| test_p115_abnormal_flag_suppression_reason_discovery | 5 | ✅ |
+| runtime-smoke | 3 | ✅ |
+| 10 E2E contracts | 41 | ✅ |
+| frontend next build | — | ✅ |
+
+### 5. P115 Discovery Summary
+
+- Characterized ambiguity in `abnormal_flag=None` (can mean: normal, unknown, no rule, suppressed by unit-scale guard).
+- No schema, DB, or API change; no real unit conversion; no historical backfill.
+- Downstream and API do not distinguish suppression reason; only `abnormal_flag` is exposed.
+
+### 6. abnormal_flag Semantics Table
+
+| abnormal_flag | Meaning |
+|---|---|
+| 'N' | Normal (units match, within range) |
+| 'H'/'L' | High/Low (units match, out of range) |
+| None | Ambiguous: normal, unknown, no rule, suppressed |
+
+### 7. None Ambiguity Map
+
+| Scenario | Example | Reason |
+|---|---|---|
+| Unit-scale mismatch | 5.5 mmol/L vs mg/dL rule | Suppressed by guard |
+| No local rule | ALT 32 U/L, rule missing | No rule |
+| Parser unavailable | 999 (no unit) | Unknown |
+
+### 8. Downstream Consumption Map
+
+- Evidence logic: `abnormal_flag=None` is not flagged as abnormal, may be omitted or shown as normal/unknown.
+- No downstream code distinguishes suppression reason.
+
+### 9. API/Schema Exposure Map
+
+- API exposes only `abnormal_flag` (no `abnormal_flag_reason`).
+- No schema field for suppression reason.
+
+### 10. Risk Classification
+
+- **Active ambiguity:** None value is overloaded, downstream and API cannot distinguish suppression from other cases.
+
+### 11. Validation Table
+
+| Step | Result |
+|---|---|
+| Backend pytest (P110–P115) | ✅ |
+| All contract/smoke tests | ✅ |
+| Frontend next build | ✅ |
+
+### 12. Files Changed
+
+| File | Action |
+|---|---|
+| `backend/tests/test_p115_abnormal_flag_suppression_reason_discovery.py` | Created |
+| `docs/product/p115-abnormal-flag-suppression-reason-discovery.md` | Created |
+
+### 13. Commit Hashes
+
+| Commit | Message |
+|---|---|
+| f2734e0 | test(backend): P115 characterize abnormal flag suppression reason |
+
+### 14. Known Limitations
+
+- No schema/API extension for suppression reason (future lane).
+- No historical backfill or real unit conversion.
+- No production code change.
+
+### 15. Next Recommended Lane
+
+- Lane B: Schema/API extension to expose suppression reason.
+- Lane D: Historical backfill if needed.
+
+### 16. Governance Notes
+
+- P115 did NOT touch roadmap.md
+- P115 did NOT touch CTO-Analysis.md
+- P115 did NOT touch CEO-Decision.md
+- P115 did NOT touch active_task.md
+
+### 17. CTO 5-line Summary
+
+- P115 discovery confirms `abnormal_flag=None` is ambiguous: can mean suppressed, unknown, or no rule.
+- Import path fix aligns with backend test convention; no production code touched.
+- All backend, contract, and frontend validations pass; no regressions.
+- No schema/API change; ambiguity remains for downstream consumers.
+- Next: Schema/API extension lane to clarify suppression reason.
+
+### 18. CEO 5-line Summary
+
+- P115 completes abnormal flag suppression reason discovery with no production impact.
+- All tests and contracts pass; system is stable.
+- Ambiguity in `abnormal_flag=None` is documented and confirmed.
+- No user-facing or data change; only test and doc added.
+- Next: Plan schema/API extension to clarify ambiguity.
+
 # Active Task Report
 
 ---
