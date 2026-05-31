@@ -1,5 +1,89 @@
 # P116 — Abnormal Flag Suppression Reason Response Contract (2026-05-31)
 
+# P117 — Suppression Reason Visibility Discovery (2026-05-31)
+
+**Classification:** `P117_SUPPRESSION_REASON_VISIBILITY_DISCOVERY_COMPLETE_BACKEND_ONLY_SAFE_BUT_NOT_VISIBLE`
+**Commits:** _(pending)_
+**Branch:** `main`
+
+### 1. Pre-flight Result
+- Repo: /Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS
+- Branch: main
+- Git-dir: .git
+- P116 impl commit: e57dafb present
+- P116 report commit: d549de8 present
+- No unrelated dirty files; only restricted governance files dirty
+- P116 temp file cleaned up
+
+### 2. Validation Summary
+- All contract, backend, and frontend tests/builds PASS
+- No regressions detected
+
+### 3. Discovery Summary
+- Backend exposes abnormal_flag_reason (e.g., suppressed_unit_scale_mismatch) in API
+- Frontend and all evidence surfaces ignore abnormal_flag_reason
+- No UI, table, or evidence renders suppression reason
+- User-facing ambiguity persists for suppressed/normal/no-rule
+
+### 4. Backend Response Availability Map
+- ParsedItemResponse includes abnormal_flag_reason (backend/app/schemas/documents.py)
+- API endpoint returns abnormal_flag_reason (backend/app/api/documents.py)
+
+### 5. Frontend Consumption Map
+- No code or test in frontend consumes abnormal_flag_reason
+- All logic and UI only reference abnormal_flag
+
+### 6. Evidence Surface Map
+- Documents confirmed data: suppression reason NOT visible
+- Lab history/trend: suppression reason NOT visible
+- Daily Assistant evidence: suppression reason NOT visible
+- Actions evidence: suppression reason NOT visible
+
+### 7. User-Facing Ambiguity Risk Classification
+- BACKEND_ONLY_SAFE_BUT_NOT_VISIBLE
+
+### 8. Validation Table
+| Area                | Status   |
+|---------------------|----------|
+| Backend API         | PASS     |
+| Frontend build      | PASS     |
+| Contract tests      | PASS     |
+| Evidence surfaces   | Not visible |
+| User-facing clarity | Ambiguous |
+
+### 9. Files Changed
+- docs/product/p117-suppression-reason-visibility-discovery.md
+
+### 10. Commit Hashes
+- P116 impl: e57dafb
+- P116 report: d549de8
+
+### 11. Known Limitations
+- Suppression reason is not visible to users in any UI
+- All ambiguity remains at the UI layer until frontend is updated
+
+### 12. Next Recommended Lane
+- Implement frontend badge/copy for suppression reason (Option A)
+
+### 13. Governance Notes
+- No backend or frontend runtime code changed in P117
+- No DB migration or schema change
+- No Makefile or governance file touched
+
+### 14. CTO 5-line Summary
+- Backend exposes suppression reason but frontend ignores it
+- No evidence surface or UI displays suppressed_unit_scale_mismatch
+- User-facing ambiguity persists for suppressed/normal/no-rule
+- All tests and builds pass; no regressions
+- Next lane: implement frontend badge/copy for suppression reason
+
+### 15. CEO 5-line Summary
+- Suppression reason is available in API but not visible to users
+- No UI or evidence surface distinguishes suppressed from normal
+- User-facing ambiguity remains unresolved
+- All validation gates pass
+- Recommend UI update to surface suppression reason
+
 **Classification:** `P116_ABNORMAL_FLAG_SUPPRESSION_REASON_RESPONSE_READY`
 **Commits:** `e57dafb` feat(backend): P116 expose abnormal flag suppression reason
 **Branch:** `main`
