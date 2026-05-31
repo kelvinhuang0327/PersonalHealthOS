@@ -5,6 +5,7 @@ import { Check, ChevronDown, ChevronUp, Loader2, Pencil, X } from 'lucide-react'
 import { Button } from '../ui/button'
 import { api } from '../../../lib/api'
 
+
 interface ParsedItem {
   id: string
   item_name: string
@@ -13,6 +14,7 @@ interface ParsedItem {
   unit: string | null
   ref_range: string | null
   abnormal_flag: string | null
+  abnormal_flag_reason?: string | null
   parser_confidence: number | null
   is_abnormal: boolean
 }
@@ -221,11 +223,15 @@ export function ParsedItemsDrawer({ documentId, documentName, onClose, onConfirm
                         )}
                       </td>
 
-                      {/* Status badge */}
+                      {/* Status badge + suppression reason */}
                       <td className="px-4 py-2 text-center">
                         {item.is_abnormal ? (
                           <span className="inline-flex items-center rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-700">
                             {item.abnormal_flag === 'H' ? '偏高' : item.abnormal_flag === 'L' ? '偏低' : '異常'}
+                          </span>
+                        ) : item.abnormal_flag_reason === 'suppressed_unit_scale_mismatch' ? (
+                          <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-700" title="單位不同，暫不判斷異常">
+                            單位不同，暫不判斷異常
                           </span>
                         ) : (
                           <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
