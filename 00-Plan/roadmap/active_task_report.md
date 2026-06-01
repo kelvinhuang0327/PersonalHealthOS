@@ -1,3 +1,61 @@
+# P123 — Minimal First-Run Journey Implementation (2026-06-01)
+
+**Final Classification:** `P123_MINIMAL_FIRST_RUN_JOURNEY_READY`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree)
+- Detached HEAD: No
+- Required prior lane state: P122 (`308bd11`) and P121 (`9c4ff0b`) present
+
+## Dirty File Handling
+- Existing dirty/untracked files were known governance/runtime artifacts from previous lanes.
+- P123 edits were scoped to frontend journey UI + contract test + documentation/report files only.
+- No unknown unrelated source file was modified during this lane.
+
+## Files Changed
+- `frontend/app/components/platform/daily-assistant-entry.tsx`
+- `frontend/tests/e2e/p123-first-run-journey-contract.spec.ts`
+- `docs/product/p123-minimal-first-run-journey-implementation.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Journey State Table
+| State | Trigger | User-facing outcome | Next step guidance |
+|---|---|---|---|
+| `empty` | no confirmed report + no symptom + no assistant surface | first-run checklist intro | prompt to start from Documents/Symptoms |
+| `in_progress` | partial completion of required surfaces | progress copy + checklist links | targeted hint to missing next step |
+| `completed` | report confirmed + symptom recorded + assistant surface available | completion copy + action-forward hint | direct CTA to Actions tracking |
+
+## Test Results
+| Test command | Result |
+|---|---|
+| `cd frontend && npx tsc --noEmit` | PASS |
+| `cd frontend && npx next build` | PASS |
+| `cd frontend && npx playwright test tests/e2e/p123-first-run-journey-contract.spec.ts --reporter=line` | PASS (7 passed) |
+| `cd frontend && npx playwright test tests/e2e/p123-first-run-journey-contract.spec.ts tests/e2e/p85-documents-page-contract.spec.ts tests/e2e/p86-symptoms-page-contract.spec.ts tests/e2e/p76-daily-assistant-signal-contract.spec.ts tests/e2e/p82-actions-page-contract.spec.ts --reporter=line` | PASS (24 passed) |
+
+## Governance Notes
+- No backend/service/schema/db changes in this lane.
+- No new route/page added; reused existing four surfaces (`documents`, `symptoms`, `dashboard`, `actions`).
+- P121 suppression semantics were preserved: not-judged copy remains non-clinical and avoids normal/abnormal overclaim.
+- Forbidden governance files remained untouched (`roadmap.md`, `CTO-Analysis.md`, `CEO-Decision.md`, `active_task.md`).
+
+## CTO 5-line Summary
+- P123 introduced a minimal first-run journey in existing dashboard assistant entry.
+- Three journey states (`empty/in_progress/completed`) are now explicit and test-addressable.
+- Route contract to the four existing surfaces is covered by stable test IDs.
+- Suppression/not-judged note uses cautious wording and avoids clinical overclaim.
+- Regression guards for dashboard/documents/symptoms/actions passed in one run.
+
+## CEO 5-line Summary
+- First-time users now have a clear path across already shipped surfaces.
+- Scope stayed minimal: no new backend, no schema expansion, no new pages.
+- User journey friction is reduced with immediate next-step prompts.
+- Safety language remains conservative for uncertain suppressed evidence.
+- The implementation is validated and ready for next lane execution.
+
 # P121 — Backend Evidence Bundle Suppression Reason Propagation (2026-06-01)
 
 **Final Classification:** `P121_BACKEND_EVIDENCE_BUNDLE_SUPPRESSION_REASON_READY`

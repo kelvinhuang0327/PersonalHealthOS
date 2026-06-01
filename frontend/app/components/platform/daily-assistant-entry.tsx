@@ -89,6 +89,9 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
   const [summary, setSummary]           = useState<DailyHealthSummary | null>(null)
   const [sumLoading, setSumLoading]     = useState(true)
   const [feedback, setFeedback]         = useState<OutcomeFeedback | null>(null)
+  const [documents, setDocuments]       = useState<Array<{ parse_status?: string }>>([])
+  const [symptoms, setSymptoms]         = useState<Array<{ id?: string }>>([])
+  const [journeyLoading, setJourneyLoading] = useState(true)
 
   useEffect(() => {
     api
@@ -101,6 +104,16 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
       .getOutcomeFeedback(7)
       .then((d) => setFeedback(d as OutcomeFeedback))
       .catch(() => setFeedback(null))
+
+    Promise.all([
+      api.listDocuments().catch(() => []),
+      api.listSymptoms().catch(() => []),
+    ])
+      .then(([docs, syms]) => {
+        setDocuments(Array.isArray(docs) ? (docs as Array<{ parse_status?: string }>) : [])
+        setSymptoms(Array.isArray(syms) ? (syms as Array<{ id?: string }>) : [])
+      })
+      .finally(() => setJourneyLoading(false))
   }, [])
 
   // Derived values
@@ -114,6 +127,29 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
 
   const fbSummary = feedback?.summary
   const hasFeedback = fbSummary && fbSummary.total_count > 0
+  const hasConfirmedReport = documents.some((doc) => doc.parse_status === 'confirmed')
+  const hasSymptomLog = symptoms.length > 0
+  const hasAssistantSurface = hasDailySummary || Boolean(topRec)
+  const isJourneyCompleted = hasConfirmedReport && hasSymptomLog && hasAssistantSurface
+  const isJourneyEmpty = !hasConfirmedReport && !hasSymptomLog && !hasAssistantSurface
+  const journeyState: 'empty' | 'in_progress' | 'completed' = isJourneyCompleted ? 'completed' : (isJourneyEmpty ? 'empty' : 'in_progress')
+  const nextStep: 'documents' | 'symptoms' | 'dashboard' | 'actions' =
+    !hasConfirmedReport ? 'documents' :
+    !hasSymptomLog ? 'symptoms' :
+    !hasAssistantSurface ? 'dashboard' :
+    'actions'
+  const suppressedNotJudgedDetected = (() => {
+    const candidates = [
+      topRec?.evidence_summary,
+      summary?.topRisk,
+      summary?.whyNow,
+      summary?.topRiskRef?.summary,
+      summary?.todayActionRef?.summary,
+    ]
+      .filter(Boolean)
+      .map((v) => String(v).toLowerCase())
+    return candidates.some((text) => text.includes('suppressed_unit_scale_mismatch') || text.includes('暫不判斷異常'))
+  })()
 
   return (
     <Card data-testid="daily-assistant-entry" className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/60 via-white to-emerald-50/30 p-5 shadow-sm">
@@ -145,6 +181,78 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
         </div>
       ) : (
         <div className="space-y-4">
+
+          {/* ── First-run journey checklist (P123) ─────────────────────────── */}
+          {!journeyLoading && (
+            <div data-testid="first-run-journey-card" className="rounded-xl border border-sky-100 bg-sky-50/50 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold text-sky-700">首次使用引導</p>
+                <span className="text-[11px] text-sky-600">報告 → 症狀 → 每日建議 → 行動</span>
+              </div>
+
+              {journeyState === 'empty' && (
+                <p data-testid="first-run-journey-empty" className="mt-2 text-[11px] text-sky-700 leading-relaxed">
+                  先完成兩個基礎步驟：上傳並確認健檢報告、記錄最近症狀。完成後即可看到更完整的每日建議。
+                </p>
+              )}
+
+              {journeyState === 'in_progress' && (
+                <p data-testid="first-run-journey-in-progress" className="mt-2 text-[11px] text-sky-700 leading-relaxed">
+                  你已經完成部分資料整理，繼續補齊下一步即可讓小助手提供更清楚的追蹤建議。
+                </p>
+              )}
+
+              {journeyState === 'completed' && (
+                <p data-testid="first-run-journey-completed" className="mt-2 text-[11px] text-emerald-700 leading-relaxed">
+                  首次使用流程已就緒，接下來可直接查看今日建議並執行行動追蹤。
+                </p>
+              )}
+
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                <Link data-testid="first-run-link-documents" href="/platform/documents" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
+                  1. 健檢報告（上傳/確認）{hasConfirmedReport ? ' ✓' : ''}
+                </Link>
+                <Link data-testid="first-run-link-symptoms" href="/platform/symptoms" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
+                  2. 症狀記錄{hasSymptomLog ? ' ✓' : ''}
+                </Link>
+                <Link data-testid="first-run-link-dashboard" href="/platform/dashboard" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
+                  3. 每日建議{hasAssistantSurface ? ' ✓' : ''}
+                </Link>
+                <Link data-testid="first-run-link-actions" href="/platform/actions" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
+                  4. 行動追蹤
+                </Link>
+              </div>
+
+              {journeyState === 'in_progress' && nextStep === 'documents' && (
+                <p data-testid="first-run-next-step-documents" className="mt-2 text-[11px] text-sky-700">
+                  下一步：先完成健檢報告上傳或確認，讓系統有可追蹤的檢驗依據。
+                </p>
+              )}
+              {journeyState === 'in_progress' && nextStep === 'symptoms' && (
+                <p data-testid="first-run-next-step-symptoms" className="mt-2 text-[11px] text-sky-700">
+                  下一步：補上症狀記錄，讓建議可結合你的主觀不適與檢驗資料。
+                </p>
+              )}
+              {journeyState === 'in_progress' && nextStep === 'dashboard' && (
+                <p data-testid="first-run-next-step-dashboard" className="mt-2 text-[11px] text-sky-700">
+                  下一步：回到儀表板查看今日建議，確認目前的追蹤重點。
+                </p>
+              )}
+              {journeyState === 'completed' && (
+                <p data-testid="first-run-next-step-actions" className="mt-2 text-[11px] text-emerald-700">
+                  建議下一步：前往行動頁，把今天最重要的一項建議加入追蹤。
+                </p>
+              )}
+            </div>
+          )}
+
+          {suppressedNotJudgedDetected && (
+            <div data-testid="first-run-suppression-not-judged-note" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                偵測到「暫不判斷異常」資料。這類資料代表目前證據不足，請搭配後續追蹤作為就醫討論參考，避免直接下臨床結論。
+              </p>
+            </div>
+          )}
 
           {/* ── Confidence context banner (Task 4: low / high copy) ─────────── */}
           {isLowConf && (
