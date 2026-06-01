@@ -1,3 +1,66 @@
+# P124 — First-Run Journey Evidence Integration Review (2026-06-01)
+
+**Final Classification:** `P124_FIRST_RUN_EVIDENCE_INTEGRATION_READY`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree)
+- Detached HEAD: No
+- P123 commit `a5a6785` present (PASS)
+- P121/P122 status present (`9c4ff0b`, `308bd11`) (PASS)
+
+## Dirty File Handling
+- Existing dirty/untracked files were known governance/runtime/environment artifacts from prior lanes.
+- No unknown unrelated source drift was introduced during P124 execution.
+- P124 changes stayed in whitelist files only.
+
+## Files Changed
+- `frontend/tests/e2e/p124-first-run-evidence-integration-contract.spec.ts`
+- `docs/product/p124-first-run-journey-evidence-integration-review.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Evidence Integration Table
+| Surface | Existing evidence cue | P124 verification result |
+|---|---|---|
+| Dashboard first-run journey card | route links + state copy | PASS (journey state still healthy) |
+| Daily Assistant top recommendation | `daily-toprec-evidence-badge` + `p91-daily-source-page-link` | PASS (lab/symptom evidence-aware path confirmed) |
+| Actions recommendation layer | evidence_summary + `p89-source-page-link` | PASS (source-specific navigation confirmed) |
+| Suppressed/not-judged hint | `first-run-suppression-not-judged-note` cautious copy | PASS (no normal/abnormal overclaim) |
+| Missing evidence fallback | no badge if evidence_summary absent | PASS (no crash / no forced fake evidence) |
+
+## Test Results
+| Test command | Result |
+|---|---|
+| `cd frontend && npx tsc --noEmit` | PASS |
+| `cd frontend && npx playwright test tests/e2e/p124-first-run-evidence-integration-contract.spec.ts --reporter=line` | PASS (7 passed) |
+| `cd frontend && npx playwright test tests/e2e/p123-first-run-journey-contract.spec.ts --reporter=line` | NOT RUN (no runtime TSX change) |
+| `cd frontend && npx playwright test tests/e2e/p76-daily-assistant-signal-contract.spec.ts --reporter=line` | NOT RUN (no runtime TSX change) |
+| `cd frontend && npx playwright test tests/e2e/p82-actions-page-contract.spec.ts --reporter=line` | NOT RUN (no runtime TSX change) |
+| `cd frontend && npx playwright test tests/e2e/p101-report-symptom-recommendation-integration.spec.ts --reporter=line` | NOT RUN (no runtime TSX change) |
+| `cd frontend && npx next build` | NOT RUN (no runtime TSX change) |
+
+## Governance Notes
+- No backend endpoint/schema/model/migration changes.
+- No runtime component edits required; P124 is contract + review lane.
+- No changes to forbidden governance files (`roadmap.md`, `CTO-Analysis.md`, `CEO-Decision.md`, `active_task.md`).
+- No package/config/build/CI file changes.
+
+## CTO 5-line Summary
+- P123 journey and evidence surfaces are aligned in current architecture.
+- Daily Assistant and Actions already expose minimal evidence visualization via existing testids.
+- Suppressed unit-mismatch path remains not-judged and non-overclaim in UI wording.
+- No runtime gap required TSX changes in this lane.
+- New P124 contract suite guards cross-surface evidence integration behavior.
+
+## CEO 5-line Summary
+- The first-run journey now points users into real evidence-bearing surfaces, not dead-end links.
+- Evidence cues for lab and symptom recommendations are visible and navigable.
+- Safety language remains conservative for uncertain suppressed evidence.
+- Scope was kept minimal and low-risk with no backend or schema expansion.
+- Product can move to next lane with confidence in activation-to-evidence continuity.
+
 # P123 — Minimal First-Run Journey Implementation (2026-06-01)
 
 **Final Classification:** `P123_MINIMAL_FIRST_RUN_JOURNEY_READY`
