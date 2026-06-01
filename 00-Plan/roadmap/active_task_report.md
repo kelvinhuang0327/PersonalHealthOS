@@ -1,3 +1,64 @@
+# P130 — Automated Dogfood Dry-Run Evidence Capture (2026-06-01)
+
+**Final Classification:** `P130_READY_FOR_MANUAL_DOGFOOD`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree, not detached)
+- Required baseline commit present: `0fecc6b` (P129) (PASS)
+- P121-P129 chain consistency validated from git history and docs/roadmap references (PASS)
+
+## Dirty File Handling
+- Existing dirty/untracked files matched known governance/runtime environment artifacts.
+- No newly introduced unrelated source dirty file was created by P130 execution.
+- P130 changes remained within whitelist docs/report files.
+
+## Files Changed
+- `docs/product/p130-automated-dogfood-dry-run-evidence.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Validation Results
+| Validation item | Result |
+|---|---|
+| Phase 0 pre-flight command bundle | PASS |
+| `cd frontend && npx tsc --noEmit` | PASS |
+| `cd frontend && npx playwright test tests/e2e/p123-first-run-journey-contract.spec.ts tests/e2e/p124-first-run-evidence-integration-contract.spec.ts tests/e2e/p126-first-run-activation-polish-contract.spec.ts --reporter=line` | PASS (21 passed) |
+| `cd frontend && npx playwright test tests/e2e/p76-daily-assistant-signal-contract.spec.ts tests/e2e/p82-actions-page-contract.spec.ts tests/e2e/p85-documents-page-contract.spec.ts tests/e2e/p86-symptoms-page-contract.spec.ts tests/e2e/p101-report-symptom-recommendation-integration.spec.ts --reporter=line` | PASS (22 passed) |
+| `cd frontend && npx next build` | PASS |
+| `cd backend && PYTHONPATH=. .venv/bin/python -m pytest tests/test_p121_backend_evidence_bundle_suppression_reason_propagation.py -v` | PASS (6 passed) |
+
+## Dry-Run Evidence Summary
+1. P129 dogfood path maps to existing contract tests across all four target surfaces.
+2. Observable states (empty/report-only/symptom-only/completed) remain covered and passing.
+3. Evidence badge/source-link behavior remains covered and passing.
+4. not-judged/suppressed safety and overclaim guards remain covered and passing.
+
+## Manual Dogfood Readiness Decision
+- Decision: `READY_FOR_MANUAL_DOGFOOD`
+- Basis: full required validation bundle PASS + no docs/code contradiction + no scope-expansion blocker.
+
+## Governance Notes
+- No frontend runtime modifications.
+- No backend runtime modifications.
+- No new tests/files outside whitelist.
+- No DB/schema/API/config/CI changes.
+
+## CTO 5-line Summary
+- Automated dry-run confirms first-run path remains contract-stable after P129.
+- Required release/dogfood validation bundle is fully green.
+- Safety semantics for suppressed/not-judged evidence remain intact and non-overclaiming.
+- No backend/schema dependency emerged from this dry-run.
+- Recommend moving to manual dogfood and collecting real-user friction evidence before any patch lane.
+
+## CEO 5-line Summary
+- The product is now ready for controlled manual dogfood entry with low technical uncertainty.
+- We validated not just build health but observable first-run behavior coverage end-to-end.
+- Trust posture is preserved: uncertain data remains uncertain, not overclaimed.
+- Next work should be evidence-driven from real-user sessions, not speculative implementation.
+- P131 remains optional and should only trigger on repeated UX friction signals.
+
 # P129 — Dogfood Execution Kit (2026-06-01)
 
 **Final Classification:** `P129_DOGFOOD_EXECUTION_KIT_READY`
