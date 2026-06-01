@@ -1,3 +1,102 @@
+# P122 — First-Run Journey Discovery (2026-06-01)
+
+**Task:** `P122_FIRST_RUN_JOURNEY_DISCOVERY`
+**Final Classification:** `P122_FIRST_RUN_JOURNEY_DISCOVERY_READY`
+**Decision:** `can-implement-minimally` (discovery-only, no runtime changes)
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: /Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS
+- Branch: main
+- Git dir: .git
+- P120 commit `9413929` exists in HEAD history
+- Known dirty/untracked only (no unknown source drift):
+  - Modified governance files: `00-Plan/roadmap/CEO-Decision.md`, `00-Plan/roadmap/CTO-Analysis.md`, `00-Plan/roadmap/active_task.md`, `00-Plan/roadmap/roadmap.md`
+  - Known untracked/runtime artifacts: `backend/test-results/`, `frontend/tests/e2e/p118-suppression-reason-badge-contract.spec.mjs`, `node_modules/`, root `package.json`, root `package-lock.json`
+
+## Four-Surface Journey Map (Current)
+```mermaid
+flowchart LR
+  A[Documents<br/>/platform/documents] --> B[Symptoms<br/>/platform/symptoms]
+  B --> C[Dashboard Daily Assistant<br/>/platform/dashboard]
+  C --> D[Actions<br/>/platform/actions]
+
+  A -. evidence refs .-> C
+  B -. symptom refs .-> C
+  C -. recommendation source links .-> D
+  C -. lab deep-link ?document_id .-> A
+```
+
+## Surface Inventory (Route / Main Component / Guard)
+- Documents:
+  - Route: `/platform/documents`
+  - Main: `frontend/app/platform/documents/page.tsx`, `frontend/app/components/platform/parsed-items-drawer.tsx`
+  - Guard: `frontend/tests/e2e/p85-documents-page-contract.spec.ts`, `frontend/tests/e2e/p87-documents-confirmed-data-refeed.spec.ts`, `frontend/tests/e2e/p97-documents-evidence-deep-link.spec.ts`
+- Symptoms:
+  - Route: `/platform/symptoms`
+  - Main: `frontend/app/platform/symptoms/page.tsx`
+  - Guard: `frontend/tests/e2e/p86-symptoms-page-contract.spec.ts`
+- Dashboard / Daily Assistant:
+  - Route: `/platform/dashboard`
+  - Main: `frontend/app/platform/dashboard/page.tsx`, `frontend/app/components/platform/daily-assistant-entry.tsx`
+  - Guard: `frontend/tests/e2e/p76-daily-assistant-signal-contract.spec.ts`, `frontend/tests/e2e/p91-daily-assistant-evidence-badge.spec.ts`, `frontend/tests/e2e/p94-daily-summary-3grid-evidence-refs.spec.ts`
+- Actions:
+  - Route: `/platform/actions`
+  - Main: `frontend/app/platform/actions/page.tsx`, `frontend/app/components/platform/decision-recommendation-layer.tsx`
+  - Guard: `frontend/tests/e2e/p82-actions-page-contract.spec.ts`, `frontend/tests/e2e/p80-actions-recommendation-smoke.spec.ts`, `frontend/tests/e2e/p89-actions-evidence-traceability.spec.ts`
+
+## Discovery Findings (Activation Gap)
+- Four surfaces already exist and are individually guarded.
+- No dedicated first-run route (`/platform/onboarding`, `/platform/first-run`, `/platform/welcome` absent).
+- Existing onboarding modal (`OnboardingWizard`) is profile/goals/first-metric only; not bound to report-confirm -> symptom-input -> daily-assistant -> action loop completion.
+- Therefore gap is orchestration/navigation state, not capability availability.
+
+## Minimal First-Run Contract (No New Surface)
+- Entry point: `/platform/dashboard` as journey anchor.
+- Step A: report import+confirm (`/platform/documents`)
+- Step B: symptom entry (`/platform/symptoms`)
+- Step C: daily assistant summary/recommendation visible (`/platform/dashboard`)
+- Step D: recommendation tracked/executed (`/platform/actions`)
+- States required:
+  - Empty: no A/B/C/D completion
+  - Missing-data: assistant has gaps and points to existing route CTAs
+  - Completed: A/B/C/D done, journey collapses to completed summary
+
+## P121 Suppression-Reason Gap Placement
+- Location in journey: Step C/Step D evidence explainability.
+- Source verification: `backend/app/services/health_assistant_service.py` filters lab items with `LabReportItem.abnormal_flag.isnot(None)` in evidence bundle assembly, so suppressed `abnormal_flag_reason` rows are excluded from this path.
+- Severity for first-run activation: fast-follow, not a blocker (flow remains executable; gap is explainability quality).
+
+## Classification And Next Lane
+- Classification: `can-implement-minimally`
+- Final: `P122_FIRST_RUN_JOURNEY_DISCOVERY_READY`
+- Next lane (CEO approved): `P121 Backend Evidence Bundle Suppression Reason Propagation`
+
+## Minimal Implementation File List (Proposed)
+- `frontend/app/components/platform/daily-assistant-entry.tsx`
+- `frontend/lib/first-run-journey.ts` (new)
+- `frontend/app/platform/dashboard/page.tsx`
+- `frontend/tests/e2e/p122-first-run-journey-contract.spec.ts` (new)
+
+## Governance Notes
+- Discovery only: no runtime frontend/backend/schema/db change.
+- No branch/worktree/checkout/push operations.
+- Restricted governance files untouched by this task except this report file (as allowed).
+- P120 stale statement was not trusted; source code used as authority.
+
+## CTO 5-line Summary
+- Four required surfaces exist and are contract-guarded.
+- Activation problem is missing first-run orchestration, not missing core capability.
+- Minimal journey can be implemented with existing routes and frontend-only state wiring.
+- P121 suppression reason issue sits in evidence explainability, not activation feasibility.
+- Recommended next execution is P121 per approved lane.
+
+## CEO 5-line Summary
+- Current product can do upload, symptom, assistant, and action, but users are not guided through one path.
+- A minimal first-run contract is now clearly defined and ready for implementation.
+- No costly regression reruns were needed for this discovery-only task.
+- No runtime risk introduced because no code behavior was changed.
+- Proceed to P121 next, then ship first-run journey implementation lane.
 
 # P120 — Daily Assistant Suppression Reason Warning — Blocked by Evidence Gap (2026-05-31)
 
