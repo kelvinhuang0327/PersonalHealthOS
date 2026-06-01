@@ -1,3 +1,67 @@
+# P131 — Manual Dogfood Start Package (2026-06-01)
+
+**Final Classification:** `P131_READY_FOR_MANUAL_DOGFOOD`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree, not detached)
+- Required baseline commit present: `1bfa2fe` (P130) (PASS)
+- P121-P130 chain consistency validated from git history and docs references (PASS)
+
+## Dirty File Handling
+- Existing dirty/untracked files matched known governance/runtime environment artifacts.
+- No newly introduced unrelated source dirty file was created by P131 docs work.
+- Execution remained whitelist-only.
+
+## Files Changed
+- `docs/product/p131-manual-dogfood-start-package.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Validation Results
+| Validation item | Result |
+|---|---|
+| Phase 0 pre-flight bundle | PASS |
+| `tsc` | NOT RUN (docs-only lane) |
+| Playwright | NOT RUN (docs-only lane) |
+| `next build` | NOT RUN (docs-only lane) |
+| backend `pytest` | NOT RUN (docs-only lane) |
+
+## Manual Dogfood Package Summary
+1. Consolidates P129 execution kit and P130 dry-run conclusions into one start package.
+2. Defines 4-step manual path: documents -> symptoms -> dashboard -> actions.
+3. Adds actionable observation checklist for next-step clarity, completion, safety, and crash detection.
+4. Adds explicit PASS/WARN/FAIL/BLOCKER classification and failure form for traceable escalation.
+
+## P132 Decision Rules Summary
+1. Wording-only issue -> docs/copy patch.
+2. CTA friction with correct data path -> minimal UI patch.
+3. Evidence-path contradiction -> STOP and open backend/evidence scope.
+4. Crash/build/test instability -> blocker-fix scope.
+5. DB/schema/API expansion needed -> STOP (out of minimal patch lane).
+
+## Governance Notes
+- No frontend runtime changes.
+- No backend runtime changes.
+- No new tests/routes/components.
+- No DB/schema/config/CI changes.
+- No forbidden governance files staged.
+
+## CTO 5-line Summary
+- P131 translates prior readiness into an operator-grade manual start package.
+- Classification and escalation are now explicit, reducing triage ambiguity.
+- Docs-only execution preserved governance and avoids premature implementation drift.
+- P132 entry conditions are clear and evidence-triggered.
+- Team can start manual dogfood with bounded risk and deterministic reporting.
+
+## CEO 5-line Summary
+- The project now has a practical launch packet for real-user dogfood sessions.
+- Teams can distinguish minor friction from true blockers quickly.
+- Safety boundaries remain explicit, especially around not-judged interpretation.
+- Escalation to P132 is controlled by evidence, not instinct.
+- This enables faster learning loops without expanding scope prematurely.
+
 # P130 — Automated Dogfood Dry-Run Evidence Capture (2026-06-01)
 
 **Final Classification:** `P130_READY_FOR_MANUAL_DOGFOOD`
