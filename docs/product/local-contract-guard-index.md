@@ -1,6 +1,6 @@
 # Local Contract Guard Index
 
-**Last updated:** P104 (2026-05-26)
+**Last updated:** P127 (2026-06-01)
 **Status:** Authoritative runbook for all local/manual Makefile contract guards.
 
 ---
@@ -142,6 +142,16 @@ make documents-evidence-deeplink-contract
 make report-symptom-recommendation-contract
 make runtime-smoke
 ```
+
+### First-run journey release-readiness bundle (P123-P126 integration)
+```bash
+cd frontend && npx tsc --noEmit
+cd frontend && npx playwright test tests/e2e/p123-first-run-journey-contract.spec.ts tests/e2e/p124-first-run-evidence-integration-contract.spec.ts tests/e2e/p126-first-run-activation-polish-contract.spec.ts --reporter=line
+cd frontend && npx playwright test tests/e2e/p76-daily-assistant-signal-contract.spec.ts tests/e2e/p82-actions-page-contract.spec.ts tests/e2e/p85-documents-page-contract.spec.ts tests/e2e/p86-symptoms-page-contract.spec.ts tests/e2e/p101-report-symptom-recommendation-integration.spec.ts --reporter=line
+cd frontend && npx next build
+cd backend && PYTHONPATH=. .venv/bin/python -m pytest tests/test_p121_backend_evidence_bundle_suppression_reason_propagation.py -v
+```
+Use this bundle when assessing dogfood readiness for the first-run flow without broad full-suite regression.
 
 ### Full local validation (pre-commit after cross-surface change)
 ```bash

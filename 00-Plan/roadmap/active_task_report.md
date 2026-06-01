@@ -1,3 +1,48 @@
+# P127 — First-Run Journey Release Readiness Review (2026-06-01)
+
+**Final Classification:** `P127_DOGFOOD_READY_WITH_LIMITATIONS`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree)
+- Detached HEAD: No
+- P121/P123/P124/P125/P126 commits present (`9c4ff0b`, `a5a6785`, `0329834`, `7e9c9d3`, `bcccbd7`) (PASS)
+
+## Dirty File Handling
+- Existing dirty/untracked files were known governance/runtime/environment artifacts.
+- No new unrelated source drift was introduced during P127 review.
+- P127 changes remained docs/report/index updates only.
+
+## Files Changed
+- `docs/product/p127-first-run-journey-release-readiness-review.md`
+- `docs/product/local-contract-guard-index.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Targeted Validation Results
+| Test command | Result |
+|---|---|
+| `cd frontend && npx tsc --noEmit` | PASS |
+| `cd frontend && npx playwright test tests/e2e/p123-first-run-journey-contract.spec.ts tests/e2e/p124-first-run-evidence-integration-contract.spec.ts tests/e2e/p126-first-run-activation-polish-contract.spec.ts --reporter=line` | PASS (21 passed) |
+| `cd frontend && npx playwright test tests/e2e/p76-daily-assistant-signal-contract.spec.ts tests/e2e/p82-actions-page-contract.spec.ts tests/e2e/p85-documents-page-contract.spec.ts tests/e2e/p86-symptoms-page-contract.spec.ts tests/e2e/p101-report-symptom-recommendation-integration.spec.ts --reporter=line` | PASS (22 passed) |
+| `cd frontend && npx next build` | PASS |
+| `cd backend && PYTHONPATH=. .venv/bin/python -m pytest tests/test_p121_backend_evidence_bundle_suppression_reason_propagation.py -v` | PASS (6 passed) |
+
+## Readiness Decision
+- Classification: `P127_DOGFOOD_READY_WITH_LIMITATIONS`
+- Ready for controlled dogfood usage across dashboard/documents/symptoms/actions first-run loop.
+- Remaining limitations are observability and onboarding formalization, not current blockers.
+
+## Known Limitations
+1. Journey is dashboard-centered, not a dedicated onboarding route/state machine.
+2. Action-step completion remains lightweight and UI-derived.
+3. Activation telemetry for drop-off instrumentation is not yet implemented.
+
+## Next Lane Recommendation
+- Suggested next lane: P128 minimal patch for frontend-only activation telemetry + contract assertions.
+- Keep backend/schema unchanged unless explicitly required by future acceptance criteria.
+
 # P126 — First-Run Activation Polish Implementation (2026-06-01)
 
 **Final Classification:** `P126_FIRST_RUN_ACTIVATION_POLISH_READY`
