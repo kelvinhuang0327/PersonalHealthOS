@@ -1,3 +1,65 @@
+# P129 — Dogfood Execution Kit (2026-06-01)
+
+**Final Classification:** `P129_DOGFOOD_EXECUTION_KIT_READY`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree, not detached)
+- Required baseline commit present: `912418d` (P128) (PASS)
+- P121-P128 chain consistency verified from git history and roadmap/docs references (PASS)
+
+## Dirty File Handling
+- Existing dirty/untracked files matched known governance/runtime environment artifacts.
+- No newly introduced unrelated source dirty files were created by this lane.
+- P129 executed with whitelist-only docs updates.
+
+## Files Changed
+- `docs/product/p129-dogfood-execution-kit.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Validation Results
+| Validation item | Result |
+|---|---|
+| Phase 0 pre-flight bundle | PASS |
+| `tsc` | NOT RUN (docs-only lane) |
+| Playwright | NOT RUN (docs-only lane) |
+| `next build` | NOT RUN (docs-only lane) |
+| backend `pytest` | NOT RUN (docs-only lane) |
+
+## Dogfood Execution Kit Summary
+1. Defines end-to-end manual script for first-run loop: documents -> symptoms -> dashboard -> actions.
+2. Specifies per-step expected observables and success conditions.
+3. Converts P121-P128 trust/safety constraints into tester-readable caveats.
+4. Includes standard failure report template with severity and classification fields.
+
+## P130 Decision Rules Summary
+1. Docs clarity issues only -> docs update lane.
+2. CTA/copy friction with healthy data path -> minimal UI patch lane.
+3. Evidence path incorrect/missing -> STOP and open backend/evidence scope lane.
+4. DB/schema/API expansion required -> STOP; prohibited for minimal UI patch lane.
+
+## Governance Notes
+- No frontend runtime changes.
+- No backend runtime changes.
+- No test files added.
+- No DB/schema/config/CI or forbidden governance files touched for staging.
+
+## CTO 5-line Summary
+- P129 delivers a deterministic manual dogfood runbook for the existing first-run path.
+- Acceptance and failure semantics are now explicit and operationally repeatable.
+- This lane preserves strict no-runtime-change governance while improving execution quality.
+- Decision routing for P130 prevents accidental backend/schema scope creep.
+- Team can now collect dogfood evidence in a structured way before any UI patching.
+
+## CEO 5-line Summary
+- We now have a practical script for real-user trial, not just readiness claims.
+- Success and failure are observable and reportable in consistent language.
+- Safety caveats are translated into tester-facing terms, reducing misuse risk.
+- Next investment is intentionally conditional and evidence-driven.
+- Product can proceed to manual dogfood with controlled scope and clear escalation rules.
+
 # P128 — Dogfood-Ready Checklist And Minimal Patch Discovery (2026-06-01)
 
 **Final Classification:** `P128_NEEDS_P129_MINIMAL_PATCH`
