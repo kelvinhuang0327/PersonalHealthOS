@@ -1,3 +1,65 @@
+# P125 — First-Run Activation Polish Discovery (2026-06-01)
+
+**Final Classification:** `P125_FIRST_RUN_ACTIVATION_POLISH_DISCOVERY_READY`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree)
+- Detached HEAD: No
+- P124 commit `0329834` present (PASS)
+- P123/P121 expected state present (`a5a6785`, `9c4ff0b`) (PASS)
+
+## Dirty File Handling
+- Existing dirty/untracked files were known governance/runtime/environment artifacts from prior lanes.
+- No unknown unrelated source files were modified during P125.
+- P125 updates remained docs/report-only and within whitelist.
+
+## Files Changed
+- `docs/product/p125-first-run-activation-polish-discovery.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Validation Results
+| Command | Result |
+|---|---|
+| Phase 0 pre-flight command bundle | PASS |
+| `tsc` / Playwright / next build / backend tests | NOT RUN (discovery/docs-only lane) |
+
+## Activation Polish Priority Table
+| Priority | Item | Why now |
+|---|---|---|
+| Must-have | Clarify first-run action-step completion criterion | Reduces ambiguity at last step of activation |
+| Must-have | Add compact progress cue for in-progress state | Helps user know remaining distance quickly |
+| Must-have | Add explicit evidence-verification hint in completion context | Bridges journey completion to trust validation behavior |
+| Nice-to-have | Harmonize empty-state tone across documents/symptoms/actions | Improves consistency but not hard blocker |
+| Nice-to-have | Strengthen suppressed/not-judged follow-up wording | Improves safety clarity, low implementation cost |
+| Defer | Persisted onboarding state machine or new backend funnel model | Out of minimal polish scope |
+
+## Recommended P126 Lane
+- Decision: `can-implement-minimal-polish`
+- Scope: frontend-only UI/copy/test polish for activation clarity, no backend/DB/schema expansion.
+- Suggested lane: `P126 First-Run Activation Minimal Polish Implementation`
+
+## Governance Notes
+- No frontend runtime code changes in P125.
+- No backend/runtime/model/schema/migration/test-harness/config changes.
+- Forbidden governance files unchanged (`roadmap.md`, `CTO-Analysis.md`, `CEO-Decision.md`, `active_task.md`).
+
+## CTO 5-line Summary
+- P123/P124 already provide a working and evidence-aware first-run path.
+- Current gap is completion clarity polish, not data-path correctness.
+- Minimal P126 can stay frontend-only with strict bounded scope.
+- No backend evidence contract expansion is required for the next increment.
+- Recommended validation remains targeted contract guards only.
+
+## CEO 5-line Summary
+- Product now has a usable activation loop; next win is reducing user hesitation.
+- The biggest friction is “what exactly counts as done” in final step messaging.
+- Trust cues exist; users need clearer prompts to verify and continue action.
+- A small polish lane can improve completion rate without risky architecture work.
+- Proceed to P126 minimal polish implementation.
+
 # P124 — First-Run Journey Evidence Integration Review (2026-06-01)
 
 **Final Classification:** `P124_FIRST_RUN_EVIDENCE_INTEGRATION_READY`
