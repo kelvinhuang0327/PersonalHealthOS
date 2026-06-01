@@ -1,3 +1,68 @@
+# P126 — First-Run Activation Polish Implementation (2026-06-01)
+
+**Final Classification:** `P126_FIRST_RUN_ACTIVATION_POLISH_READY`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree)
+- Detached HEAD: No
+- P125 commit `7e9c9d3` present (PASS)
+- P124/P123 expected state present (`0329834`, `a5a6785`) (PASS)
+
+## Dirty File Handling
+- Existing dirty/untracked files were known governance/runtime/environment artifacts from prior lanes.
+- No unknown unrelated source files were introduced by P126 changes.
+- P126 changes stayed within whitelist files.
+
+## Files Changed
+- `frontend/app/components/platform/daily-assistant-entry.tsx`
+- `frontend/tests/e2e/p126-first-run-activation-polish-contract.spec.ts`
+- `docs/product/p126-first-run-activation-polish-implementation.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Test Results
+| Test command | Result |
+|---|---|
+| `cd frontend && npx tsc --noEmit` | PASS |
+| `cd frontend && npx next build` | PASS |
+| `cd frontend && npx playwright test tests/e2e/p126-first-run-activation-polish-contract.spec.ts --reporter=line` | PASS (7 passed) |
+| `cd frontend && npx playwright test tests/e2e/p123-first-run-journey-contract.spec.ts --reporter=line` | PASS (7 passed) |
+| `cd frontend && npx playwright test tests/e2e/p124-first-run-evidence-integration-contract.spec.ts --reporter=line` | PASS (7 passed) |
+| `cd frontend && npx playwright test tests/e2e/p76-daily-assistant-signal-contract.spec.ts --reporter=line` | PASS (5 passed) |
+| `cd frontend && npx playwright test tests/e2e/p82-actions-page-contract.spec.ts --reporter=line` | PASS (4 passed) |
+| `cd frontend && npx playwright test tests/e2e/p85-documents-page-contract.spec.ts --reporter=line` | NOT RUN (documents UI unchanged) |
+| `cd frontend && npx playwright test tests/e2e/p86-symptoms-page-contract.spec.ts --reporter=line` | NOT RUN (symptoms UI unchanged) |
+
+## Activation Polish State Table
+| State | Trigger | P126 polish |
+|---|---|---|
+| `empty` | no report + no symptom + no assistant signal | explicit start CTAs to documents and symptoms |
+| `report-only` | confirmed report but no symptom | next-step symptom guidance + why-needed copy |
+| `symptom-only` | symptom exists but no confirmed report | next-step documents guidance + why-needed copy |
+| `completed` | report + symptom + assistant signal ready | explicit CTA to dashboard + actions and clearer action-step status |
+
+## Governance Notes
+- No backend endpoint/model/schema/migration changes.
+- No new route/page/state machine introduced.
+- P121/P124 not-judged evidence safety semantics preserved (no normal/diagnosis overclaim).
+- No forbidden governance file edits (`roadmap.md`, `CTO-Analysis.md`, `CEO-Decision.md`, `active_task.md`).
+
+## CTO 5-line Summary
+- P126 delivered activation clarity improvements via bounded dashboard-only runtime change.
+- Checklist now exposes explicit step status, progress, and actionable next-step cues.
+- Completion state now includes direct CTA pair to recommendation review and action execution.
+- Existing P123/P124/P76/P82 guards remain green after change.
+- Safety semantics for suppressed/not-judged evidence remain intact.
+
+## CEO 5-line Summary
+- New users now get clearer guidance on what to do next and why each step matters.
+- The journey moved from “can use” to “easier to complete” without architecture risk.
+- Trust and evidence cues remain visible while copy stays medically conservative.
+- Scope stayed minimal and execution stayed fast with no backend dependency.
+- Product is ready for the next incremental lane.
+
 # P125 — First-Run Activation Polish Discovery (2026-06-01)
 
 **Final Classification:** `P125_FIRST_RUN_ACTIVATION_POLISH_DISCOVERY_READY`

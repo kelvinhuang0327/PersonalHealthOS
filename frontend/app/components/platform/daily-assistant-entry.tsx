@@ -130,9 +130,11 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
   const hasConfirmedReport = documents.some((doc) => doc.parse_status === 'confirmed')
   const hasSymptomLog = symptoms.length > 0
   const hasAssistantSurface = hasDailySummary || Boolean(topRec)
+  const hasTrackingAction = Boolean(data?.recommendations?.some((rec) => rec.is_tracking))
   const isJourneyCompleted = hasConfirmedReport && hasSymptomLog && hasAssistantSurface
   const isJourneyEmpty = !hasConfirmedReport && !hasSymptomLog && !hasAssistantSurface
   const journeyState: 'empty' | 'in_progress' | 'completed' = isJourneyCompleted ? 'completed' : (isJourneyEmpty ? 'empty' : 'in_progress')
+  const completedStepCount = [hasConfirmedReport, hasSymptomLog, hasAssistantSurface].filter(Boolean).length
   const nextStep: 'documents' | 'symptoms' | 'dashboard' | 'actions' =
     !hasConfirmedReport ? 'documents' :
     !hasSymptomLog ? 'symptoms' :
@@ -198,50 +200,106 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
 
               {journeyState === 'in_progress' && (
                 <p data-testid="first-run-journey-in-progress" className="mt-2 text-[11px] text-sky-700 leading-relaxed">
-                  你已經完成部分資料整理，繼續補齊下一步即可讓小助手提供更清楚的追蹤建議。
+                  你已完成 {completedStepCount}/3 個啟動步驟，補齊下一步後可看到更完整的追蹤建議。
                 </p>
               )}
 
               {journeyState === 'completed' && (
                 <p data-testid="first-run-journey-completed" className="mt-2 text-[11px] text-emerald-700 leading-relaxed">
-                  首次使用流程已就緒，接下來可直接查看今日建議並執行行動追蹤。
+                  首次使用流程已就緒。下一步建議查看今日建議重點，並在行動頁先加入至少一項追蹤。
                 </p>
+              )}
+
+              {journeyState === 'empty' && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Link
+                    data-testid="first-run-empty-cta-documents"
+                    href="/platform/documents"
+                    className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-[11px] text-sky-700 border border-sky-200 hover:bg-sky-50"
+                  >
+                    先上傳健檢報告 <ArrowRight className="h-3 w-3" />
+                  </Link>
+                  <Link
+                    data-testid="first-run-empty-cta-symptoms"
+                    href="/platform/symptoms"
+                    className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-[11px] text-sky-700 border border-sky-200 hover:bg-sky-50"
+                  >
+                    先記錄症狀 <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
               )}
 
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <Link data-testid="first-run-link-documents" href="/platform/documents" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
-                  1. 健檢報告（上傳/確認）{hasConfirmedReport ? ' ✓' : ''}
+                  <span className="font-medium">1. 健檢報告（上傳/確認）</span>
+                  <span data-testid="first-run-step-documents-status" className="ml-1 text-sky-700">{hasConfirmedReport ? '已完成' : '尚未開始'}</span>
                 </Link>
                 <Link data-testid="first-run-link-symptoms" href="/platform/symptoms" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
-                  2. 症狀記錄{hasSymptomLog ? ' ✓' : ''}
+                  <span className="font-medium">2. 症狀記錄</span>
+                  <span data-testid="first-run-step-symptoms-status" className="ml-1 text-sky-700">{hasSymptomLog ? '已完成' : '尚未開始'}</span>
                 </Link>
                 <Link data-testid="first-run-link-dashboard" href="/platform/dashboard" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
-                  3. 每日建議{hasAssistantSurface ? ' ✓' : ''}
+                  <span className="font-medium">3. 每日建議</span>
+                  <span data-testid="first-run-step-dashboard-status" className="ml-1 text-sky-700">{hasAssistantSurface ? '已完成' : '尚未開始'}</span>
                 </Link>
                 <Link data-testid="first-run-link-actions" href="/platform/actions" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
-                  4. 行動追蹤
+                  <span className="font-medium">4. 行動追蹤</span>
+                  <span data-testid="first-run-step-actions-status" className="ml-1 text-sky-700">{hasTrackingAction ? '已開始追蹤' : '建議下一步'}</span>
                 </Link>
               </div>
 
               {journeyState === 'in_progress' && nextStep === 'documents' && (
-                <p data-testid="first-run-next-step-documents" className="mt-2 text-[11px] text-sky-700">
-                  下一步：先完成健檢報告上傳或確認，讓系統有可追蹤的檢驗依據。
-                </p>
+                <>
+                  <p data-testid="first-run-next-step-documents" className="mt-2 text-[11px] text-sky-700">
+                    下一步：先完成健檢報告上傳或確認，讓系統有可追蹤的檢驗依據。
+                  </p>
+                  <p data-testid="first-run-why-documents" className="mt-1 text-[11px] text-slate-600">
+                    為什麼需要：有了已確認報告，建議才有清楚的資料來源可追溯。
+                  </p>
+                </>
               )}
               {journeyState === 'in_progress' && nextStep === 'symptoms' && (
-                <p data-testid="first-run-next-step-symptoms" className="mt-2 text-[11px] text-sky-700">
-                  下一步：補上症狀記錄，讓建議可結合你的主觀不適與檢驗資料。
-                </p>
+                <>
+                  <p data-testid="first-run-next-step-symptoms" className="mt-2 text-[11px] text-sky-700">
+                    下一步：補上症狀記錄，讓建議可結合你的主觀不適與檢驗資料。
+                  </p>
+                  <p data-testid="first-run-why-symptoms" className="mt-1 text-[11px] text-slate-600">
+                    為什麼需要：症狀紀錄可協助整理你最近的不適變化與追蹤優先序。
+                  </p>
+                </>
               )}
               {journeyState === 'in_progress' && nextStep === 'dashboard' && (
-                <p data-testid="first-run-next-step-dashboard" className="mt-2 text-[11px] text-sky-700">
-                  下一步：回到儀表板查看今日建議，確認目前的追蹤重點。
-                </p>
+                <>
+                  <p data-testid="first-run-next-step-dashboard" className="mt-2 text-[11px] text-sky-700">
+                    下一步：回到儀表板查看今日建議，確認目前的追蹤重點。
+                  </p>
+                  <p data-testid="first-run-why-dashboard" className="mt-1 text-[11px] text-slate-600">
+                    為什麼需要：可先看建議依據與資料來源，再決定今天先追蹤哪一項。
+                  </p>
+                </>
               )}
               {journeyState === 'completed' && (
-                <p data-testid="first-run-next-step-actions" className="mt-2 text-[11px] text-emerald-700">
-                  建議下一步：前往行動頁，把今天最重要的一項建議加入追蹤。
-                </p>
+                <>
+                  <p data-testid="first-run-next-step-actions" className="mt-2 text-[11px] text-emerald-700">
+                    建議下一步：前往行動頁，把今天最重要的一項建議加入追蹤。
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Link
+                      data-testid="first-run-completed-cta-dashboard"
+                      href="/platform/dashboard"
+                      className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-[11px] text-emerald-700 border border-emerald-200 hover:bg-emerald-50"
+                    >
+                      查看今日建議 <ArrowRight className="h-3 w-3" />
+                    </Link>
+                    <Link
+                      data-testid="first-run-completed-cta-actions"
+                      href="/platform/actions"
+                      className="inline-flex items-center gap-1 rounded-md bg-white px-2.5 py-1 text-[11px] text-emerald-700 border border-emerald-200 hover:bg-emerald-50"
+                    >
+                      查看行動清單 <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  </div>
+                </>
               )}
             </div>
           )}
