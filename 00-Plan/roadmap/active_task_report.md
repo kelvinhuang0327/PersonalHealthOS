@@ -1,3 +1,62 @@
+# P121 — Backend Evidence Bundle Suppression Reason Propagation (2026-06-01)
+
+**Final Classification:** `P121_BACKEND_EVIDENCE_BUNDLE_SUPPRESSION_REASON_READY`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree)
+- Detached HEAD: No
+- P120/P122 expected state: matched (`9413929` and `308bd11` present)
+- Source reconfirmed old assumption error: assistant bundle path previously filtered with `abnormal_flag.isnot(None)` and excluded suppressed rows.
+
+## Dirty File Handling
+- Existing dirty/untracked files were known governance/runtime artifacts from prior lanes.
+- No unknown unrelated dirty source files were introduced by P121.
+- P121 changes were restricted to whitelist files only.
+
+## Evidence Semantics Table
+| Row type | Evidence path | Counts as abnormal | Included in lab_abnormalities | Severity/ranking impact |
+|---|---|---:|---:|---:|
+| `abnormal_flag=H/L` | `lab_report_items` | Yes | Yes | Yes (unchanged) |
+| `abnormal_flag=None` + `suppressed_unit_scale_mismatch` | `lab_not_judged_items` | No | No | No |
+| `abnormal_flag=None` + no-rule/unknown/parser-low-conf | excluded from assistant lab lists | No | No | No |
+
+## Files Changed
+- `backend/app/services/health_assistant_service.py`
+- `backend/tests/test_p121_backend_evidence_bundle_suppression_reason_propagation.py`
+- `docs/product/p121-backend-evidence-bundle-suppression-reason-propagation.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Test Results
+| Test command | Result |
+|---|---|
+| `cd backend && PYTHONPATH=. .venv/bin/python -m pytest tests/test_p121_backend_evidence_bundle_suppression_reason_propagation.py -v` | PASS (6 passed) |
+| `cd backend && PYTHONPATH=. .venv/bin/python -m pytest tests/test_health_assistant_service.py -q` | PASS (23 passed) |
+| Next build / Playwright full suite | NOT RUN (backend-only lane) |
+
+## Governance Notes
+- No DB model change.
+- No migration/new column.
+- No schema-expansion-driven workaround.
+- No frontend runtime changes.
+- No modifications to forbidden governance files (`roadmap.md`, `CTO-Analysis.md`, `CEO-Decision.md`, `active_task.md`).
+
+## CTO 5-line Summary
+- P121 introduced a safe not-judged evidence path for `suppressed_unit_scale_mismatch`.
+- Suppressed rows are now observable in assistant bundle while isolated from abnormal scoring.
+- `abnormal_lab_count` and `lab_abnormalities` remain tied to clinically judged rows only.
+- Existing health assistant test suite passed after change.
+- No schema/DB/frontend blast radius.
+
+## CEO 5-line Summary
+- P121 trust-lane blocker has been resolved without risky data model changes.
+- Suppressed unit-mismatch evidence is now visible but clearly marked uncertain/not-judged.
+- The fix does not inflate abnormal counts or severity.
+- Regression tests passed and scope stayed tightly governed.
+- This unblocks moving to the next implementation lane.
+
 # P122 — First-Run Journey Discovery (2026-06-01)
 
 **Task:** `P122_FIRST_RUN_JOURNEY_DISCOVERY`

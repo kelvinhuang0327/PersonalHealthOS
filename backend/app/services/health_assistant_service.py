@@ -79,6 +79,34 @@ def _freshness_label(dt: datetime | None) -> str:
     return "fresh" if (_NOW() - dt).total_seconds() <= 86400 else "stale"
 
 
+def _derive_abnormal_flag_reason(item: LabReportItem) -> str:
+    """Derive a deterministic abnormal-flag reason without schema changes.
+
+    This mirrors the response-level reasoning style used by the documents
+    parsed-items path, while keeping bundle semantics explicit and conservative.
+    """
+    if item.abnormal_flag == "H":
+        return "flagged_high"
+    if item.abnormal_flag == "L":
+        return "flagged_low"
+    if item.abnormal_flag == "N":
+        return "normal_by_rule"
+    if item.abnormal_flag is None:
+        range_source = getattr(item, "range_source", None)
+        if range_source == "default_rule":
+            normalized_unit = (item.normalized_unit or "").strip().lower()
+            raw_unit = (item.unit or "").strip().lower()
+            if normalized_unit and raw_unit and normalized_unit != raw_unit:
+                return "suppressed_unit_scale_mismatch"
+            return "no_reference_rule"
+        if range_source == "unknown":
+            return "no_reference_rule"
+        if item.parser_confidence is not None and float(item.parser_confidence) < 0.6:
+            return "parser_unavailable"
+        return "unknown"
+    return "unknown"
+
+
 # Source → reliability score for known external providers.
 # Any unrecognised source falls back to _DEFAULT_EXTERNAL_RELIABILITY.
 _EXTERNAL_RELIABILITY: dict[str, float] = {
@@ -268,7 +296,7 @@ def build_evidence_bundle(
             "weight_kg":     float(m.weight_kg) if m.weight_kg else None,
         })
 
-    # ── lab report items (last 365 days, abnormal only) ────────────────────
+    # ── lab report items (last 365 days) ────────────────────────────────────
     cutoff_1y = _NOW() - timedelta(days=365)
     recent_reports = (
         db.query(LabReport)
@@ -283,26 +311,21 @@ def build_evidence_bundle(
     )
 
     lab_report_items: list[dict[str, Any]] = []
+    lab_not_judged_items: list[dict[str, Any]] = []
     for report in recent_reports:
-        items = (
-            db.query(LabReportItem)
-            .filter(
-                LabReportItem.report_id == report.id,
-                LabReportItem.abnormal_flag.isnot(None),
-            )
-            .all()
-        )
+        items = db.query(LabReportItem).filter(LabReportItem.report_id == report.id).all()
         for item in items:
             val_str = (
                 f"{float(item.value_num):.2f} {item.unit or ''}"
                 if item.value_num is not None
                 else (item.value_text or "N/A")
             )
-            lab_report_items.append({
+            abnormal_flag_reason = _derive_abnormal_flag_reason(item)
+            base_item = {
                 "source_type": "lab_report_item",
                 "source_id": str(item.id),
                 "report_id": str(report.id),
-                "document_id": str(report.document_id) if report.document_id else None,
+                    "document_id": str(getattr(report, "document_id", None)) if getattr(report, "document_id", None) else None,
                 "recency": _recency_label(
                     datetime(report.report_date.year, report.report_date.month,
                              report.report_date.day, tzinfo=timezone.utc)
@@ -318,8 +341,29 @@ def build_evidence_bundle(
                 "unit": item.unit,
                 "ref_range": item.ref_range,
                 "abnormal_flag": item.abnormal_flag,
+                "abnormal_flag_reason": abnormal_flag_reason,
                 "report_date": str(report.report_date) if report.report_date else None,
-            })
+            }
+
+            # Keep clinically judged rows on the existing abnormal path.
+            if item.abnormal_flag is not None:
+                lab_report_items.append(base_item)
+                continue
+
+            # Suppressed unit-scale mismatch is surfaced via an explicit
+            # not-judged path and is excluded from abnormal counts/severity.
+            if abnormal_flag_reason == "suppressed_unit_scale_mismatch":
+                not_judged_item = dict(base_item)
+                not_judged_item.update(
+                    {
+                        "source_type": "lab_report_item_not_judged",
+                        "evidence_level": "C",
+                        "summary": f"{item.item_name} {val_str}（單位不同，暫不判斷異常）",
+                        "not_judged": True,
+                        "judgement": "uncertain",
+                    }
+                )
+                lab_not_judged_items.append(not_judged_item)
 
     # ── risk alerts (active) ───────────────────────────────────────────────
     alert_rows = (
@@ -532,6 +576,7 @@ def build_evidence_bundle(
         "symptom_patterns": symptom_patterns,
         "lab_abnormalities": lab_abnormalities,
         "lab_report_items": lab_report_items,
+        "lab_not_judged_items": lab_not_judged_items,
         "risk_alerts": risk_alerts,
         "insights": insights,
         "actions": actions,
@@ -543,6 +588,7 @@ def build_evidence_bundle(
             "symptom_count": len(symptoms) + len(long_term_symptoms),
             "metric_count": len(metric_rows),
             "abnormal_lab_count": len(lab_report_items),
+            "not_judged_lab_count": len(lab_not_judged_items),
             "lab_abnormality_count": len(lab_abnormalities),
             "active_alert_count": len(risk_alerts),
             "insight_count": len(insights),
@@ -773,6 +819,7 @@ def get_action_recommendations(
         "device_escalation": bundle.get("device_escalation", {}),
         "symptom_patterns": bundle.get("symptom_patterns", []),
         "lab_abnormalities": bundle.get("lab_abnormalities", []),
+        "lab_not_judged_items": bundle.get("lab_not_judged_items", []),
         "evidence_bundle_summary": bundle["summary"],
         "missing_data": bundle["missing_data"],
     }
