@@ -1,3 +1,64 @@
+# P128 — Dogfood-Ready Checklist And Minimal Patch Discovery (2026-06-01)
+
+**Final Classification:** `P128_NEEDS_P129_MINIMAL_PATCH`
+**Branch:** `main`
+
+## Pre-flight Result
+- Repo: `/Users/kelvin/Kelvin-WorkSpace/PersonalHealthOS` (PASS)
+- Branch: `main` (PASS)
+- Git dir: `.git` (PASS, not worktree, not detached)
+- Required baseline commit present: `f46f5a2` (P127) (PASS)
+- P121/P123/P124/P126 expected states present (`9c4ff0b`, `a5a6785`, `0329834`, `bcccbd7`) (PASS)
+
+## Dirty File Handling
+- Existing dirty/untracked files matched known governance/runtime environment artifacts from previous lanes.
+- No newly discovered unrelated dirty source file was introduced during this P128 docs lane.
+- Execution proceeded with whitelist-only edits.
+
+## Files Changed
+- `docs/product/p128-dogfood-ready-checklist-and-minimal-patch-discovery.md`
+- `00-Plan/roadmap/active_task_report.md`
+
+## Validation Results
+| Validation item | Result |
+|---|---|
+| Phase 0 command bundle | PASS |
+| `tsc` | NOT RUN (docs-only lane) |
+| Playwright | NOT RUN (docs-only lane) |
+| next build | NOT RUN (docs-only lane) |
+| backend targeted pytest | NOT RUN (docs-only lane) |
+
+## Dogfood Checklist Summary
+1. Dogfood minimum path confirmed as documents -> symptoms -> dashboard -> actions.
+2. Observable acceptance covers empty/report-only/symptom-only/completed journey states.
+3. Evidence badge/source-link and suppressed/not-judged safety behavior are explicit acceptance checks.
+4. Overclaim phrase deny-list and fail-reporting protocol are defined for real-user sessions.
+
+## Next Lane Recommendation
+- Classification implies follow-up: P129 minimal patch lane.
+- Preferred P129 path: docs/script-only execution protocol if dogfood session finds no runtime defect.
+- Escalate to bounded UI patch only when dogfood evidence shows concrete first-run friction.
+
+## Governance Notes
+- No frontend/backend runtime code changed.
+- No test files added/modified.
+- No DB/model/schema/migration/config/CI files touched.
+- No forbidden governance files staged (`roadmap.md`, `CTO-Analysis.md`, `CEO-Decision.md`, `active_task.md`).
+
+## CTO 5-line Summary
+- P127 readiness status is operationally usable for controlled dogfood entry.
+- Remaining gaps are execution protocol and observability polish, not trust-path correctness.
+- P128 now defines deterministic dogfood checklist and fail triage policy.
+- A minimal P129 lane is recommended to avoid scope drift and preserve governance.
+- Backend/schema expansion is explicitly out of scope unless a blocker is proven.
+
+## CEO 5-line Summary
+- First-run value path can now be trialed by real users in a controlled environment.
+- Expectations and caveats are explicit, reducing risk of trust misinterpretation.
+- The team has a concrete acceptance list and failure reporting standard.
+- Next investment should stay minimal and evidence-driven instead of broad rewrite.
+- Move to P129 with strict scope and only patch what dogfood sessions actually reveal.
+
 # P127 — First-Run Journey Release Readiness Review (2026-06-01)
 
 **Final Classification:** `P127_DOGFOOD_READY_WITH_LIMITATIONS`
