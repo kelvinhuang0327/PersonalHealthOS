@@ -49,8 +49,11 @@ def list_actions(db: Session, user_id: str, person_id: str | None = None) -> lis
 
 
 def get_action(db: Session, user_id: str, action_id: str) -> HealthAction | None:
-    uid = UUID(user_id) if isinstance(user_id, str) else user_id
-    aid = UUID(action_id) if isinstance(action_id, str) else action_id
+    try:
+        uid = UUID(user_id) if isinstance(user_id, str) else user_id
+        aid = UUID(action_id) if isinstance(action_id, str) else action_id
+    except (ValueError, AttributeError):
+        return None
     return (
         db.query(HealthAction)
         .filter(HealthAction.id == aid, HealthAction.user_id == uid)
@@ -218,7 +221,11 @@ def compute_outcomes(db: Session, action: HealthAction, time_window_days: int = 
 
 
 def get_outcomes_for_action(db: Session, action_id: str) -> list[ActionOutcome]:
-    return db.query(ActionOutcome).filter(ActionOutcome.action_id == action_id).all()
+    try:
+        aid = UUID(action_id) if isinstance(action_id, str) else action_id
+    except (ValueError, AttributeError):
+        return []
+    return db.query(ActionOutcome).filter(ActionOutcome.action_id == aid).all()
 
 
 # ---------------------------------------------------------------------------
@@ -240,8 +247,12 @@ def get_prioritized_actions(db: Session, user_id: str, person_id: str | None = N
     def _is_active(a: HealthAction) -> bool:
         if a.status in _INACTIVE_STATUSES:
             return False
-        if a.status == 'snoozed' and a.snoozed_until is not None and a.snoozed_until > now:
-            return False
+        if a.status == 'snoozed' and a.snoozed_until is not None:
+            snoozed = a.snoozed_until
+            if snoozed.tzinfo is None:
+                snoozed = snoozed.replace(tzinfo=timezone.utc)
+            if snoozed > now:
+                return False
         return True
 
     active = [a for a in actions if _is_active(a)]
