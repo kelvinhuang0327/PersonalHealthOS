@@ -128,11 +128,12 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
   const fbSummary = feedback?.summary
   const hasFeedback = fbSummary && fbSummary.total_count > 0
   const hasConfirmedReport = documents.some((doc) => doc.parse_status === 'confirmed')
+  const hasUploadedReport = documents.some((doc) => doc.parse_status === 'parsed' || doc.parse_status === 'uploaded')
   const hasSymptomLog = symptoms.length > 0
   const hasAssistantSurface = hasDailySummary || Boolean(topRec)
   const hasTrackingAction = Boolean(data?.recommendations?.some((rec) => rec.is_tracking))
   const isJourneyCompleted = hasConfirmedReport && hasSymptomLog && hasAssistantSurface
-  const isJourneyEmpty = !hasConfirmedReport && !hasSymptomLog && !hasAssistantSurface
+  const isJourneyEmpty = !hasConfirmedReport && !hasUploadedReport && !hasSymptomLog && !hasAssistantSurface
   const journeyState: 'empty' | 'in_progress' | 'completed' = isJourneyCompleted ? 'completed' : (isJourneyEmpty ? 'empty' : 'in_progress')
   const completedStepCount = [hasConfirmedReport, hasSymptomLog, hasAssistantSurface].filter(Boolean).length
   const nextStep: 'documents' | 'symptoms' | 'dashboard' | 'actions' =
@@ -232,7 +233,15 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 <Link data-testid="first-run-link-documents" href="/platform/documents" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
                   <span className="font-medium">1. 健檢報告（上傳/確認）</span>
-                  <span data-testid="first-run-step-documents-status" className="ml-1 text-sky-700">{hasConfirmedReport ? '已完成' : '尚未開始'}</span>
+                  <span data-testid="first-run-step-documents-status" className="ml-1 font-medium">
+                    {hasConfirmedReport ? (
+                      <span className="text-emerald-600">已完成</span>
+                    ) : hasUploadedReport ? (
+                      <span className="text-amber-600">待確認</span>
+                    ) : (
+                      <span className="text-slate-400">尚未開始</span>
+                    )}
+                  </span>
                 </Link>
                 <Link data-testid="first-run-link-symptoms" href="/platform/symptoms" className="rounded-lg border border-white bg-white px-2.5 py-2 text-[11px] text-slate-700 hover:bg-slate-50">
                   <span className="font-medium">2. 症狀記錄</span>

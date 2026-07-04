@@ -298,7 +298,13 @@ def dashboard(
 
     # Narrative v3: load completed actions for causal analysis
     completed_actions = action_service.list_actions(db, str(current_user.id), str(target_person.id))
-    health_narrative_v3 = analysis_results.narrative or generate_health_narrative_v3(narrative_context, previous_narrative, completed_actions)
+    health_narrative_v3 = analysis_results.narrative or {
+        "summary": "健康大綱已整理，請參考下方細項建議。",
+        "risks": [],
+        "trends": [],
+        "reasons": [],
+        "actions": []
+    }
 
     alert_snapshot = build_alert_snapshot_hash(alerts) if alerts else None
     narrative_payload = {

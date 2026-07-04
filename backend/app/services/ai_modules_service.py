@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,8 @@ from app.orchestrator.execution_policy import evaluate_llm_execution, record_llm
 from app.services.ai_guardrail_service import apply_guardrails, evaluate_guarded_output
 
 settings = get_settings()
+
+logger = logging.getLogger(__name__)
 
 PROMPT_DIR = Path(__file__).resolve().parents[3] / 'ai' / 'prompts'
 PROMPT_FILES = {
@@ -231,17 +234,21 @@ def _load_prompt_template(module: str) -> str:
 def _call_model(module: str, prompt: str, context: dict[str, Any], max_items: int) -> tuple[dict[str, Any], str]:
     policy = evaluate_llm_execution(source='api-direct')
     if settings.openai_api_key and policy.allowed:
-        record_llm_call(source='api-direct', provider='openai', model=settings.openai_model)
-        client = OpenAI(api_key=settings.openai_api_key)
-        completion = client.responses.create(
-            model=settings.openai_model,
-            input=prompt,
-            temperature=0.2,
-        )
-        parsed = _safe_json_load(completion.output_text)
-        if parsed is None:
-            parsed = _fallback_output(module, context, max_items)
-        return parsed, settings.openai_model
+        try:
+            record_llm_call(source='api-direct', provider='openai', model=settings.openai_model)
+            client = OpenAI(api_key=settings.openai_api_key)
+            completion = client.responses.create(
+                model=settings.openai_model,
+                input=prompt,
+                temperature=0.2,
+            )
+            parsed = _safe_json_load(completion.output_text)
+            if parsed is None:
+                parsed = _fallback_output(module, context, max_items)
+            return parsed, settings.openai_model
+        except Exception as exc:
+            logger.error("OpenAI call failed in _call_model: %s", exc)
+            return _fallback_output(module, context, max_items), "rule-based-fallback"
 
     if settings.openai_api_key and not policy.allowed:
         return _fallback_output(module, context, max_items), f'policy-fallback:{policy.code.lower()}'

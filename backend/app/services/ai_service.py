@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+import logging
 from typing import Any
 
 from openai import OpenAI
@@ -10,6 +11,8 @@ from app.core.constants import MEDICAL_DISCLAIMER
 from app.orchestrator.execution_policy import evaluate_llm_execution, record_llm_call
 
 settings = get_settings()
+
+logger = logging.getLogger(__name__)
 
 
 def build_summary_payload(profile: dict[str, Any], metrics: list[dict[str, Any]], alerts: list[dict[str, Any]]) -> str:
@@ -32,15 +35,25 @@ def generate_health_summary(
     policy = evaluate_llm_execution(source='api-direct')
 
     if settings.openai_api_key and policy.allowed:
-        record_llm_call(source='api-direct', provider='openai', model=settings.openai_model)
-        client = OpenAI(api_key=settings.openai_api_key)
-        completion = client.responses.create(
-            model=settings.openai_model,
-            input=prompt,
-            temperature=0.3,
-        )
-        text = completion.output_text
-        model_name = settings.openai_model
+        try:
+            record_llm_call(source='api-direct', provider='openai', model=settings.openai_model)
+            client = OpenAI(api_key=settings.openai_api_key)
+            completion = client.responses.create(
+                model=settings.openai_model,
+                input=prompt,
+                temperature=0.3,
+            )
+            text = completion.output_text
+            model_name = settings.openai_model
+        except Exception as exc:
+            logger.error("OpenAI summary generation failed: %s", exc)
+            text = (
+                '近期健康數據已整理完成。請持續追蹤血壓、血糖與體重變化，若異常持續請儘速就醫。\n'
+                '異常值：請參考系統提示卡片。\n'
+                '建議：規律作息、均衡飲食、每週至少 150 分鐘中強度運動。\n'
+                f'免責聲明：{MEDICAL_DISCLAIMER}'
+            )
+            model_name = 'rule-based-fallback'
     else:
         text = (
             '近期健康數據已整理完成。請持續追蹤血壓、血糖與體重變化，若異常持續請儘速就醫。\n'
