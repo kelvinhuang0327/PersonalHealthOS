@@ -21,6 +21,7 @@ Coverage
 from __future__ import annotations
 
 import pytest
+from datetime import datetime, timezone
 
 from app.services.narrative_intelligence_service import (
     build_cross_period_health_reasoning,
@@ -41,8 +42,10 @@ def _mem(
     effective_actions: list[str] | None = None,
     ignored_items: list[str] | None = None,
     confidence: float = 0.70,
-    generated_at: str = "2026-05-07T10:00:00+00:00",
+    generated_at: str | None = None,
 ) -> dict:
+    if generated_at is None:
+        generated_at = datetime.now(timezone.utc).isoformat()
     return {
         "periodType": period_type,
         "periodStart": "2026-05-01",

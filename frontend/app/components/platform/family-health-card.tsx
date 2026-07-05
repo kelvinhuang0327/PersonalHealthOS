@@ -178,9 +178,9 @@ export default function FamilyHealthCard() {
         api.getFamilyRelationships(),
         api.getFamilyRecommendations(),
       ])
-      setContext(ctxRes.context)
-      setRelationships(relRes.relationships)
-      setRecommendations(recRes.recommendations)
+      setContext(ctxRes?.context || null)
+      setRelationships(Array.isArray(relRes?.relationships) ? relRes.relationships : [])
+      setRecommendations(Array.isArray(recRes?.recommendations) ? recRes.recommendations : [])
     } catch (e) {
       setError('無法載入家庭健康資料')
     } finally {
@@ -192,7 +192,7 @@ export default function FamilyHealthCard() {
     load()
   }, [])
 
-  const hasFamily = relationships.length > 0
+  const hasFamily = Array.isArray(relationships) && relationships.length > 0
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col gap-4">
@@ -239,10 +239,10 @@ export default function FamilyHealthCard() {
           <Section
             title="家庭成員"
             icon={<Users className="w-4 h-4 text-indigo-400" />}
-            count={relationships.length}
+            count={Array.isArray(relationships) ? relationships.length : 0}
           >
             <ul className="divide-y divide-slate-50">
-              {relationships.map(rel => (
+              {(Array.isArray(relationships) ? relationships : []).map(rel => (
                 <li key={rel.id} className="flex items-center justify-between py-1.5">
                   <span className="text-sm text-slate-700">
                     {rel.related_display_name || '成員'}
@@ -341,15 +341,15 @@ export default function FamilyHealthCard() {
           )}
 
           {/* Recommendations */}
-          {recommendations.length > 0 && (
+          {Array.isArray(recommendations) && recommendations.length > 0 && (
             <Section
               title="家庭健康建議"
               icon={<Lightbulb className="w-4 h-4 text-yellow-400" />}
-              count={recommendations.length}
+              count={Array.isArray(recommendations) ? recommendations.length : 0}
               defaultOpen={false}
             >
               <ul className="space-y-2.5">
-                {recommendations.map((rec, i) => (
+                {(Array.isArray(recommendations) ? recommendations : []).map((rec, i) => (
                   <li key={i} className="flex flex-col gap-1">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <UrgencyBadge urgency={rec.urgency} />

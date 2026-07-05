@@ -315,6 +315,30 @@ test.describe('health platform e2e', () => {
           },
         });
       }
+      if (path.includes('/family-relationships') && method === 'GET') {
+        return route.fulfill({ json: { relationships: [], total: 0 } });
+      }
+      if (path.includes('/family-health-context') && method === 'GET') {
+        return route.fulfill({
+          json: {
+            context: {
+              relatedProfiles: [],
+              sharedRisks: [],
+              caregiverAlerts: [],
+              childAttentionItems: [],
+              familyActionSuggestions: [],
+              confidence: 0.0,
+              limitations: [],
+            },
+          },
+        });
+      }
+      if (path.includes('/family-recommendations') && method === 'GET') {
+        return route.fulfill({ json: { recommendations: [], total: 0 } });
+      }
+      if (path.endsWith('/metrics') && method === 'GET') {
+        return route.fulfill({ json: [] });
+      }
 
       return route.fulfill({ status: 200, json: {} });
     });

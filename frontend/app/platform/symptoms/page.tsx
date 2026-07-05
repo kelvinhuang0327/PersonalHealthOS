@@ -28,7 +28,10 @@ export default function SymptomsPage() {
 
   const refresh = () => {
     api.listSymptoms().then(setLogs).catch(() => setLogs([]))
-    api.listMetrics().then((rows: any) => setMetrics(rows || [])).catch(() => setMetrics([]))
+    api.listMetrics().then((rows: any) => {
+      const arr = Array.isArray(rows) ? rows : (rows && Array.isArray(rows.items) ? rows.items : [])
+      setMetrics(arr)
+    }).catch(() => setMetrics([]))
   }
 
   useEffect(() => {
@@ -77,6 +80,7 @@ export default function SymptomsPage() {
 
   const abnormalMetricDates = useMemo(() => {
     const map = new Set<string>()
+    if (!Array.isArray(metrics)) return map
     for (const row of metrics) {
       const abnormal = (row.systolic_bp && row.systolic_bp >= 140) || (row.diastolic_bp && row.diastolic_bp >= 90) || (row.blood_glucose && row.blood_glucose >= 126)
       if (!abnormal || !row.recorded_at) continue

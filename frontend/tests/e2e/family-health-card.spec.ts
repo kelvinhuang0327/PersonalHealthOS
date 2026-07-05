@@ -100,6 +100,9 @@ test.describe('FamilyHealthCard — evidence transparency smoke', () => {
           json: { id: 'pid-self', display_name: '本人', onboarding_completed: true },
         })
       }
+      if (path.endsWith('/metrics')) {
+        return route.fulfill({ json: [] })
+      }
       if (route.request().method() === 'GET') return route.fulfill({ json: { items: [] } })
       return route.fulfill({ json: {} })
     })
@@ -107,7 +110,7 @@ test.describe('FamilyHealthCard — evidence transparency smoke', () => {
 
   test('family health card section is visible on dashboard', async ({ page }) => {
     await page.goto('/platform/dashboard')
-    await expect(page.getByText('家庭健康脈絡')).toBeVisible()
+    await expect(page.getByText('家庭健康總覽')).toBeVisible()
   })
 
   test('no-diagnosis disclaimer is visible', async ({ page }) => {

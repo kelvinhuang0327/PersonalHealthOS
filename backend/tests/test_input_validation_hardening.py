@@ -115,6 +115,13 @@ def _set_user(db: Session, user: User) -> TestClient:
 class TestAuthInputValidation:
     """Auth endpoint input validation — no DB/auth setup needed (public endpoints)."""
 
+    @pytest.fixture(autouse=True)
+    def _setup_db(self):
+        db, user, person = _make_db_and_user()
+        def _override_db():
+            yield db
+        app.dependency_overrides[get_db] = _override_db
+
     def test_login_password_too_long(self):
         """Password > 1024 chars must be rejected with 422."""
         client = TestClient(app)

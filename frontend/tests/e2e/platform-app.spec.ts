@@ -129,6 +129,30 @@ test('platform dashboard loads with explainability', async ({ page }) => {
     if (path.endsWith('/weekly-report')) {
       return route.fulfill({ json: { items: [] } })
     }
+    if (path.includes('/family-relationships')) {
+      return route.fulfill({ json: { relationships: [], total: 0 } })
+    }
+    if (path.includes('/family-health-context')) {
+      return route.fulfill({
+        json: {
+          context: {
+            relatedProfiles: [],
+            sharedRisks: [],
+            caregiverAlerts: [],
+            childAttentionItems: [],
+            familyActionSuggestions: [],
+            confidence: 0.0,
+            limitations: [],
+          },
+        },
+      })
+    }
+    if (path.includes('/family-recommendations')) {
+      return route.fulfill({ json: { recommendations: [], total: 0 } })
+    }
+    if (path.endsWith('/metrics')) {
+      return route.fulfill({ json: [] })
+    }
 
     if (method === 'GET') return route.fulfill({ json: { items: [] } })
     return route.fulfill({ json: {} })
