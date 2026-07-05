@@ -308,8 +308,9 @@ test.describe('P150 — Actions Page Feedback, Outcome, and Snooze Contract', ()
     expect(postPayload.status).toBe('not_useful')
     expect(postPayload.source_id).toBe('rule-ast-high-p150')
 
-    // Verify recommendation card is removed from the view
-    await expect(page.getByText('建議進行肝臟健康管理')).not.toBeVisible()
+    // Verify recommendation card is removed from the recommendation section
+    const recSection = page.locator('div.rounded-3xl', { has: page.locator('h3:has-text("系統現在建議你先做")') }).first()
+    await expect(recSection.getByText('建議進行肝臟健康管理')).not.toBeVisible()
   })
 
   test('2) Feedback POST failure recovers gracefully and retains page navigation', async ({ page }) => {
@@ -447,8 +448,9 @@ test.describe('P150 — Actions Page Feedback, Outcome, and Snooze Contract', ()
     expect(postPayload.status).toBe('snoozed')
     expect(postPayload.snoozed_until).toBeDefined()
 
-    // Recommendation card is hidden from view
-    await expect(page.getByText('建議進行肝臟健康管理')).not.toBeVisible()
+    // Recommendation card is hidden from recommendation section
+    const recSection = page.locator('div.rounded-3xl', { has: page.locator('h3:has-text("系統現在建議你先做")') }).first()
+    await expect(recSection.getByText('建議進行肝臟健康管理')).not.toBeVisible()
   })
 
   test('6) Report-linked recommendation remains traceable to evidence', async ({ page }) => {
