@@ -651,6 +651,77 @@ class TestActionOutcomesReadback:
         assert stored[0].outcome_label == 'improved'
 
 
+class TestActionImpactFeedbackPersistence:
+    """Verify explicit impact feedback writes ActionOutcome rows."""
+
+    def test_patch_done_with_impact_status_persists_action_outcome(self):
+        """PATCH done + impact_status → ActionOutcome user_feedback row."""
+        db, user, person, client = _setup_isolated_env()
+        created = _create_action_via_api(
+            client,
+            person,
+            title='P174 使用者效果回饋',
+            category='activity',
+        )
+        action_id = created['id']
+
+        resp_patch = client.patch(
+            f'/api/v1/actions/{action_id}',
+            json={'status': 'done', 'impact_status': 'improved'},
+        )
+        assert resp_patch.status_code == 200, resp_patch.text
+        patched = resp_patch.json()
+        assert patched['status'] == 'done'
+        assert patched['impact_status'] == 'improved'
+
+        stored = db.query(ActionOutcome).filter(
+            ActionOutcome.action_id == uuid.UUID(action_id),
+            ActionOutcome.metric_type == 'user_feedback',
+        ).all()
+        assert len(stored) == 1
+        assert stored[0].outcome_label == 'improved'
+        assert stored[0].time_window_days == 0
+        assert stored[0].before_value is None
+        assert stored[0].after_value is None
+
+        resp_outcomes = client.get(f'/api/v1/actions/{action_id}/outcomes')
+        assert resp_outcomes.status_code == 200
+        outcomes = resp_outcomes.json()
+        target = next((o for o in outcomes if o['metric_type'] == 'user_feedback'), None)
+        assert target is not None
+        assert target['outcome_label'] == 'improved'
+
+    def test_worse_impact_feedback_maps_to_deteriorated_timeline(self):
+        """Persisted worse feedback must read back as deteriorated outcome-feedback."""
+        db, user, person, client = _setup_isolated_env()
+        created = _create_action_via_api(
+            client,
+            person,
+            title='P174 需要調整的行動',
+            category='sleep',
+        )
+        action_id = created['id']
+
+        resp_patch = client.patch(
+            f'/api/v1/actions/{action_id}',
+            json={'status': 'done', 'impact_status': 'worse'},
+        )
+        assert resp_patch.status_code == 200, resp_patch.text
+
+        resp_feedback = client.get(
+            '/api/v1/health-assistant/outcome-feedback',
+            params={'window_days': 7, 'person_id': str(person.id)},
+        )
+        assert resp_feedback.status_code == 200
+        data = resp_feedback.json()
+        target = next((o for o in data['outcomes'] if o['action_id'] == action_id), None)
+        assert target is not None
+        assert target['status'] == 'completed'
+        assert target['outcome_status'] == 'deteriorated'
+        assert target['actual_metric_change']['metric_type'] == 'user_feedback'
+        assert target['evidence_sources'] == ['action_outcome']
+
+
 # ===========================================================================
 # TestInvalidAndMissingState
 # ===========================================================================

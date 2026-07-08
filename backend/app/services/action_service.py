@@ -23,6 +23,9 @@ CATEGORY_METRIC_MAP: dict[str, list[str]] = {
     'heart_rate': ['heart_rate'],
 }
 
+_FEEDBACK_OUTCOME_METRIC_TYPE = 'user_feedback'
+_FEEDBACK_OUTCOME_LABELS: frozenset[str] = frozenset({'improved', 'no_change', 'worse'})
+
 # Whether a decrease is "improvement" (True) or increase is "improvement" (False)
 LOWER_IS_BETTER: dict[str, bool] = {
     'systolic_bp': True,
@@ -70,6 +73,28 @@ def create_action(db: Session, user_id: str, data: dict[str, Any]) -> HealthActi
     return action
 
 
+def _persist_action_feedback_outcome(db: Session, action: HealthAction, now: datetime) -> None:
+    """Store explicit user impact feedback as an ActionOutcome row."""
+    label = action.impact_status
+    if action.status != 'done' or label not in _FEEDBACK_OUTCOME_LABELS:
+        return
+
+    db.query(ActionOutcome).filter(
+        ActionOutcome.action_id == action.id,
+        ActionOutcome.metric_type == _FEEDBACK_OUTCOME_METRIC_TYPE,
+    ).delete()
+
+    db.add(ActionOutcome(
+        action_id=action.id,
+        user_id=action.user_id,
+        person_id=action.person_id,
+        metric_type=_FEEDBACK_OUTCOME_METRIC_TYPE,
+        time_window_days=0,
+        outcome_label=label,
+        computed_at=now,
+    ))
+
+
 def update_action(db: Session, action: HealthAction, patch: dict[str, Any]) -> HealthAction:
     now = datetime.now(timezone.utc)
 
@@ -98,6 +123,8 @@ def update_action(db: Session, action: HealthAction, patch: dict[str, Any]) -> H
             setattr(action, key, value)
 
     action.updated_at = now
+    if 'impact_status' in patch:
+        _persist_action_feedback_outcome(db, action, now)
     db.commit()
     db.refresh(action)
     return action
