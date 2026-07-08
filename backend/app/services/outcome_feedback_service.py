@@ -221,9 +221,11 @@ def _process_completed_action(
             key=lambda o: _aware(o.computed_at) if o.computed_at else now,
         )
         raw_label = best.outcome_label or "no_change"
-        # Normalise: "no_change" → "unchanged"; keep "improved" / "deteriorated"
+        # Normalise persisted labels to the public outcome-feedback vocabulary.
         if raw_label == "no_change":
             outcome_status = "unchanged"
+        elif raw_label == "worse":
+            outcome_status = "deteriorated"
         elif raw_label in ("improved", "deteriorated", "unchanged"):
             outcome_status = raw_label
         else:
