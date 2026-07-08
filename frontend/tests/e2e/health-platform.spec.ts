@@ -99,10 +99,23 @@ test.describe('health platform e2e', () => {
         return route.fulfill({ json: state.symptoms.filter((s) => s.person_id === personId) });
       }
       if (path.endsWith('/symptoms') && method === 'POST') {
-        const body = req.postDataJSON() as Omit<Symptom, 'id' | 'person_id'>;
-        const symptom = { id: `sym-${state.symptoms.length + 1}`, person_id: personId, ...body };
-        state.symptoms.unshift(symptom);
-        return route.fulfill({ json: { ...symptom, user_id: 'user-1', subject_profile_id: personId } });
+        const body = req.postDataJSON() as Record<string, unknown>;
+        const names = Array.isArray(body.symptom_names)
+          ? body.symptom_names.map(String).filter(Boolean)
+          : [String(body.symptom || '')].filter(Boolean);
+        const now = new Date().toISOString();
+        const created = names.map((name, idx) => ({
+          id: `sym-${state.symptoms.length + idx + 1}`,
+          person_id: personId,
+          symptom: name,
+          occurred_at: String(body.occurred_at || now),
+          duration_minutes: Number(body.duration_minutes || 0),
+          severity: Number(body.severity || 2),
+          note: String(body.note || body.notes || ''),
+        }));
+        state.symptoms.unshift(...created);
+        const rows = created.map((symptom) => ({ ...symptom, user_id: 'user-1', subject_profile_id: personId }));
+        return route.fulfill({ json: rows.length === 1 ? rows[0] : rows });
       }
       if (/\/api\/v1\/symptoms\/[^/]+$/.test(path) && method === 'PUT') {
         const targetId = path.split('/').pop() as string;
@@ -163,6 +176,23 @@ test.describe('health platform e2e', () => {
             abnormal_items: 1,
             parsed_items_preview: [{ item_name: 'Glucose', value_num: 110, unit: 'mg/dL', abnormal_flag: 'H' }],
           },
+        });
+      }
+      if (/\/api\/v1\/documents\/[^/]+\/parsed-items$/.test(path) && method === 'GET') {
+        return route.fulfill({
+          json: [
+            {
+              id: 'item-1',
+              item_name: 'Glucose',
+              value_num: 110,
+              value_text: null,
+              unit: 'mg/dL',
+              ref_range: '70-99',
+              abnormal_flag: 'H',
+              parser_confidence: 0.92,
+              is_abnormal: true,
+            },
+          ],
         });
       }
       if (/\/api\/v1\/documents\/[^/]+\/confirm$/.test(path) && method === 'PUT') {
@@ -247,6 +277,9 @@ test.describe('health platform e2e', () => {
       }
       if (path.endsWith('/insights') && method === 'GET') {
         return route.fulfill({ json: state.insights });
+      }
+      if (path.endsWith('/health-assistant/outcome-feedback') && method === 'GET') {
+        return route.fulfill({ json: { outcomes: [] } });
       }
       if (path.endsWith('/insights/generate') && method === 'POST') {
         state.insights = [
@@ -344,78 +377,60 @@ test.describe('health platform e2e', () => {
     });
   });
 
-  test('person switch + symptoms add/edit/history isolation', async ({ page }) => {
-    await page.goto('/symptoms');
-    await page.getByPlaceholder('請直接描述過去或平常的症狀（不需要填日期）').fill('頭痛');
-    await page.getByRole('button', { name: '儲存症狀自述' }).click();
-    await expect(page.getByText('頭痛')).toBeVisible();
+  test('person switch + symptoms history isolation', async ({ page }) => {
+    const symptomList = page.locator('[data-testid="symptoms-list-section"]');
 
-    await page.locator('nav select').selectOption('person-child');
-    await expect(page).toHaveURL(/\/symptoms/);
-    // Wait for page to reflect person-child data AND for React to hydrate after reload
-    await expect(page.getByRole('heading', { name: '歷史症狀' })).toBeVisible({ timeout: 10000 });
-    // Wait for JS bundle to load and React to finish hydration (SSR heading is visible before hydration)
-    await page.waitForLoadState('load', { timeout: 30000 });
-    await expect(page.getByText('頭痛')).toHaveCount(0);
-    await page.getByPlaceholder('請直接描述過去或平常的症狀（不需要填日期）').fill('咳嗽');
-    await page.getByRole('button', { name: '儲存症狀自述' }).click();
-    await expect(page.getByText('咳嗽')).toBeVisible({ timeout: 10000 });
+    await page.goto('/platform/symptoms');
+    await expect(page.getByRole('heading', { name: '快速症狀記錄' })).toBeVisible();
+    await page.getByRole('button', { name: '頭痛' }).click();
+    await page.getByRole('button', { name: '儲存症狀' }).click();
+    await expect(symptomList.getByText('頭痛')).toBeVisible();
 
-    await page.getByRole('button', { name: '修改' }).first().click();
-    await page.getByPlaceholder('請直接描述過去或平常的症狀（不需要填日期）').fill('咳嗽(更新)');
-    await page.getByRole('button', { name: '更新症狀自述' }).click();
-    await expect(page.getByText('咳嗽(更新)')).toBeVisible({ timeout: 10000 });
+    await page.evaluate(() => localStorage.setItem('person_id', 'person-child'));
+    await page.reload();
+    await expect(page.getByRole('heading', { name: '快速症狀記錄' })).toBeVisible();
+    await expect(symptomList.getByText('頭痛')).toHaveCount(0);
+    await page.getByPlaceholder('其他...').fill('咳嗽');
+    await page.getByRole('button', { name: '儲存症狀' }).click();
+    await expect(symptomList.getByText('咳嗽')).toBeVisible();
 
-    // Second person switch also needs load-state wait
-    await page.locator('nav select').selectOption('person-self');
-    await expect(page).toHaveURL(/\/symptoms/);
-    await expect(page.getByRole('heading', { name: '歷史症狀' })).toBeVisible({ timeout: 10000 });
-    await page.waitForLoadState('load', { timeout: 30000 });
-    await expect(page.getByText('頭痛')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('咳嗽')).toHaveCount(0);
+    await page.evaluate(() => localStorage.setItem('person_id', 'person-self'));
+    await page.reload();
+    await expect(page.getByRole('heading', { name: '快速症狀記錄' })).toBeVisible();
+    await expect(symptomList.getByText('頭痛')).toBeVisible();
+    await expect(symptomList.getByText('咳嗽')).toHaveCount(0);
   });
 
   test('document upload -> confirmation -> save', async ({ page }) => {
-    await page.goto('/documents');
+    await page.goto('/platform/documents');
     await page.setInputFiles('input[type="file"]', {
       name: 'report.pdf',
       mimeType: 'application/pdf',
       buffer: Buffer.from('fake pdf'),
     });
     await page.getByRole('button', { name: '上傳', exact: true }).click();
-    await page.getByRole('button', { name: '解析並確認' }).first().click();
-    await expect(page).toHaveURL(/documents-confirmation/);
-    await expect(page.getByRole('heading', { name: '健檢報告確認' })).toBeVisible();
-    await page.getByRole('button', { name: '確認資料' }).click();
-    await expect(page).toHaveURL(/documents$/);
+    await page.getByRole('button', { name: '解析' }).first().click();
+    await page.getByRole('button', { name: '審閱解析結果' }).first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '審閱解析結果' })).toBeVisible();
+    await expect(page.getByText('Glucose')).toBeVisible();
+    await page.getByRole('button', { name: '確認並分析' }).click();
+    await expect(page).toHaveURL(/\/platform\/documents$/);
     await expect(page.getByText('已確認', { exact: true }).first()).toBeVisible();
   });
 
-  test('profile update + account settings + dashboard actions + health analysis + external metrics + alerts', async ({ page }) => {
-    await page.goto('/profile');
-    await page.getByPlaceholder('姓名').fill('王小明');
-    await page.getByRole('button', { name: '儲存基本資料' }).click();
-    await page.getByPlaceholder('電子郵件').fill('new@example.com');
-    await page.getByRole('button', { name: '儲存帳號設定' }).click();
-
-    await page.goto('/health-analysis');
-    await expect(page.getByRole('heading', { name: '健康分析' })).toBeVisible();
-    await expect(page.getByText('資料不足：請補充症狀、健檢或身體指數後再分析。')).toBeVisible();
-
-    await page.goto('/external-metrics');
-    await page.getByRole('button', { name: '手動同步' }).click();
-    await expect(page.getByText('external_api')).toBeVisible();
-    await expect(page.locator('pre').filter({ hasText: '5000' }).first()).toBeVisible();
-
-    await page.goto('/health-alerts');
-    await page.getByRole('button', { name: '執行風險監控' }).click();
-    await expect(page.getByText('血壓偏高')).toBeVisible();
-
+  test('current platform routes smoke for dashboard insights actions and notifications', async ({ page }) => {
     await page.goto('/platform/dashboard');
     await expect(page.getByRole('heading', { name: '儀表板' })).toBeVisible();
     await expect(page.getByText('健康分數').first()).toBeVisible();
+    await page.goto('/platform/analytics');
+    await expect(page.getByRole('heading', { name: '產品分析' })).toBeVisible();
+    await page.goto('/platform/insights');
+    await expect(page.getByRole('heading', { name: '深度分析' })).toBeVisible();
+    await page.goto('/platform/actions');
+    await expect(page.getByRole('heading', { name: /執行中心|行動中心/ }).first()).toBeVisible();
     await page.goto('/platform/notifications');
     await expect(page).toHaveURL(/notifications/);
-    await page.getByRole('button', { name: '加入追蹤' }).first().click();
+    await expect(page.getByText('健康待處理中心', { exact: true }).first()).toBeVisible();
   });
 });

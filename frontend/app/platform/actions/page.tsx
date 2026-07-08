@@ -40,6 +40,18 @@ function defaultDueDate(priority: string): string {
   return d.toISOString().split('T')[0]
 }
 
+const EMPTY_OUTCOME_SUMMARY: OutcomeFeedback['summary'] = {
+  improved_count: 0,
+  unchanged_count: 0,
+  deteriorated_count: 0,
+  insufficient_data_count: 0,
+  tracking_count: 0,
+  not_useful_count: 0,
+  not_applicable_count: 0,
+  snoozed_count: 0,
+  total_count: 0,
+}
+
 // ── Recommendation feedback localStorage helpers ───────────────────────────
 type RecFeedback = Record<string, 'snoozed' | 'not_useful' | 'not_applicable'>
 function recFeedbackKey(personId: string) { return `rec_feedback_${personId}` }
@@ -535,7 +547,7 @@ export default function ActionsPage() {
       {historyData && (
         <RecommendationHistoryCard
           outcomes={historyData.outcomes ?? []}
-          summary={historyData.summary}
+          summary={historyData.summary ?? EMPTY_OUTCOME_SUMMARY}
         />
       )}
     </div></ErrorBoundary>
