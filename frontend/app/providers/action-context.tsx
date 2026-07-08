@@ -432,16 +432,29 @@ export function ActionProvider({ children }: { children: ReactNode }) {
 
       updateStatus: async (id: string, status: HealthAction['status']) => {
         if (!personId) return
+        const currentAction = actions.find((a) => a.id === id)
+        const impactStatus = currentAction?.impact_status ?? 'no_change'
+        const payload =
+          status === 'done'
+            ? { status, impact_status: impactStatus }
+            : { status }
         // Optimistic update
         setActions((prev) => {
           const updated = prev.map((a) =>
-            a.id !== id ? a : { ...a, status, completed_at: status === 'done' ? new Date().toISOString() : a.completed_at }
+            a.id !== id
+              ? a
+              : {
+                  ...a,
+                  status,
+                  completed_at: status === 'done' ? new Date().toISOString() : a.completed_at,
+                  impact_status: status === 'done' ? impactStatus : a.impact_status,
+                }
           )
           writeCache(personId, updated)
           return updated
         })
         try {
-          await api.updateAction(id, { status })
+          await api.updateAction(id, payload)
           if (status === 'done') {
             trackEvent('complete_action', { page: '/platform/actions', metadata: { action_id: id } })
           } else if (status === 'in_progress') {
@@ -477,4 +490,3 @@ export function ActionProvider({ children }: { children: ReactNode }) {
 export function useActions() {
   return useContext(ActionContext)
 }
-

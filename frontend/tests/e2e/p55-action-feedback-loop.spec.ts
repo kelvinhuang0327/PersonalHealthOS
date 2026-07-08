@@ -230,6 +230,27 @@ test.describe('P55 — ActionCard feedback buttons', () => {
     expect(patchBody).not.toBeNull()
     expect(patchBody?.status).toBe('not_applicable')
   })
+
+  test('PATCH includes impact_status when an action is completed', async ({ page }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let patchBody: any = null
+    const actionWithFeedback = { ...TODO_ACTION, impact_status: 'improved' }
+    await setAuthStorage(page, false)
+    await stubRoutes(page, { actions: [actionWithFeedback], noRecs: true })
+    await page.route('**/api/v1/actions/action-p55-test**', async (route) => {
+      if (route.request().method() === 'PATCH') {
+        patchBody = JSON.parse(route.request().postData() ?? '{}')
+        return route.fulfill({ json: { ...actionWithFeedback, status: 'done' } })
+      }
+      return route.continue()
+    })
+    await page.goto('/platform/actions')
+    await page.getByRole('button', { name: '打卡' }).first().click()
+    await page.waitForTimeout(500)
+    expect(patchBody).not.toBeNull()
+    expect(patchBody?.status).toBe('done')
+    expect(patchBody?.impact_status).toBe('improved')
+  })
 })
 
 // ── Tests: DecisionRecommendationLayer dismiss buttons ────────────────────────
