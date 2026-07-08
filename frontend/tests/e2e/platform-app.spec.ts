@@ -28,6 +28,9 @@ test('platform dashboard loads with explainability', async ({ page }) => {
     if (path.includes('/actions/prioritized') || path.endsWith('/actions')) {
       return route.fulfill({ json: [] })
     }
+    if (path.endsWith('/health-assistant/outcome-feedback')) {
+      return route.fulfill({ json: { outcomes: [] } })
+    }
     if (path.endsWith('/dashboard')) {
       return route.fulfill({
         json: {

@@ -69,6 +69,12 @@ const MOCK_RECOMMENDATIONS = {
   ],
 }
 
+async function openFamilyRecommendations(page: import('@playwright/test').Page) {
+  const toggle = page.getByRole('button', { name: /家庭健康建議/ })
+  await expect(toggle).toBeVisible()
+  await toggle.click()
+}
+
 test.describe('FamilyHealthCard — evidence transparency smoke', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
@@ -120,16 +126,19 @@ test.describe('FamilyHealthCard — evidence transparency smoke', () => {
 
   test('source badge labels visible (child_health → 兒童健康)', async ({ page }) => {
     await page.goto('/platform/dashboard')
+    await openFamilyRecommendations(page)
     await expect(page.getByText('兒童健康').first()).toBeVisible()
   })
 
   test('source badge labels visible (action → 行動建議)', async ({ page }) => {
     await page.goto('/platform/dashboard')
+    await openFamilyRecommendations(page)
     await expect(page.getByText('行動建議').first()).toBeVisible()
   })
 
   test('audience badge visible (caregiver → 照護者)', async ({ page }) => {
     await page.goto('/platform/dashboard')
+    await openFamilyRecommendations(page)
     await expect(page.getByText('照護者').first()).toBeVisible()
   })
 
