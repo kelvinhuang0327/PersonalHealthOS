@@ -691,6 +691,61 @@ class TestActionImpactFeedbackPersistence:
         assert target is not None
         assert target['outcome_label'] == 'improved'
 
+    def test_patch_done_with_improved_feedback_full_loop_readback(self):
+        """PATCH done + improved feedback → persisted outcome and normalized readback."""
+        db, user, person, client = _setup_isolated_env()
+        created = _create_action_via_api(
+            client,
+            person,
+            title='P181 完整效果回饋',
+            category='activity',
+        )
+        action_id = created['id']
+
+        resp_patch = client.patch(
+            f'/api/v1/actions/{action_id}',
+            json={'status': 'done', 'impact_status': 'improved'},
+        )
+        assert resp_patch.status_code == 200, resp_patch.text
+        patched = resp_patch.json()
+        assert patched['status'] == 'done'
+        assert patched['impact_status'] == 'improved'
+
+        stored = db.query(ActionOutcome).filter(
+            ActionOutcome.action_id == uuid.UUID(action_id),
+            ActionOutcome.metric_type == 'user_feedback',
+        ).all()
+        assert len(stored) == 1
+        assert stored[0].outcome_label == 'improved'
+        assert stored[0].time_window_days == 0
+
+        resp_outcomes = client.get(f'/api/v1/actions/{action_id}/outcomes')
+        assert resp_outcomes.status_code == 200
+        persisted_feedback = next(
+            (
+                outcome for outcome in resp_outcomes.json()
+                if outcome['metric_type'] == 'user_feedback'
+            ),
+            None,
+        )
+        assert persisted_feedback is not None
+        assert persisted_feedback['outcome_label'] == 'improved'
+
+        resp_feedback = client.get(
+            '/api/v1/health-assistant/outcome-feedback',
+            params={'window_days': 7, 'person_id': str(person.id)},
+        )
+        assert resp_feedback.status_code == 200
+        feedback = resp_feedback.json()
+        target = next((o for o in feedback['outcomes'] if o['action_id'] == action_id), None)
+        assert target is not None
+        assert target['status'] == 'completed'
+        assert target['outcome_status'] == 'improved'
+        assert target['actual_metric_change']['metric_type'] == 'user_feedback'
+        assert target['evidence_sources'] == ['action_outcome']
+        assert feedback['summary']['improved_count'] == 1
+        assert feedback['summary']['total_count'] == 1
+
     def test_worse_impact_feedback_maps_to_deteriorated_timeline(self):
         """Persisted worse feedback must read back as deteriorated outcome-feedback."""
         db, user, person, client = _setup_isolated_env()
