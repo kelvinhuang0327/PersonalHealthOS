@@ -143,6 +143,7 @@ type StubOptions = {
   actionPostStatus?: number
   actionPatchStatus?: number
   persistCreatedActions?: boolean
+  createdActionOverrides?: Record<string, unknown>
 }
 
 async function stubRoutes(
@@ -159,6 +160,7 @@ async function stubRoutes(
     actionPostStatus = 200,
     actionPatchStatus = 200,
     persistCreatedActions = false,
+    createdActionOverrides = {},
   } = opts
   const createdActions: any[] = []
 
@@ -258,6 +260,7 @@ async function stubRoutes(
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         ...payload,
+        ...createdActionOverrides,
       }
       if (persistCreatedActions) createdActions.unshift(created)
       return route.fulfill({
@@ -270,10 +273,24 @@ async function stubRoutes(
       }
       const parts = path.split('/')
       const patchId = parts[parts.length - 1]
+      const payload = JSON.parse(route.request().postData() || '{}')
+      if (persistCreatedActions) {
+        const index = createdActions.findIndex((action) => action.id === patchId)
+        if (index >= 0) {
+          createdActions[index] = {
+            ...createdActions[index],
+            ...payload,
+            updated_at: new Date().toISOString(),
+            completed_at: payload.status === 'done'
+              ? new Date().toISOString()
+              : createdActions[index].completed_at,
+          }
+        }
+      }
       return route.fulfill({
         json: {
           id: patchId,
-          ...JSON.parse(route.request().postData() || '{}'),
+          ...payload,
         }
       })
     }
@@ -351,6 +368,72 @@ test.describe('P150 — Actions Page Feedback, Outcome, and Snooze Contract', ()
     }).first()
     await expect(trackedCard.getByText('已追蹤中')).toBeVisible({ timeout: 10_000 })
     await expect(trackedCard.getByRole('button', { name: '查看追蹤中的任務' })).toBeVisible()
+  })
+
+  test('1c) Recommendation tracking can be completed and read back as feedback', async ({ page }) => {
+    const MOCK_OUTCOMES = [
+      {
+        metric_type: 'steps',
+        before_value: 4000,
+        after_value: 8000,
+        delta: 4000,
+        delta_pct: 100,
+        time_window_days: 14,
+        outcome_label: 'improved'
+      }
+    ]
+
+    await setAuthStorage(page)
+    await stubRoutes(page, {
+      persistCreatedActions: true,
+      createdActionOverrides: { impact_status: 'improved' },
+      outcomesResponse: MOCK_OUTCOMES,
+    })
+
+    await page.goto('/platform/actions')
+    await page.waitForSelector('[data-testid="actions-page"]', { timeout: 10_000 })
+
+    const firstCard = page.locator('div.rounded-2xl.border.p-4').first()
+    await expect(firstCard.getByText('建議進行肝臟健康管理')).toBeVisible()
+
+    const createRequestPromise = page.waitForRequest(
+      (req) => req.url().includes('/actions') && req.method() === 'POST'
+    )
+    await firstCard.getByRole('button', { name: '加入追蹤' }).click()
+
+    const createRequest = await createRequestPromise
+    const createPayload = JSON.parse(createRequest.postData() || '{}')
+    expect(createPayload.status).toBe('todo')
+    expect(createPayload.source_type).toBe('lab_report_item')
+    expect(createPayload.source_id).toBe('rule-ast-high-p150')
+    expect(createPayload.title).toBe('建議進行肝臟健康管理')
+
+    await page.reload()
+    await page.waitForSelector('[data-testid="actions-page"]', { timeout: 10_000 })
+    const trackedRecommendationCard = page.locator('div.rounded-2xl.border.p-4', {
+      hasText: '建議進行肝臟健康管理',
+    }).first()
+    await expect(trackedRecommendationCard.getByText('已追蹤中')).toBeVisible({ timeout: 10_000 })
+
+    const trackedActionButton = page.getByRole('button', { name: '打卡' }).first()
+    await expect(trackedActionButton).toBeVisible()
+
+    const patchRequestPromise = page.waitForRequest(
+      (req) => req.url().includes('/actions/') && req.method() === 'PATCH'
+    )
+    await trackedActionButton.click()
+
+    const patchRequest = await patchRequestPromise
+    const patchPayload = JSON.parse(patchRequest.postData() || '{}')
+    expect(patchPayload.status).toBe('done')
+    expect(patchPayload.impact_status).toBe('improved')
+
+    await expect(page.locator('[data-testid="actions-feedback-loop"]')).toBeVisible({ timeout: 10_000 })
+    const feedbackCard = page.locator('[data-testid="actions-feedback-loop"]').locator('div.rounded-2xl.border').first()
+    await expect(feedbackCard.getByText('建議進行肝臟健康管理')).toBeVisible()
+    await expect(feedbackCard.getByText('有改善 ✓')).toBeVisible()
+    await expect(feedbackCard.getByText('步數')).toBeVisible()
+    await expect(feedbackCard.getByText('改善', { exact: true })).toBeVisible()
   })
 
   test('2) Feedback POST failure recovers gracefully and retains page navigation', async ({ page }) => {
