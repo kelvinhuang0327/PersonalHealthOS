@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Connection, Engine
 
 from app.core.config import get_settings
+from app.services.offline_feedback_metrics import build_offline_feedback_metrics
 
 
 GO = "GO"
@@ -382,20 +383,172 @@ def _write_output(content: str, output_path: str | None) -> None:
         print(content, end="")
 
 
+@dataclass(frozen=True)
+class OfflineReadinessThresholds:
+    min_feedback_events: int = 5
+    min_acceptance_rate: float = 0.5
+    max_not_useful_rate: float = 0.3
+    max_snooze_rate: float = 0.3
+    min_improvement_rate: float = 0.5
+
+
+@dataclass
+class OfflineReadinessResult:
+    decision: str
+    metrics_summary: dict[str, Any]
+    thresholds: dict[str, Any]
+    reasons: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "decision": self.decision,
+            "metrics_summary": self.metrics_summary,
+            "thresholds": self.thresholds,
+            "reasons": self.reasons,
+        }
+
+
+def evaluate_offline_feedback_readiness(
+    metrics: dict[str, Any],
+    thresholds: OfflineReadinessThresholds | None = None,
+) -> OfflineReadinessResult:
+    thresholds = thresholds or OfflineReadinessThresholds()
+    reasons: list[str] = []
+
+    total = metrics.get("total_feedback_events", 0)
+    rates = metrics.get("rates", {})
+    acceptance_rate = rates.get("acceptance_rate", 0.0)
+    not_useful_rate = rates.get("not_useful_rate", 0.0)
+    snooze_rate = rates.get("snooze_rate", 0.0)
+
+    outcome_counts = metrics.get("outcome_status_counts", {})
+    improved = outcome_counts.get("improved", 0)
+    unchanged = outcome_counts.get("unchanged", 0)
+    worse = outcome_counts.get("worse", 0)
+    total_outcomes = improved + unchanged + worse
+
+    if total < thresholds.min_feedback_events:
+        return OfflineReadinessResult(
+            decision="INSUFFICIENT_DATA",
+            metrics_summary=metrics,
+            thresholds=asdict(thresholds),
+            reasons=[f"total_feedback_events ({total}) < min_feedback_events ({thresholds.min_feedback_events})"],
+        )
+
+    is_ready = True
+    if acceptance_rate < thresholds.min_acceptance_rate:
+        is_ready = False
+        reasons.append(f"acceptance_rate ({acceptance_rate}) < min_acceptance_rate ({thresholds.min_acceptance_rate})")
+    if not_useful_rate > thresholds.max_not_useful_rate:
+        is_ready = False
+        reasons.append(f"not_useful_rate ({not_useful_rate}) > max_not_useful_rate ({thresholds.max_not_useful_rate})")
+    if snooze_rate > thresholds.max_snooze_rate:
+        is_ready = False
+        reasons.append(f"snooze_rate ({snooze_rate}) > max_snooze_rate ({thresholds.max_snooze_rate})")
+
+    if total_outcomes > 0:
+        improvement_rate = round(improved / total_outcomes, 4)
+        if improvement_rate < thresholds.min_improvement_rate:
+            is_ready = False
+            reasons.append(f"improvement_rate ({improvement_rate}) < min_improvement_rate ({thresholds.min_improvement_rate})")
+
+    if is_ready:
+        decision = "READY"
+        reasons.append("All synthetic offline feedback metrics meet or exceed readiness thresholds")
+    else:
+        decision = "NOT_READY"
+
+    return OfflineReadinessResult(
+        decision=decision,
+        metrics_summary=metrics,
+        thresholds=asdict(thresholds),
+        reasons=reasons,
+    )
+
+
+def format_offline_markdown(result: OfflineReadinessResult) -> str:
+    summary = result.metrics_summary
+    rates = summary.get("rates", {})
+    dist = summary.get("feedback_distribution", {})
+    outcomes = summary.get("outcome_status_counts", {})
+
+    lines = [
+        "# Offline Action Feedback Readiness Report",
+        "",
+        f"- Decision: **{result.decision}**",
+        "",
+        "## Reasons",
+    ]
+    lines.extend(f"- {reason}" for reason in result.reasons)
+
+    lines.extend([
+        "",
+        "## Metrics Summary",
+        f"- Total Feedback Events: `{summary.get('total_feedback_events', 0)}`",
+        f"- Acceptance Rate: `{rates.get('acceptance_rate', 0.0)}`",
+        f"- Not Useful Rate: `{rates.get('not_useful_rate', 0.0)}`",
+        f"- Snooze Rate: `{rates.get('snooze_rate', 0.0)}`",
+        "",
+        "### Feedback Distribution",
+    ])
+    if dist:
+        lines.extend(f"- {k}: `{v}`" for k, v in sorted(dist.items()))
+    else:
+        lines.append("- empty")
+
+    lines.extend([
+        "",
+        "### Outcome Distribution",
+    ])
+    if outcomes:
+        lines.extend(f"- {k}: `{v}`" for k, v in sorted(outcomes.items()))
+    else:
+        lines.append("- empty")
+
+    lines.extend([
+        "",
+        "## Thresholds Configured",
+    ])
+    lines.extend(f"- {k}: `{v}`" for k, v in sorted(result.thresholds.items()))
+
+    return "\n".join(lines) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Read-only aggregate action-feedback training readiness checker.")
+    parser = argparse.ArgumentParser(description="Aggregate action-feedback training readiness checker (offline & database modes).")
     parser.add_argument("--database-url", default=None, help="Database URL. Defaults to app settings.")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     parser.add_argument("--output", default=None, help="Optional report path. No files are written unless this is set.")
+    parser.add_argument("--fixture", default=None, help="Path to offline synthetic feedback metrics JSON fixture (disables database mode).")
     args = parser.parse_args(argv)
 
-    result = run_with_database_url(args.database_url)
-    if args.format == "json":
-        content = json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n"
+    if args.fixture:
+        fixture_path = Path(args.fixture)
+        with fixture_path.open("r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+        if not isinstance(payload, dict):
+            raise ValueError("fixture must be a JSON object")
+
+        metrics = build_offline_feedback_metrics(
+            actions=payload.get("actions", []),
+            outcomes=payload.get("outcomes", []),
+        )
+        result = evaluate_offline_feedback_readiness(metrics)
+        if args.format == "json":
+            content = json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n"
+        else:
+            content = format_offline_markdown(result)
+        _write_output(content, args.output)
+
+        return 0 if result.decision == "READY" else 1
     else:
-        content = format_markdown(result)
-    _write_output(content, args.output)
-    return 0 if result.classification in {GO, NO_GO_ZERO_ACTIONS, NO_GO_ZERO_OUTCOMES, NO_GO_NO_PAIRABILITY} else 2
+        result = run_with_database_url(args.database_url)
+        if args.format == "json":
+            content = json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n"
+        else:
+            content = format_markdown(result)
+        _write_output(content, args.output)
+        return 0 if result.classification in {GO, NO_GO_ZERO_ACTIONS, NO_GO_ZERO_OUTCOMES, NO_GO_NO_PAIRABILITY} else 2
 
 
 if __name__ == "__main__":
