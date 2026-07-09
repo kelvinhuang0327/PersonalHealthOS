@@ -128,7 +128,9 @@ export function DailyAssistantEntry({ data, loading = false }: DailyAssistantEnt
   const fbSummary = feedback?.summary
   const hasFeedback = fbSummary && fbSummary.total_count > 0
   const hasConfirmedReport = documents.some((doc) => doc.parse_status === 'confirmed')
-  const hasUploadedReport = documents.some((doc) => doc.parse_status === 'parsed' || doc.parse_status === 'uploaded')
+  const hasUploadedReport = documents.some((doc) =>
+    doc.parse_status === 'parsed' || doc.parse_status === 'completed' || doc.parse_status === 'uploaded'
+  )
   const hasSymptomLog = symptoms.length > 0
   const hasAssistantSurface = hasDailySummary || Boolean(topRec)
   const hasTrackingAction = Boolean(data?.recommendations?.some((rec) => rec.is_tracking))
