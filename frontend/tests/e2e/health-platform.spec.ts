@@ -281,6 +281,113 @@ test.describe('health platform e2e', () => {
       if (path.endsWith('/health-assistant/outcome-feedback') && method === 'GET') {
         return route.fulfill({ json: { outcomes: [] } });
       }
+      if (path.endsWith('/health-assistant/evidence-bundle') && method === 'GET') {
+        return route.fulfill({
+          json: {
+            person_id: personId,
+            generated_at: new Date().toISOString(),
+            lab_abnormalities: [
+              {
+                abnormalityType: 'glucose_abnormality',
+                severity: 'medium',
+                labItemName: '空腹血糖',
+                currentValue: '126 mg/dL',
+                referenceRange: '70-99 mg/dL',
+                reportId: 'report-1',
+                detectedAt: new Date().toISOString(),
+                whyDetected: '健檢報告顯示空腹血糖高於參考範圍。',
+                suggestedAction: '建議搭配症狀紀錄與飲食追蹤。',
+                confidence: 0.86,
+                evidenceSources: [{ type: 'lab_report_item', id: 'item-1', summary: '空腹血糖 126 mg/dL，旗標 H' }],
+                recurrenceCount: 1,
+                rule_id: 'glucose-high',
+              },
+            ],
+            symptom_patterns: [
+              {
+                patternType: 'symptom_with_lab_risk',
+                severity: 'medium',
+                symptomType: '頭痛',
+                label: '頭痛與血糖異常同日出現',
+                whyDetected: '近期症狀紀錄與報告異常需要一起追蹤。',
+                confidence: 0.74,
+                suggestedAction: '今天補記頭痛狀態並觀察飲食後變化。',
+                evidenceSources: [{ type: 'symptom', id: 'sym-1', summary: '頭痛紀錄' }],
+                relatedDeviceSignals: [],
+                relatedLabItems: ['空腹血糖'],
+              },
+            ],
+            summary: { abnormal_lab_count: 1, lab_abnormality_count: 1, missing_data_count: 0 },
+          },
+        });
+      }
+      if (path.endsWith('/health-assistant/daily-summary') && method === 'GET') {
+        return route.fulfill({
+          json: {
+            person_id: personId,
+            generated_at: new Date().toISOString(),
+            topRisk: '報告血糖偏高，建議搭配症狀追蹤。',
+            biggestChange: '最近一次報告新增血糖異常。',
+            todayAction: '記錄頭痛症狀並追蹤餐後狀態',
+            whyNow: '空腹血糖異常與近期頭痛紀錄需要同頁追蹤。',
+            confidence: 0.78,
+          },
+        });
+      }
+      if (path.endsWith('/health-assistant/recommendations') && method === 'GET') {
+        return route.fulfill({
+          json: {
+            person_id: personId,
+            generated_at: new Date().toISOString(),
+            recommendations: [
+              {
+                title: '追蹤血糖與頭痛',
+                why_now: '健檢報告血糖偏高，且已有頭痛紀錄。',
+                priority: 'medium',
+                source_type: 'lab_report_item',
+                source_id: 'item-1',
+                expected_health_impact: '協助判斷症狀是否與飲食或血糖波動同時出現。',
+                evidence_summary: '空腹血糖 126 mg/dL，旗標 H',
+                evidence_sources: [{ type: 'lab_report_item', id: 'item-1', summary: '空腹血糖偏高' }],
+                next_action: '記錄頭痛症狀並追蹤餐後狀態',
+                is_tracking: false,
+              },
+            ],
+            lab_abnormalities: [
+              {
+                abnormalityType: 'glucose_abnormality',
+                severity: 'medium',
+                labItemName: '空腹血糖',
+                currentValue: '126 mg/dL',
+                referenceRange: '70-99 mg/dL',
+                reportId: 'report-1',
+                whyDetected: '健檢報告顯示空腹血糖高於參考範圍。',
+                suggestedAction: '建議搭配症狀紀錄與飲食追蹤。',
+                confidence: 0.86,
+                evidenceSources: [{ type: 'lab_report_item', id: 'item-1', summary: '空腹血糖 126 mg/dL，旗標 H' }],
+                recurrenceCount: 1,
+                rule_id: 'glucose-high',
+              },
+            ],
+            symptom_patterns: [
+              {
+                patternType: 'symptom_with_lab_risk',
+                severity: 'medium',
+                symptomType: '頭痛',
+                label: '頭痛與血糖異常同日出現',
+                whyDetected: '近期症狀紀錄與報告異常需要一起追蹤。',
+                confidence: 0.74,
+                suggestedAction: '今天補記頭痛狀態並觀察飲食後變化。',
+                evidenceSources: [{ type: 'symptom', id: 'sym-1', summary: '頭痛紀錄' }],
+                relatedDeviceSignals: [],
+                relatedLabItems: ['空腹血糖'],
+              },
+            ],
+            missing_data: [],
+            total: 1,
+          },
+        });
+      }
       if (path.endsWith('/insights/generate') && method === 'POST') {
         state.insights = [
           {
@@ -382,6 +489,10 @@ test.describe('health platform e2e', () => {
 
     await page.goto('/platform/symptoms');
     await expect(page.getByRole('heading', { name: '快速症狀記錄' })).toBeVisible();
+    await expect(page.getByTestId('symptoms-integrated-context')).toBeVisible();
+    await expect(page.getByTestId('symptoms-report-signal-context')).toContainText('空腹血糖');
+    await expect(page.getByTestId('symptoms-daily-action-context')).toContainText('記錄頭痛症狀並追蹤餐後狀態');
+    await expect(page.getByTestId('symptoms-pattern-context')).toContainText('頭痛與血糖異常同日出現');
     await page.getByRole('button', { name: '頭痛' }).click();
     await page.getByRole('button', { name: '儲存症狀' }).click();
     await expect(symptomList.getByText('頭痛')).toBeVisible();

@@ -16,9 +16,22 @@ const DURATION_OPTIONS = [
   { value: 'chronic', label: '長期慢性' },
 ]
 
+function asArray(value: any): any[] {
+  return Array.isArray(value) ? value : []
+}
+
+function firstText(...values: any[]) {
+  const found = values.find((value) => typeof value === 'string' && value.trim().length > 0)
+  return found ? found.trim() : ''
+}
+
 export default function SymptomsPage() {
   const [logs, setLogs] = useState<any[]>([])
   const [metrics, setMetrics] = useState<any[]>([])
+  const [evidenceBundle, setEvidenceBundle] = useState<any>(null)
+  const [dailySummary, setDailySummary] = useState<any>(null)
+  const [assistantContext, setAssistantContext] = useState<any>(null)
+  const [nearTermActions, setNearTermActions] = useState<any[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const [other, setOther] = useState('')
   const [severity, setSeverity] = useState(2)
@@ -32,6 +45,12 @@ export default function SymptomsPage() {
       const arr = Array.isArray(rows) ? rows : (rows && Array.isArray(rows.items) ? rows.items : [])
       setMetrics(arr)
     }).catch(() => setMetrics([]))
+    api.getEvidenceBundle().then(setEvidenceBundle).catch(() => setEvidenceBundle(null))
+    api.getDailySummary().then(setDailySummary).catch(() => setDailySummary(null))
+    api.getRecommendations().then(setAssistantContext).catch(() => setAssistantContext(null))
+    api.getActions(undefined, 2).then((rows: any) => {
+      setNearTermActions(Array.isArray(rows) ? rows : [])
+    }).catch(() => setNearTermActions([]))
   }
 
   useEffect(() => {
@@ -115,12 +134,112 @@ export default function SymptomsPage() {
     return map
   }, [logs])
 
+  const reportSignals = useMemo(() => {
+    const seen = new Set<string>()
+    return [
+      ...asArray(assistantContext?.lab_abnormalities),
+      ...asArray(evidenceBundle?.lab_abnormalities),
+    ].filter((item) => {
+      const key = `${item.rule_id || item.id || item.labItemName || item.lab_item_name}-${item.reportId || item.report_id || ''}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return firstText(item.labItemName, item.lab_item_name, item.item_name)
+    }).slice(0, 3)
+  }, [assistantContext, evidenceBundle])
+
+  const symptomPatterns = useMemo(() => {
+    const seen = new Set<string>()
+    return [
+      ...asArray(assistantContext?.symptom_patterns),
+      ...asArray(evidenceBundle?.symptom_patterns),
+    ].filter((item) => {
+      const key = `${item.patternType || item.pattern_type || item.label || item.symptomType || item.symptom_type}`
+      if (seen.has(key)) return false
+      seen.add(key)
+      return firstText(item.label, item.whyDetected, item.why_detected, item.symptomType, item.symptom_type)
+    }).slice(0, 2)
+  }, [assistantContext, evidenceBundle])
+
+  const topRecommendation = useMemo(() => asArray(assistantContext?.recommendations)[0] || null, [assistantContext])
+  const currentAction = useMemo(() => nearTermActions.find((action) => action.status !== 'done' && action.status !== 'completed') || nearTermActions[0] || null, [nearTermActions])
+  const hasDailyActionContext = Boolean(
+    firstText(dailySummary?.todayAction, dailySummary?.topRisk, topRecommendation?.title, topRecommendation?.next_action, currentAction?.title, currentAction?.action_title)
+  )
+  const hasIntegratedContext = hasDailyActionContext || reportSignals.length > 0 || symptomPatterns.length > 0
+
   return (
     <div className="space-y-4" data-testid="symptoms-page">
       {chronic ? (
         <Card className="border-amber-200 bg-amber-50">
           <p className="text-sm text-amber-800">{chronic.symptom} 已持續記錄 {chronic.count} 次（過去 2 週），建議追蹤</p>
           <Link href="/platform/insights" className="mt-1 inline-flex text-xs font-medium text-amber-700 hover:underline">查看洞察</Link>
+        </Card>
+      ) : null}
+
+      {hasIntegratedContext ? (
+        <Card data-testid="symptoms-integrated-context" className="border-sky-100 bg-sky-50/60">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">症狀整合脈絡</h2>
+              <p className="mt-1 text-sm text-slate-600">把症狀紀錄、報告異常與今天建議放在同一頁追蹤。</p>
+            </div>
+            {assistantContext?.generated_at ? (
+              <span className="rounded-full bg-white px-3 py-1 text-xs text-slate-500">
+                {new Date(assistantContext.generated_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })} 更新
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            {reportSignals.length > 0 ? (
+              <div data-testid="symptoms-report-signal-context" className="rounded-xl border border-rose-100 bg-white p-3">
+                <p className="text-xs font-semibold text-rose-700">報告異常訊號</p>
+                <div className="mt-2 space-y-2">
+                  {reportSignals.map((item, idx) => {
+                    const name = firstText(item.labItemName, item.lab_item_name, item.item_name)
+                    const value = item.currentValue ?? item.current_value ?? item.value_num ?? item.value_text ?? null
+                    const range = item.referenceRange ?? item.reference_range ?? item.ref_range ?? null
+                    return (
+                      <div key={`${name}-${idx}`} className="rounded-lg bg-rose-50/60 p-2">
+                        <p className="text-sm font-medium text-slate-900">{name}</p>
+                        {value || range ? <p className="mt-0.5 text-xs text-slate-500">{value ? `目前 ${value}` : ''}{range ? ` · 參考 ${range}` : ''}</p> : null}
+                        <p className="mt-1 text-xs text-slate-600">{firstText(item.suggestedAction, item.suggested_action, item.whyDetected, item.why_detected)}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {hasDailyActionContext ? (
+              <div data-testid="symptoms-daily-action-context" className="rounded-xl border border-emerald-100 bg-white p-3">
+                <p className="text-xs font-semibold text-emerald-700">今日建議與行動</p>
+                <p className="mt-2 text-sm font-medium text-slate-900">
+                  {firstText(dailySummary?.todayAction, topRecommendation?.next_action, currentAction?.title, currentAction?.action_title, topRecommendation?.title)}
+                </p>
+                {firstText(dailySummary?.whyNow, topRecommendation?.why_now, topRecommendation?.evidence_summary, dailySummary?.topRisk) ? (
+                  <p className="mt-1 text-xs text-slate-600">
+                    {firstText(dailySummary?.whyNow, topRecommendation?.why_now, topRecommendation?.evidence_summary, dailySummary?.topRisk)}
+                  </p>
+                ) : null}
+                <Link href="/platform/actions" className="mt-2 inline-flex text-xs font-medium text-emerald-700 hover:underline">查看行動中心</Link>
+              </div>
+            ) : null}
+
+            {symptomPatterns.length > 0 ? (
+              <div data-testid="symptoms-pattern-context" className="rounded-xl border border-amber-100 bg-white p-3">
+                <p className="text-xs font-semibold text-amber-700">症狀模式</p>
+                <div className="mt-2 space-y-2">
+                  {symptomPatterns.map((item, idx) => (
+                    <div key={`${item.label || item.symptomType || idx}`} className="rounded-lg bg-amber-50/70 p-2">
+                      <p className="text-sm font-medium text-slate-900">{firstText(item.label, item.symptomType, item.symptom_type)}</p>
+                      <p className="mt-1 text-xs text-slate-600">{firstText(item.whyDetected, item.why_detected, item.suggestedAction, item.suggested_action)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </Card>
       ) : null}
 
