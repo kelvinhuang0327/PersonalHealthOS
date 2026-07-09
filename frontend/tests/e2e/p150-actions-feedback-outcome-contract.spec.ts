@@ -142,6 +142,7 @@ type StubOptions = {
   outcomesStatus?: number
   actionPostStatus?: number
   actionPatchStatus?: number
+  persistCreatedActions?: boolean
 }
 
 async function stubRoutes(
@@ -157,7 +158,9 @@ async function stubRoutes(
     outcomesStatus = 200,
     actionPostStatus = 200,
     actionPatchStatus = 200,
+    persistCreatedActions = false,
   } = opts
+  const createdActions: any[] = []
 
   await page.route('**/api/v1/**', async (route) => {
     const url = new URL(route.request().url())
@@ -242,17 +245,23 @@ async function stubRoutes(
       return route.fulfill({ json: outcomesResponse })
     }
     if ((path.endsWith('/actions') || path.includes('/actions?')) && method === 'GET') {
-      return route.fulfill({ json: actions })
+      return route.fulfill({ json: persistCreatedActions ? [...createdActions, ...actions] : actions })
     }
     if ((path.endsWith('/actions') || path.includes('/actions?')) && method === 'POST') {
       if (actionPostStatus !== 200) {
         return route.fulfill({ status: actionPostStatus, json: { detail: 'Simulated create error' } })
       }
+      const payload = JSON.parse(route.request().postData() || '{}')
+      const created = {
+        id: `act_created_${Date.now()}`,
+        person_id: 'person-self',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...payload,
+      }
+      if (persistCreatedActions) createdActions.unshift(created)
       return route.fulfill({
-        json: {
-          id: `act_created_${Date.now()}`,
-          ...JSON.parse(route.request().postData() || '{}'),
-        }
+        json: created
       })
     }
     if (path.includes('/actions/') && method === 'PATCH') {
@@ -311,6 +320,37 @@ test.describe('P150 — Actions Page Feedback, Outcome, and Snooze Contract', ()
     // Verify recommendation card is removed from the recommendation section
     const recSection = page.locator('div.rounded-3xl', { has: page.locator('h3:has-text("系統現在建議你先做")') }).first()
     await expect(recSection.getByText('建議進行肝臟健康管理')).not.toBeVisible()
+  })
+
+  test('1b) Tracking a recommendation creates a durable todo action', async ({ page }) => {
+    await setAuthStorage(page)
+    await stubRoutes(page, { persistCreatedActions: true })
+
+    await page.goto('/platform/actions')
+    await page.waitForSelector('[data-testid="actions-page"]', { timeout: 10_000 })
+
+    const firstCard = page.locator('div.rounded-2xl.border.p-4').first()
+    await expect(firstCard.getByText('建議進行肝臟健康管理')).toBeVisible()
+
+    const requestPromise = page.waitForRequest(
+      (req) => req.url().includes('/actions') && req.method() === 'POST'
+    )
+    await firstCard.getByRole('button', { name: '加入追蹤' }).click()
+
+    const request = await requestPromise
+    const postPayload = JSON.parse(request.postData() || '{}')
+    expect(postPayload.status).toBe('todo')
+    expect(postPayload.source_type).toBe('lab_report_item')
+    expect(postPayload.source_id).toBe('rule-ast-high-p150')
+    expect(postPayload.title).toBe('建議進行肝臟健康管理')
+
+    await page.reload()
+    await page.waitForSelector('[data-testid="actions-page"]', { timeout: 10_000 })
+    const trackedCard = page.locator('div.rounded-2xl.border.p-4', {
+      hasText: '建議進行肝臟健康管理',
+    }).first()
+    await expect(trackedCard.getByText('已追蹤中')).toBeVisible({ timeout: 10_000 })
+    await expect(trackedCard.getByRole('button', { name: '查看追蹤中的任務' })).toBeVisible()
   })
 
   test('2) Feedback POST failure recovers gracefully and retains page navigation', async ({ page }) => {
@@ -495,4 +535,3 @@ test.describe('P150 — Actions Page Feedback, Outcome, and Snooze Contract', ()
     expect(text).not.toContain('數值正常')
   })
 })
-
