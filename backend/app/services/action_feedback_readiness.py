@@ -514,30 +514,64 @@ def format_offline_markdown(result: OfflineReadinessResult) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _load_json_object(path: Path, label: str) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be a JSON object")
+    return payload
+
+
+def _load_offline_fixture_metrics(path: Path) -> dict[str, Any]:
+    payload = _load_json_object(path, "fixture")
+    return build_offline_feedback_metrics(
+        actions=payload.get("actions", []),
+        outcomes=payload.get("outcomes", []),
+    )
+
+
+def _load_offline_metrics(path: Path) -> dict[str, Any]:
+    payload = _load_json_object(path, "metrics-json")
+    if isinstance(payload.get("metrics_summary"), dict):
+        return payload["metrics_summary"]
+    return payload
+
+
+def _render_offline_result(result: OfflineReadinessResult, output_format: str) -> str:
+    if output_format == "json":
+        return json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n"
+    return format_offline_markdown(result)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Aggregate action-feedback training readiness checker (offline & database modes).")
     parser.add_argument("--database-url", default=None, help="Database URL. Defaults to app settings.")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     parser.add_argument("--output", default=None, help="Optional report path. No files are written unless this is set.")
-    parser.add_argument("--fixture", default=None, help="Path to offline synthetic feedback metrics JSON fixture (disables database mode).")
+    offline_input = parser.add_mutually_exclusive_group()
+    offline_input.add_argument(
+        "--fixture",
+        default=None,
+        help="Path to offline synthetic feedback fixture JSON (disables database mode).",
+    )
+    offline_input.add_argument(
+        "--metrics-json",
+        default=None,
+        help="Path to aggregate offline feedback metrics JSON (disables database mode).",
+    )
     args = parser.parse_args(argv)
 
     if args.fixture:
-        fixture_path = Path(args.fixture)
-        with fixture_path.open("r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-        if not isinstance(payload, dict):
-            raise ValueError("fixture must be a JSON object")
-
-        metrics = build_offline_feedback_metrics(
-            actions=payload.get("actions", []),
-            outcomes=payload.get("outcomes", []),
-        )
+        metrics = _load_offline_fixture_metrics(Path(args.fixture))
         result = evaluate_offline_feedback_readiness(metrics)
-        if args.format == "json":
-            content = json.dumps(result.to_dict(), indent=2, sort_keys=True) + "\n"
-        else:
-            content = format_offline_markdown(result)
+        content = _render_offline_result(result, args.format)
+        _write_output(content, args.output)
+
+        return 0 if result.decision == "READY" else 1
+    elif args.metrics_json:
+        metrics = _load_offline_metrics(Path(args.metrics_json))
+        result = evaluate_offline_feedback_readiness(metrics)
+        content = _render_offline_result(result, args.format)
         _write_output(content, args.output)
 
         return 0 if result.decision == "READY" else 1

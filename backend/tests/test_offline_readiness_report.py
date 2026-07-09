@@ -131,6 +131,101 @@ def test_offline_readiness_cli_json(tmp_path: Path):
     assert any("not_useful_rate (0.3333) > max_not_useful_rate (0.3)" in r for r in data["reasons"])
 
 
+def test_offline_readiness_cli_metrics_json_ready(tmp_path: Path):
+    metrics_json = tmp_path / "metrics-ready.json"
+    metrics_json.write_text(
+        json.dumps(
+            _make_metrics(
+                total=10,
+                acceptance_rate=0.7,
+                not_useful_rate=0.1,
+                snooze_rate=0.1,
+                improved=4,
+                unchanged=1,
+                worse=0,
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "app/services/action_feedback_readiness.py",
+            "--metrics-json",
+            str(metrics_json),
+            "--format",
+            "json",
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0
+    data = json.loads(result.stdout)
+    assert data["decision"] == "READY"
+    assert data["metrics_summary"]["total_feedback_events"] == 10
+    assert data["thresholds"]["min_feedback_events"] == 5
+    assert data["reasons"] == ["All synthetic offline feedback metrics meet or exceed readiness thresholds"]
+
+
+def test_offline_readiness_cli_metrics_json_not_ready(tmp_path: Path):
+    metrics_json = tmp_path / "metrics-not-ready.json"
+    metrics_json.write_text(json.dumps(_make_metrics(total=10, acceptance_rate=0.4)), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "app/services/action_feedback_readiness.py",
+            "--metrics-json",
+            str(metrics_json),
+            "--format",
+            "json",
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 1
+    data = json.loads(result.stdout)
+    assert data["decision"] == "NOT_READY"
+    assert "metrics_summary" in data
+    assert "thresholds" in data
+    assert "reasons" in data
+    assert any("acceptance_rate (0.4) < min_acceptance_rate (0.5)" in r for r in data["reasons"])
+
+
+def test_offline_readiness_cli_metrics_json_insufficient_data(tmp_path: Path):
+    metrics_json = tmp_path / "metrics-insufficient-data.json"
+    metrics_json.write_text(json.dumps(_make_metrics(total=4)), encoding="utf-8")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "app/services/action_feedback_readiness.py",
+            "--metrics-json",
+            str(metrics_json),
+            "--format",
+            "json",
+        ],
+        cwd=Path(__file__).resolve().parents[1],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 1
+    data = json.loads(result.stdout)
+    assert data["decision"] == "INSUFFICIENT_DATA"
+    assert data["metrics_summary"]["total_feedback_events"] == 4
+    assert data["thresholds"]["min_feedback_events"] == 5
+    assert "total_feedback_events (4) < min_feedback_events (5)" in data["reasons"]
+
+
 def test_offline_readiness_cli_markdown(tmp_path: Path):
     fixture = tmp_path / "fixture.json"
     # Meet all thresholds to return READY
