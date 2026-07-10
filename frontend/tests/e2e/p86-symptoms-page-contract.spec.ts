@@ -245,4 +245,105 @@ test.describe('P86 — Symptoms Page Contract', () => {
       expect(bodyText.toLowerCase()).not.toContain(phrase.toLowerCase())
     }
   })
+
+  /**
+   * Contract test 5 — datetime-local control and submission
+   */
+  test('contract: datetime-local control default value and submission', async ({ page }) => {
+    let lastRequestBody: any = null
+    await stubRoutes(page, { symptoms: [] })
+
+    // Override the POST symptom endpoint to intercept data
+    await page.route('**/api/v1/symptoms*', async (route) => {
+      const method = route.request().method()
+      if (method === 'POST') {
+        lastRequestBody = route.request().postDataJSON()
+        return route.fulfill({
+          status: 200,
+          json: {
+            id: 'new-sym',
+            symptom: '頭痛',
+            severity: 2,
+            duration_category: 'today',
+            notes: null,
+            note: null,
+            occurred_at: lastRequestBody?.occurred_at || new Date().toISOString()
+          }
+        })
+      }
+      if (method === 'GET') {
+        return route.fulfill({ status: 200, json: [] })
+      }
+      return route.fallback()
+    })
+
+    await page.goto('/platform/symptoms')
+    await page.waitForSelector('[data-testid="symptoms-page"]', { timeout: 10_000 })
+
+    // 1. Labeled control is rendered
+    const dateInput = page.getByLabel('症狀發生日期與時間')
+    await expect(dateInput).toBeVisible()
+
+    // 2. Default value is present and matches format (YYYY-MM-DDTHH:mm)
+    const defaultValue = await dateInput.inputValue()
+    expect(defaultValue).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
+
+    // Check that it's close to current time (within 5 minutes to avoid clock drifts in CI)
+    const [datePart, timePart] = defaultValue.split('T')
+    const [year, month, day] = datePart.split('-').map(Number)
+    const [hour, minute] = timePart.split(':').map(Number)
+    const defaultDate = new Date(year, month - 1, day, hour, minute)
+    expect(Math.abs(Date.now() - defaultDate.getTime())).toBeLessThan(5 * 60 * 1000)
+
+    // 3. Select a past date/time (e.g. 2 hours ago)
+    const pastDate = new Date(Date.now() - 2 * 60 * 60 * 1000)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const pastStr = `${pastDate.getFullYear()}-${pad(pastDate.getMonth() + 1)}-${pad(pastDate.getDate())}T${pad(pastDate.getHours())}:${pad(pastDate.getMinutes())}`
+    await dateInput.fill(pastStr)
+
+    // Select symptom '頭痛' and click save
+    await page.getByRole('button', { name: '頭痛' }).click()
+    const responsePromise = page.waitForResponse(response =>
+      response.url().includes('/api/v1/symptoms') && response.request().method() === 'POST'
+    )
+    await page.getByRole('button', { name: '儲存症狀' }).click()
+    await responsePromise
+
+    // Verify submission contains occurred_at matching the local pastDate in ISO format
+    expect(lastRequestBody).not.toBeNull()
+    expect(lastRequestBody.symptom_names).toContain('頭痛')
+
+    // Parse the submitted UTC timestamp and check it matches the selected local time
+    const submittedDate = new Date(lastRequestBody.occurred_at)
+    const selectMinutes = Math.floor(pastDate.getTime() / 60000)
+    const submittedMinutes = Math.floor(submittedDate.getTime() / 60000)
+    expect(submittedMinutes).toBe(selectMinutes)
+  })
+
+  /**
+   * Contract test 6 — Future date validation
+   */
+  test('contract: future date is rejected with validation message', async ({ page }) => {
+    await stubRoutes(page, { symptoms: [] })
+    await page.goto('/platform/symptoms')
+    await page.waitForSelector('[data-testid="symptoms-page"]', { timeout: 10_000 })
+
+    const dateInput = page.getByLabel('症狀發生日期與時間')
+    await expect(dateInput).toBeVisible()
+
+    // Fill with a future date (1 day in the future)
+    const futureDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const futureStr = `${futureDate.getFullYear()}-${pad(futureDate.getMonth() + 1)}-${pad(futureDate.getDate())}T${pad(futureDate.getHours())}:${pad(futureDate.getMinutes())}`
+    await dateInput.fill(futureStr)
+
+    // Attempt to submit
+    await page.getByRole('button', { name: '頭痛' }).click()
+    await page.getByRole('button', { name: '儲存症狀' }).click()
+
+    // Assert that the error message is shown and has "不能選擇未來的時間"
+    const errorMessage = page.locator('[data-testid="symptoms-error-message"]')
+    await expect(errorMessage).toBeVisible()
+    await expect(errorMessage).toContainText('不能選擇未來的時間')
+  })
 })
