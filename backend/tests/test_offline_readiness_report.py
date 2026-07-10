@@ -104,7 +104,7 @@ def test_offline_readiness_cli_json(tmp_path: Path):
     ]
     # 4/6 accepted = 0.6667 acceptance rate, 2/6 not useful = 0.3333 not useful rate.
     # Note: 0.3333 not useful rate exceeds default threshold of 0.3, so decision should be NOT_READY.
-    fixture.write_text(json.dumps({"actions": actions, "outcomes": []}), encoding="utf-8")
+    fixture.write_text(json.dumps({"actions": actions, "outcomes": [{"action_id": "a-0", "outcome_label": "improved"}]}), encoding="utf-8")
 
     result = subprocess.run(
         [
@@ -233,7 +233,7 @@ def test_offline_readiness_cli_markdown(tmp_path: Path):
         {"id": f"a-{i}", "status": "accepted", "action_type": "habit", "rule_id": "rule-sleep"}
         for i in range(6)
     ]
-    fixture.write_text(json.dumps({"actions": actions, "outcomes": []}), encoding="utf-8")
+    fixture.write_text(json.dumps({"actions": actions, "outcomes": [{"action_id": "a-0", "outcome_label": "improved"}]}), encoding="utf-8")
 
     result = subprocess.run(
         [
