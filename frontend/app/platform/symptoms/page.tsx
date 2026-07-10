@@ -25,6 +25,33 @@ function firstText(...values: any[]) {
   return found ? found.trim() : ''
 }
 
+function formatLocalDateTime(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const yyyy = date.getFullYear()
+  const MM = pad(date.getMonth() + 1)
+  const dd = pad(date.getDate())
+  const hh = pad(date.getHours())
+  const mm = pad(date.getMinutes())
+  return `${yyyy}-${MM}-${dd}T${hh}:${mm}`
+}
+
+function parseLocalDateTime(localStr: string): Date | null {
+  if (!localStr) return null
+  const parts = localStr.split('T')
+  if (parts.length !== 2) return null
+  const [datePart, timePart] = parts
+  const dateSplit = datePart.split('-')
+  const timeSplit = timePart.split(':')
+  if (dateSplit.length !== 3 || timeSplit.length < 2) return null
+  const year = parseInt(dateSplit[0], 10)
+  const month = parseInt(dateSplit[1], 10)
+  const day = parseInt(dateSplit[2], 10)
+  const hour = parseInt(timeSplit[0], 10)
+  const minute = parseInt(timeSplit[1], 10)
+  if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hour) || isNaN(minute)) return null
+  return new Date(year, month - 1, day, hour, minute)
+}
+
 export default function SymptomsPage() {
   const [logs, setLogs] = useState<any[]>([])
   const [metrics, setMetrics] = useState<any[]>([])
@@ -38,6 +65,9 @@ export default function SymptomsPage() {
   const [durationCategory, setDurationCategory] = useState('today')
   const [notes, setNotes] = useState('')
   const [activeDate, setActiveDate] = useState<string | null>(null)
+  const [occurredAt, setOccurredAt] = useState<string>('')
+  const [maxDateTime, setMaxDateTime] = useState<string>('')
+  const [error, setError] = useState<string | null>(null)
 
   const refresh = () => {
     api.listSymptoms().then(setLogs).catch(() => setLogs([]))
@@ -56,29 +86,51 @@ export default function SymptomsPage() {
   useEffect(() => {
     trackEvent('view_symptoms', { page: '/platform/symptoms' })
     refresh()
+    const now = new Date()
+    setOccurredAt(formatLocalDateTime(now))
+    setMaxDateTime(formatLocalDateTime(now))
   }, [])
 
   const toggleSymptom = (symptom: string) => {
     setSelected((prev) => (prev.includes(symptom) ? prev.filter((item) => item !== symptom) : [...prev, symptom]))
+    setError(null)
   }
 
   const submit = async () => {
     const symptomNames = [...selected]
     if (other.trim()) symptomNames.push(other.trim())
     if (symptomNames.length === 0) return
+    setError(null)
+    if (!occurredAt) {
+      setError('請選擇發生的日期與時間')
+      return
+    }
+    const parsedDate = parseLocalDateTime(occurredAt)
+    if (!parsedDate || isNaN(parsedDate.getTime())) {
+      setError('請輸入有效的日期與時間')
+      return
+    }
+    if (parsedDate.getTime() > Date.now()) {
+      setError('不能選擇未來的時間')
+      return
+    }
     await api.createSymptom({
       symptom_names: symptomNames,
       severity,
       duration_category: durationCategory,
       notes: notes || undefined,
       note: notes || undefined,
-      occurred_at: new Date().toISOString(),
+      occurred_at: parsedDate.toISOString(),
     })
     setSelected([])
     setOther('')
     setNotes('')
     setSeverity(2)
     setDurationCategory('today')
+    const now = new Date()
+    setOccurredAt(formatLocalDateTime(now))
+    setMaxDateTime(formatLocalDateTime(now))
+    setError(null)
     refresh()
   }
 
@@ -266,7 +318,23 @@ export default function SymptomsPage() {
           />
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+          <label className="text-sm" htmlFor="occurred-at-input">
+            <span className="text-slate-600 font-medium">症狀發生日期與時間</span>
+            <input
+              id="occurred-at-input"
+              data-testid="occurred-at-input"
+              type="datetime-local"
+              className="mt-1 w-full min-h-11 rounded-xl border px-3 py-2 font-sans"
+              value={occurredAt}
+              max={maxDateTime}
+              onChange={(e) => {
+                setOccurredAt(e.target.value)
+                setError(null)
+              }}
+            />
+          </label>
+
           <label className="text-sm">
             <span className="text-slate-600">嚴重程度</span>
             <select className="mt-1 w-full min-h-11 rounded-xl border px-3 py-2" value={severity} onChange={(e) => setSeverity(Number(e.target.value))}>
@@ -288,6 +356,12 @@ export default function SymptomsPage() {
             <input className="mt-1 w-full min-h-11 rounded-xl border px-3 py-2" value={notes} onChange={(e) => setNotes(e.target.value)} />
           </label>
         </div>
+
+        {error && (
+          <p className="text-sm text-rose-500 mt-2" data-testid="symptoms-error-message">
+            {error}
+          </p>
+        )}
 
         <Button className="mt-4 min-h-11" onClick={() => void submit()}>儲存症狀</Button>
       </Card>
