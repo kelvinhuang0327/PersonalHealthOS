@@ -413,29 +413,150 @@ def evaluate_offline_feedback_readiness(
     thresholds: OfflineReadinessThresholds | None = None,
 ) -> OfflineReadinessResult:
     thresholds = thresholds or OfflineReadinessThresholds()
-    reasons: list[str] = []
 
-    total = metrics.get("total_feedback_events", 0)
-    rates = metrics.get("rates", {})
-    acceptance_rate = rates.get("acceptance_rate", 0.0)
-    not_useful_rate = rates.get("not_useful_rate", 0.0)
-    snooze_rate = rates.get("snooze_rate", 0.0)
+    # 1. Normalize input once before evaluation (strict allowlist filtering)
+    norm_metrics = {}
 
-    outcome_counts = metrics.get("outcome_status_counts", {})
-    improved = outcome_counts.get("improved", 0)
-    unchanged = outcome_counts.get("unchanged", 0)
-    worse = outcome_counts.get("worse", 0)
+    total_val = metrics.get("total_feedback_events")
+    if total_val is None:
+        total = None
+    else:
+        try:
+            total = int(total_val)
+        except (ValueError, TypeError):
+            total = -1
+
+    norm_metrics["total_feedback_events"] = total
+
+    dist = metrics.get("feedback_distribution")
+    norm_dist = {}
+    if isinstance(dist, dict):
+        allowed_dist_keys = {"accepted", "not_applicable", "not_useful", "snoozed", "pending", "other"}
+        for k in allowed_dist_keys:
+            if k in dist:
+                val = dist[k]
+                try:
+                    norm_dist[k] = int(val) if val is not None else 0
+                except (ValueError, TypeError):
+                    norm_dist[k] = -1
+    norm_metrics["feedback_distribution"] = norm_dist
+
+    outcome = metrics.get("outcome_status_counts")
+    norm_outcome = {}
+    if isinstance(outcome, dict):
+        allowed_outcome_keys = {"improved", "unchanged", "worse", "unknown"}
+        for k in allowed_outcome_keys:
+            if k in outcome:
+                val = outcome[k]
+                try:
+                    norm_outcome[k] = int(val) if val is not None else 0
+                except (ValueError, TypeError):
+                    norm_outcome[k] = -1
+    norm_metrics["outcome_status_counts"] = norm_outcome
+
+    rates = metrics.get("rates")
+    norm_rates = {}
+    if isinstance(rates, dict):
+        allowed_rates_keys = {"acceptance_rate", "not_useful_rate", "snooze_rate"}
+        for k in allowed_rates_keys:
+            if k in rates:
+                val = rates[k]
+                try:
+                    norm_rates[k] = float(val) if val is not None else 0.0
+                except (ValueError, TypeError):
+                    norm_rates[k] = -999.0
+    norm_metrics["rates"] = norm_rates
+
+    # 2. Check total first to see if it is INSUFFICIENT_DATA
+    # If the required fields exist and total is a non-negative number less than min_feedback_events, return INSUFFICIENT_DATA
+    # directly. Otherwise, do full safety checks.
+    if total is not None and 0 <= total < thresholds.min_feedback_events:
+        if dist is not None and outcome is not None and rates is not None:
+            return OfflineReadinessResult(
+                decision="INSUFFICIENT_DATA",
+                metrics_summary=norm_metrics,
+                thresholds=asdict(thresholds),
+                reasons=[f"total_feedback_events ({total}) < min_feedback_events ({thresholds.min_feedback_events})"],
+            )
+
+    # 3. Safety Invariant Validation
+    safety_reasons: list[str] = []
+
+    # A. Check missing required denominator/count information
+    if total_val is None:
+        safety_reasons.append("Missing required field: total_feedback_events")
+    if dist is None:
+        safety_reasons.append("Missing required field: feedback_distribution")
+    if outcome is None:
+        safety_reasons.append("Missing required field: outcome_status_counts")
+    if rates is None:
+        safety_reasons.append("Missing required field: rates")
+    else:
+        for k in {"acceptance_rate", "not_useful_rate", "snooze_rate"}:
+            if k not in rates:
+                safety_reasons.append(f"Missing required rate field: {k}")
+
+    # B. Check negative counts
+    if total is not None and total < 0:
+        safety_reasons.append(f"Negative count: total_feedback_events ({total})")
+    for k, v in norm_dist.items():
+        if v < 0:
+            safety_reasons.append(f"Negative count for '{k}': {v}")
+    for k, v in norm_outcome.items():
+        if v < 0:
+            safety_reasons.append(f"Negative count for '{k}': {v}")
+
+    # C. Check rates outside [0, 1]
+    for k, v in norm_rates.items():
+        if v < 0.0 or v > 1.0:
+            safety_reasons.append(f"Rate '{k}' ({v}) is outside [0, 1] range")
+
+    # D. Check zero actual outcomes
+    improved = norm_outcome.get("improved", 0)
+    unchanged = norm_outcome.get("unchanged", 0)
+    worse = norm_outcome.get("worse", 0)
     total_outcomes = improved + unchanged + worse
+    if outcome is not None and total_outcomes <= 0:
+        safety_reasons.append(f"Zero actual outcomes: improved ({improved}) + unchanged ({unchanged}) + worse ({worse}) == 0")
 
-    if total < thresholds.min_feedback_events:
+    # E. Check contradictory counts and rates
+    if total is not None and total > 0:
+        rate_count_pairs = [
+            ("acceptance_rate", "accepted"),
+            ("not_useful_rate", "not_useful"),
+            ("snooze_rate", "snoozed")
+        ]
+        for rate_key, count_key in rate_count_pairs:
+            rate_val = norm_rates.get(rate_key)
+            count_val = norm_dist.get(count_key, 0)
+            if rate_val is not None and 0.0 <= rate_val <= 1.0 and count_val >= 0:
+                expected_rate = round(count_val / total, 4)
+                if count_val == 0 and rate_val > 0.0:
+                    safety_reasons.append(f"Contradictory rate: {rate_key} is {rate_val} but {count_key} count is 0")
+                elif abs(rate_val - expected_rate) > 0.05:
+                    safety_reasons.append(f"Contradictory rate: {rate_key} is {rate_val} but expected {expected_rate} based on {count_key} count ({count_val}) and total ({total})")
+    elif total == 0:
+        for rate_key, rate_val in norm_rates.items():
+            if rate_val > 0.0:
+                safety_reasons.append(f"Contradictory rate: {rate_key} is {rate_val} but total_feedback_events is 0")
+
+    # If any safety invariants failed, return NOT_READY fail-closed
+    if safety_reasons:
         return OfflineReadinessResult(
-            decision="INSUFFICIENT_DATA",
-            metrics_summary=metrics,
+            decision="NOT_READY",
+            metrics_summary=norm_metrics,
             thresholds=asdict(thresholds),
-            reasons=[f"total_feedback_events ({total}) < min_feedback_events ({thresholds.min_feedback_events})"],
+            reasons=safety_reasons,
         )
 
+    # 4. Existing evaluation logic if safety checks pass
+    # Since total is guaranteed to be >= thresholds.min_feedback_events and non-negative
+    acceptance_rate = norm_rates.get("acceptance_rate", 0.0)
+    not_useful_rate = norm_rates.get("not_useful_rate", 0.0)
+    snooze_rate = norm_rates.get("snooze_rate", 0.0)
+
     is_ready = True
+    reasons = []
     if acceptance_rate < thresholds.min_acceptance_rate:
         is_ready = False
         reasons.append(f"acceptance_rate ({acceptance_rate}) < min_acceptance_rate ({thresholds.min_acceptance_rate})")
@@ -446,11 +567,11 @@ def evaluate_offline_feedback_readiness(
         is_ready = False
         reasons.append(f"snooze_rate ({snooze_rate}) > max_snooze_rate ({thresholds.max_snooze_rate})")
 
-    if total_outcomes > 0:
-        improvement_rate = round(improved / total_outcomes, 4)
-        if improvement_rate < thresholds.min_improvement_rate:
-            is_ready = False
-            reasons.append(f"improvement_rate ({improvement_rate}) < min_improvement_rate ({thresholds.min_improvement_rate})")
+    # total_outcomes is guaranteed > 0 here because of safety checks
+    improvement_rate = round(improved / total_outcomes, 4)
+    if improvement_rate < thresholds.min_improvement_rate:
+        is_ready = False
+        reasons.append(f"improvement_rate ({improvement_rate}) < min_improvement_rate ({thresholds.min_improvement_rate})")
 
     if is_ready:
         decision = "READY"
@@ -460,7 +581,7 @@ def evaluate_offline_feedback_readiness(
 
     return OfflineReadinessResult(
         decision=decision,
-        metrics_summary=metrics,
+        metrics_summary=norm_metrics,
         thresholds=asdict(thresholds),
         reasons=reasons,
     )
