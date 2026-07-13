@@ -170,6 +170,20 @@ function CtoRunDetailView({
   const { run, reviews, intelligence } = detail;
   const [showReport, setShowReport] = useState(false);
   const [showTimeline, setShowTimeline] = useState(false);
+
+  if (!run || !reviews || !intelligence) {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-5">
+        <div className="flex items-center justify-between">
+          <button onClick={onBack} className="text-xs text-blue-400 hover:underline">← 返回列表</button>
+        </div>
+        <div className="text-red-400 text-sm">
+          ⚠️ 資料暫時無法載入 / 回傳格式不完整
+        </div>
+      </div>
+    );
+  }
+
   const batchAdded = addedBatchSet.has(run.run_id);
   const passCount = reviews.filter((r) => r.decision === 'PASS').length;
   const replanCount = reviews.filter((r) => r.decision === 'NEEDS_REPLAN').length;
@@ -347,6 +361,15 @@ function PrioritizedBacklogPanel({
   backlog, onRescore, onApplyAging,
 }: PrioritizedBacklogPanelProps) {
   const [showP2P3, setShowP2P3] = useState(false);
+
+  if (!backlog || !backlog.by_level || !backlog.counts) {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 text-red-400 text-sm">
+        ⚠️ 資料暫時無法載入 / 回傳格式不完整
+      </div>
+    );
+  }
+
   const highPriority = [...(backlog.by_level.P0 ?? []), ...(backlog.by_level.P1 ?? [])];
   const lowPriority = [...(backlog.by_level.P2 ?? []), ...(backlog.by_level.P3 ?? [])];
 
@@ -388,6 +411,14 @@ function PrioritizedBacklogPanel({
 }
 
 function AdaptivePolicyPanel({ policy, onRefresh }: AdaptivePolicyPanelProps) {
+  if (!policy || !policy.intent_merge_rates || !policy.policy_adjustments) {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 text-red-400 text-sm">
+        ⚠️ 資料暫時無法載入 / 回傳格式不完整
+      </div>
+    );
+  }
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 space-y-3">
       <div className="flex items-center justify-between">

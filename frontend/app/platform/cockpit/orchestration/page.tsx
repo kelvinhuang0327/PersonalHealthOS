@@ -144,6 +144,14 @@ function ProductView({ dashSummary }: Readonly<{ dashSummary: OrcDashboardSummar
     );
   }
 
+  if (!dashSummary.top_categories || !dashSummary.recent_completed) {
+    return (
+      <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 text-red-400 text-sm">
+        ⚠️ 資料暫時無法載入 / 回傳格式不完整
+      </div>
+    );
+  }
+
   const completedByCategory = Object.fromEntries(
     dashSummary.top_categories.map((c) => [c.category, c.completed_count]),
   );
@@ -847,27 +855,31 @@ export default function OrchestrationPage() {
           </p>
           {showTaskPool && taskPool && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-              {taskPool.pool.map((item) => (
-                <div
-                  key={item.category}
-                  className={`rounded-lg p-3 border text-xs space-y-1 ${
-                    item.is_active
-                      ? 'bg-blue-950/40 border-blue-800'
-                      : 'bg-zinc-800 border-zinc-700'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-zinc-500">{item.category}</span>
-                    {item.is_active ? (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-900 text-blue-300 font-medium">執行中</span>
-                    ) : (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-700 text-zinc-400">可用</span>
-                    )}
+              {!taskPool.pool ? (
+                <div className="text-xs text-red-400 p-2 col-span-2">⚠️ 資料暫時無法載入 / 回傳格式不完整</div>
+              ) : (
+                taskPool.pool.map((item) => (
+                  <div
+                    key={item.category}
+                    className={`rounded-lg p-3 border text-xs space-y-1 ${
+                      item.is_active
+                        ? 'bg-blue-950/40 border-blue-800'
+                        : 'bg-zinc-800 border-zinc-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono text-zinc-500">{item.category}</span>
+                      {item.is_active ? (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-900 text-blue-300 font-medium">執行中</span>
+                      ) : (
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-zinc-700 text-zinc-400">可用</span>
+                      )}
+                    </div>
+                    <div className="text-zinc-300 leading-snug">{item.title}</div>
+                    <div className="text-zinc-500">{item.focus_keys.join(' · ')}</div>
                   </div>
-                  <div className="text-zinc-300 leading-snug">{item.title}</div>
-                  <div className="text-zinc-500">{item.focus_keys.join(' · ')}</div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
         </div>
