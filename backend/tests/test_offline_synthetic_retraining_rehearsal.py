@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import ast
+import importlib
 import json
 import subprocess
 import sys
+import warnings
 from pathlib import Path
+
+import pytest
 
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "offline_synthetic_retraining_rehearsal.py"
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +23,206 @@ FORBIDDEN_SUBSTRINGS = (
     "user_id",
     "@",  # no embedded email-shaped identifiers
 )
+
+
+def _normalized_warning_filters() -> tuple[tuple[object, ...], ...]:
+    return tuple(
+        (
+            action,
+            getattr(message, "pattern", message),
+            f"{category.__module__}.{category.__qualname__}",
+            getattr(module, "pattern", module),
+            lineno,
+        )
+        for action, message, category, module, lineno in warnings.filters
+    )
+
+
+def _run_import_warning_probe(warning_text: str) -> subprocess.CompletedProcess[str]:
+    probe = f"""
+import importlib
+import json
+import warnings
+
+importlib.import_module("scripts.offline_synthetic_retraining_rehearsal")
+with warnings.catch_warnings(record=True) as captured:
+    warnings.warn({warning_text!r}, RuntimeWarning)
+print(json.dumps([str(item.message) for item in captured]))
+"""
+    return subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=BACKEND_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+
+def test_import_does_not_change_normalized_warning_filters() -> None:
+    probe = """
+import importlib
+import json
+import warnings
+
+import numpy
+import sklearn
+import sklearn.datasets
+import sklearn.dummy
+import sklearn.linear_model
+import sklearn.metrics
+import sklearn.model_selection
+import sklearn.pipeline
+import sklearn.preprocessing
+import app.services.action_feedback_readiness
+
+def normalize(filters):
+    return [
+        [
+            action,
+            getattr(message, "pattern", message),
+            f"{category.__module__}.{category.__qualname__}",
+            getattr(module, "pattern", module),
+            lineno,
+        ]
+        for action, message, category, module, lineno in filters
+    ]
+
+before = normalize(warnings.filters)
+importlib.import_module("scripts.offline_synthetic_retraining_rehearsal")
+after = normalize(warnings.filters)
+print(json.dumps({"before": before, "after": after}))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=BACKEND_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["before"] == payload["after"]
+
+
+def test_matmul_runtime_warning_remains_observable_after_import() -> None:
+    result = _run_import_warning_probe("synthetic encountered in matmul warning")
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == ["synthetic encountered in matmul warning"]
+
+
+def test_unrelated_runtime_warning_remains_observable_after_import() -> None:
+    result = _run_import_warning_probe("synthetic unrelated numerical warning")
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == ["synthetic unrelated numerical warning"]
+
+
+def test_no_global_matmul_runtime_warning_ignore_filter() -> None:
+    probe = """
+import importlib
+import json
+import re
+import warnings
+
+importlib.import_module("scripts.offline_synthetic_retraining_rehearsal")
+matching = []
+for action, message, category, module, lineno in warnings.filters:
+    pattern = getattr(message, "pattern", message)
+    if (
+        action == "ignore"
+        and category is RuntimeWarning
+        and pattern is not None
+        and re.search(pattern, "synthetic encountered in matmul warning")
+    ):
+        matching.append(pattern)
+print(json.dumps(matching))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", probe],
+        cwd=BACKEND_ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == []
+
+
+def test_source_has_no_process_wide_warning_suppression() -> None:
+    tree = ast.parse(SCRIPT_PATH.read_text(encoding="utf-8"))
+
+    module_level_filter_calls = [
+        node
+        for statement in tree.body
+        if not isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        for node in ast.walk(statement)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "filterwarnings"
+    ]
+    broad_simplefilter_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "simplefilter"
+        and node.args
+        and isinstance(node.args[0], ast.Constant)
+        and node.args[0].value == "ignore"
+    ]
+
+    assert module_level_filter_calls == []
+    assert broad_simplefilter_calls == []
+
+
+def test_nonmatching_warning_inside_local_scope_remains_observable() -> None:
+    rehearsal = importlib.import_module("scripts.offline_synthetic_retraining_rehearsal")
+
+    with pytest.warns(RuntimeWarning, match="synthetic unrelated numerical warning"):
+        rehearsal._run_with_scoped_matmul_warning_filter(
+            lambda: warnings.warn("synthetic unrelated numerical warning", RuntimeWarning)
+        )
+
+
+def test_full_ready_rehearsal_restores_warning_state() -> None:
+    rehearsal = importlib.import_module("scripts.offline_synthetic_retraining_rehearsal")
+    before = _normalized_warning_filters()
+
+    result = rehearsal.build_rehearsal_report(20260710, rehearsal._default_ready_metrics())
+
+    assert result["fit_performed"] is True
+    assert _normalized_warning_filters() == before
+
+
+def test_ready_path_runs_all_three_model_fits(monkeypatch) -> None:
+    rehearsal = importlib.import_module("scripts.offline_synthetic_retraining_rehearsal")
+    original_fit_and_evaluate = rehearsal._fit_and_evaluate
+    fitted_models: list[str] = []
+
+    def recording_fit_and_evaluate(model, *args, **kwargs):
+        fitted_models.append(type(model).__name__)
+        return original_fit_and_evaluate(model, *args, **kwargs)
+
+    monkeypatch.setattr(rehearsal, "_fit_and_evaluate", recording_fit_and_evaluate)
+    result = rehearsal.build_rehearsal_report(20260710, rehearsal._default_ready_metrics())
+
+    assert len(fitted_models) == 3
+    assert set(result["stages"]) == {"naive_baseline", "initial_model", "retrained_model"}
+
+
+def test_blocked_paths_never_call_fit(monkeypatch) -> None:
+    rehearsal = importlib.import_module("scripts.offline_synthetic_retraining_rehearsal")
+
+    def unexpected_fit(*args, **kwargs):
+        raise AssertionError("blocked rehearsal attempted model fitting")
+
+    monkeypatch.setattr(rehearsal, "_fit_and_evaluate", unexpected_fit)
+    for metrics in (_zero_outcome_metrics(), _contradictory_metrics()):
+        result = rehearsal.build_rehearsal_report(1, metrics)
+        assert result["fit_performed"] is False
 
 
 def _run(tmp_path: Path, *, seed: int, metrics_json: Path | None = None) -> tuple[subprocess.CompletedProcess[str], Path]:

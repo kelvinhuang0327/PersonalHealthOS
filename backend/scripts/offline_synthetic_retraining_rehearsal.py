@@ -11,14 +11,10 @@ import argparse
 import json
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 
-# Apple Accelerate's BLAS backend (used by numpy on macOS arm64) emits spurious
-# "encountered in matmul" RuntimeWarnings on plain finite float64 data; results
-# are unaffected. Silence only that exact noise so real warnings still surface.
-warnings.filterwarnings("ignore", message=".*encountered in matmul.*", category=RuntimeWarning)
 from sklearn import __version__ as SKLEARN_VERSION
 from sklearn.datasets import make_classification
 from sklearn.dummy import DummyClassifier
@@ -48,6 +44,13 @@ N_REDUNDANT = 2
 CLASS_WEIGHTS = (0.55, 0.45)
 HOLDOUT_FRACTION = 0.2
 FEEDBACK_FRACTION = 0.3
+
+_VERIFIED_MATMUL_WARNING_MESSAGES = (
+    r"^divide by zero encountered in matmul$",
+    r"^overflow encountered in matmul$",
+    r"^invalid value encountered in matmul$",
+)
+_VERIFIED_MATMUL_WARNING_MODULE = r"^sklearn\.utils\.extmath$"
 
 
 def _default_ready_metrics() -> dict[str, Any]:
@@ -120,16 +123,35 @@ def _metrics_for(y_true: np.ndarray, y_pred: np.ndarray, y_score: np.ndarray) ->
     }
 
 
+def _run_with_scoped_matmul_warning_filter(operation: Callable[[], Any]) -> Any:
+    """Hide only verified Accelerate noise for one prediction operation."""
+    with warnings.catch_warnings():
+        for message in _VERIFIED_MATMUL_WARNING_MESSAGES:
+            warnings.filterwarnings(
+                "ignore",
+                message=message,
+                category=RuntimeWarning,
+                module=_VERIFIED_MATMUL_WARNING_MODULE,
+            )
+        return operation()
+
+
 def _fit_and_evaluate(
     model: Any,
     X_train: np.ndarray,
     y_train: np.ndarray,
     X_holdout: np.ndarray,
     y_holdout: np.ndarray,
+    *,
+    scope_verified_matmul_warning: bool = False,
 ) -> dict[str, Any]:
     model.fit(X_train, y_train)
-    y_pred = model.predict(X_holdout)
-    y_score = model.predict_proba(X_holdout)[:, 1]
+    if scope_verified_matmul_warning:
+        y_pred = _run_with_scoped_matmul_warning_filter(lambda: model.predict(X_holdout))
+        y_score = _run_with_scoped_matmul_warning_filter(lambda: model.predict_proba(X_holdout))[:, 1]
+    else:
+        y_pred = model.predict(X_holdout)
+        y_score = model.predict_proba(X_holdout)[:, 1]
 
     metrics = _metrics_for(y_holdout, y_pred, y_score)
     metrics["train_size"] = int(len(y_train))
@@ -182,10 +204,12 @@ def build_rehearsal_report(seed: int, metrics: dict[str, Any]) -> dict[str, Any]
         initial_model = _fit_and_evaluate(
             make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000, random_state=seed, solver="liblinear")),
             X_initial, y_initial, X_holdout, y_holdout,
+            scope_verified_matmul_warning=True,
         )
         retrained_model = _fit_and_evaluate(
             make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000, random_state=seed, solver="liblinear")),
             X_retrain, y_retrain, X_holdout, y_holdout,
+            scope_verified_matmul_warning=True,
         )
 
         same_holdout_confirmed = (
