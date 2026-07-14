@@ -59,7 +59,7 @@ async function seedAnalytics(context: BrowserContext, events: SyntheticEvent[] |
 }
 
 async function isolateLocalAnalytics(page: Page) {
-  await page.route('http://localhost:8000/api/v1/**', async (route) => {
+  await page.route(/^http:\/\/(?:localhost|127\.0\.0\.1):8000\/api\/v1\/.*/, async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   })
 }
