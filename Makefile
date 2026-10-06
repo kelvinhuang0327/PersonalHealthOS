@@ -1,0 +1,196 @@
+.PHONY: up down logs backend-test backend-smoke backend-auth-audit frontend-tsc security-smoke config-smoke validation-smoke outcome-smoke frontend-auth-smoke frontend-e2e-local daily-assistant-contract actions-page-contract documents-page-contract symptoms-page-contract documents-confirmed-data-contract local-db-up local-db-down local-db-reset local-seed local-seed-reset local-seed-reseed daily-summary-evidence-contract documents-evidence-deeplink-contract report-symptom-recommendation-contract lab-trend-comparison-contract lab-trend-report-date-contract
+
+up:
+	docker compose up -d --build
+
+down:
+	docker compose down
+
+logs:
+	docker compose logs -f --tail=100
+
+backend-test:
+	cd backend && python3 -m venv .venv && .venv/bin/python -m pip install -r requirements-dev.txt && PYTHONPATH=. .venv/bin/python -m pytest -q
+
+# Quick auth negative smoke only (no DB required — uses in-memory SQLite)
+backend-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v tests/test_auth_negative_smoke.py tests/test_real_token_auth_negative.py
+
+# Full P13-P20 + P44/P45 auth/security regression (no DB required — in-memory SQLite)
+# Covers: API auth, real JWT, person_id audit, report owner hardening, download token policy
+backend-auth-audit:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v \
+		tests/test_auth_negative_smoke.py \
+		tests/test_real_token_auth_negative.py \
+		tests/test_person_id_authorization_audit.py \
+		tests/test_report_authorization_hardening.py \
+		tests/test_report_download_token_policy.py
+
+# TypeScript typecheck only — no backend required
+frontend-tsc:
+	cd frontend && npx tsc --noEmit
+
+# backend-auth-audit + frontend tsc — no running server required
+security-smoke:
+	$(MAKE) backend-auth-audit
+	$(MAKE) frontend-tsc
+
+# Config guard smoke — verifies production JWT secret guard and startup integration
+# No DB required. Runs P28 unit tests, P29 env/startup integration tests, and P43 startup warning tests.
+config-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q \
+		tests/test_config_security_guard.py \
+		tests/test_runtime_config_startup_guard.py
+
+# P23–P30 input validation, boundary, injection, and schema boundary regression
+# No DB required. All tests use in-memory SQLite.
+validation-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q \
+		tests/test_input_validation_hardening.py \
+		tests/test_input_validation_boundary.py \
+		tests/test_injection_smoke.py \
+		tests/test_schema_validation_p30.py
+
+# P58/P59 outcome feedback service + API route smoke — no DB required (in-memory SQLite)
+# Covers safe copy, confidence=0.0, actual_metric_change=null, window_days validation,
+# not_useful / not_applicable / snoozed presence and summary counts.
+outcome-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -q \
+		tests/test_outcome_feedback_service.py \
+		tests/test_api_outcome_feedback_p59.py
+
+# Health endpoint contract smoke + full security regression — no running server required
+# /health and /health/live are DB-independent (always 200).
+# /health/ready accepts 200 (DB up) or 503 (DB down); never 500.
+runtime-smoke:
+	cd backend && PYTHONPATH=. .venv/bin/python -m pytest -v tests/test_runtime_smoke.py
+	$(MAKE) security-smoke
+	$(MAKE) config-smoke
+	$(MAKE) validation-smoke
+	$(MAKE) outcome-smoke
+
+# Targeted Playwright auth E2E tests
+# Requires:
+#   1. Backend running:  cd backend && uvicorn app.main:app --port 8000
+#   2. Frontend built:   cd frontend && npm run build
+# Playwright webServer auto-starts next start --port 3010
+frontend-auth-smoke:
+	cd frontend && npx playwright test \
+		tests/e2e/auth-negative.spec.ts \
+		tests/e2e/auth-ui-negative.spec.ts \
+		tests/e2e/auth-ui-multi.spec.ts \
+		--reporter=line
+
+# Full Playwright e2e suite (all 6 specs)
+# Requires:
+#   1. Backend running:  cd backend && uvicorn app.main:app --port 8000
+#   2. Frontend built:   cd frontend && npm run build
+# CI uses npm run e2e:ci (mocked-only subset) instead of this target
+frontend-e2e-local:
+	cd frontend && npm run e2e
+
+# P77 Daily Assistant signal contract guard — local/manual only, not CI-required
+# Runs typescript check + P76 contract smoke (5 tests).
+# Full P64–P76 regression: use frontend-e2e-local
+# See: docs/security/P76_DAILY_ASSISTANT_SIGNAL_CONTRACT.md
+daily-assistant-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p76-daily-assistant-signal-contract.spec.ts --reporter=line
+
+# P95 Daily summary evidence refs contract guard — local/manual only, not CI-required
+# Runs TypeScript check + P94 Daily Assistant 3-grid evidence refs smoke.
+# Run after touching DailyHealthSummary evidence refs, Daily Assistant 3-grid cards,
+# evidence-source metadata, or related source-link behavior.
+daily-summary-evidence-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p94-daily-summary-3grid-evidence-refs.spec.ts --reporter=line
+
+# P97 Documents evidence deep link contract — local/manual only, not CI-required
+# Runs TypeScript check + P97 evidence deep-link smoke (4 tests).
+# Run after touching document_id propagation, evidence badge hrefs,
+# documents page useSearchParams, or getEvidenceHref logic.
+documents-evidence-deeplink-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p97-documents-evidence-deep-link.spec.ts --reporter=line
+
+# P101 Report + Symptom → Recommendation integration contract — local/manual only, not CI-required
+# Runs TypeScript check + P101 integration smoke (5 tests).
+# Proves the core PersonalHealthOS product loop: lab evidence + symptom evidence
+# both feed Daily Assistant 3-grid refs with correct source-specific hrefs,
+# and lab document_id deep links open the matching documents drawer.
+# Run after touching Daily Assistant evidence refs, documents deep link,
+# symptom evidence source behavior, or report/symptom recommendation integration.
+report-symptom-recommendation-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p101-report-symptom-recommendation-integration.spec.ts --reporter=line
+
+# P103 Lab trend comparison contract guard — local/manual only, not CI-required
+# Runs TypeScript check + P103 lab trend comparison smoke (4 tests).
+# Run after touching LabComparisonTable, /documents/lab-history endpoint,
+# direction framing labels, or lab history / comparison tab logic.
+lab-trend-comparison-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p103-lab-trend-comparison-contract.spec.ts --reporter=line
+
+# P104 Lab trend report date contract guard — local/manual only, not CI-required
+# Runs TypeScript check + P104 report date capture contract smoke (4 tests).
+# Run after touching ParsedItemsDrawer confirm flow, PUT document confirm endpoint,
+# LabReport.report_date logic, or lab trend chronology.
+lab-trend-report-date-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p104-lab-trend-report-date-contract.spec.ts --reporter=line
+
+# P83 Actions page contract guard — local/manual only, not CI-required
+# Runs typescript check + P82 actions page contract smoke (4 tests).
+# Run after touching /platform/actions, recommendation history, feedback loop,
+# snooze sections, or related selectors.
+# See: docs/security/P82_ACTIONS_PAGE_CONTRACT.md
+actions-page-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p82-actions-page-contract.spec.ts --reporter=line
+
+# P85 Documents page contract guard — local/manual only, not CI-required
+# Runs typescript check + P85 documents page contract smoke (4 tests).
+# Run after touching /platform/documents, upload/parse flow, LabReportItem
+# display, or document list components.
+# See: docs/security/P85_DOCUMENTS_PAGE_CONTRACT.md
+documents-page-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p85-documents-page-contract.spec.ts --reporter=line
+
+# P86 Symptoms page contract guard — local/manual only, not CI-required
+# Runs typescript check + P86 symptoms page contract smoke (4 tests).
+# Run after touching /platform/symptoms, quick-symptom chips, heatmap,
+# severity/duration selectors, or symptom list display.
+symptoms-page-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p86-symptoms-page-contract.spec.ts --reporter=line
+
+# P87 Documents confirmed-data re-feed contract guard — local/manual only, not CI-required
+# Runs typescript check + P87 confirmed-data re-feed contract smoke (4 tests).
+# Run after touching ParsedItemsDrawer confirm flow, Doc interface, or confirmed_data display.
+documents-confirmed-data-contract:
+	cd frontend && npx tsc --noEmit
+	cd frontend && npx playwright test tests/e2e/p87-documents-confirmed-data-refeed.spec.ts --reporter=line
+
+local-db-up:
+	docker compose -f docker-compose.local.yml up -d
+
+local-db-down:
+	docker compose -f docker-compose.local.yml down
+
+local-db-reset:
+	docker compose -f docker-compose.local.yml down -v
+	docker compose -f docker-compose.local.yml up -d
+
+local-seed:
+	cd backend && PYTHONPATH=. .venv/bin/python scripts/seed_demo_data.py --seed-only
+
+local-seed-reset:
+	cd backend && PYTHONPATH=. .venv/bin/python scripts/seed_demo_data.py --reset-only
+
+local-seed-reseed:
+	cd backend && PYTHONPATH=. .venv/bin/python scripts/seed_demo_data.py
+
+validate-rules:
+	cd backend && PYTHONPATH=. .venv/bin/python scripts/validate_rules.py
