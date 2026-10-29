@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, TrendingDown, TrendingUp, Minus } from 'lucide-react'
 import type { HealthAction } from '../../../lib/actions'
-import { api } from '../../../lib/api'
+import { actionsApi as api } from '../../../lib/actions-client'
 import { Badge } from '../ui/badge'
 import { Card } from '../ui/card'
 

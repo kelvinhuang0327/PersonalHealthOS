@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { api, type NarrativeMemoryData, type CrossPeriodReasoning } from '../../../lib/api'
+import { healthAssistantApi as api, type NarrativeMemoryData, type CrossPeriodReasoning } from '../../../lib/health-assistant-client'
 import {
   BookOpen,
   TrendingDown,

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/router';
-import { api } from '../lib/api';
+import { authApi as api } from '../lib/auth-client';
 
 const DEFAULT_EMAIL = 'demo.default@example.com';
 const DEFAULT_PASSWORD = 'Demo12345';
@@ -24,7 +24,7 @@ export default function LoginPage() {
         res = await api.login(email, password);
       }
       localStorage.setItem('token', res.access_token);
-      router.push('/platform/dashboard');
+      router.push('/platform/insights');
     } catch (err: any) {
       setError(err.message || '登入失敗');
     }

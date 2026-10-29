@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Fragment } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { api } from '../../../lib/api'
+import { documentsApi as api } from '../../../lib/document-client'
 import { normalizeUnitForCompare } from '../../../lib/lab-unit-normalization'
 
 type Row = {

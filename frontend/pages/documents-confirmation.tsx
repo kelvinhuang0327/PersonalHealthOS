@@ -8,7 +8,7 @@ import { Layout } from '../components/Layout';
 import { DocumentReviewTable, type ReviewItem } from '../components/redesign/document-review-table';
 import { DocumentFlowStepper } from '../components/redesign/document-flow-stepper';
 import { PageHeader } from '../components/redesign/page-header';
-import { api } from '../lib/api';
+import { documentsApi as api } from '../lib/document-client';
 
 function parseStoredRows(id: string) {
   try {

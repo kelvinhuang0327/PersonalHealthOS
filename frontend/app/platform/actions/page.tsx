@@ -28,8 +28,9 @@ import { ErrorBoundary } from '../../components/ui/error-boundary'
 import { Skeleton } from '../../components/ui/skeleton'
 import { useActions } from '../../providers/action-context'
 import { usePerson } from '../../providers/person-context'
-import { api } from '../../../lib/api'
-import type { OutcomeFeedback } from '../../../lib/api'
+import { dashboardApi } from '../../../lib/dashboard-client'
+import { healthAssistantApi, type OutcomeFeedback } from '../../../lib/health-assistant-client'
+import { actionsApi } from '../../../lib/actions-client'
 import { trackEvent } from '../../../lib/analytics'
 import type { UnifiedDecisionItem } from '../../../lib/decision-support'
 
@@ -108,11 +109,11 @@ export default function ActionsPage() {
 
   useEffect(() => {
     trackEvent('view_actions', { page: '/platform/actions' })
-    api.getDashboard().then(setDashboardData).catch(() => setDashboardData(null)).finally(() => setLoading(false))
+    dashboardApi.getDashboard().then(setDashboardData).catch(() => setDashboardData(null)).finally(() => setLoading(false))
     // Also fetch health-assistant recommendations (same backend source as Dashboard panel)
-    api.getRecommendations().then(setAssistantRecs).catch(() => setAssistantRecs(null))
+    healthAssistantApi.getRecommendations().then(setAssistantRecs).catch(() => setAssistantRecs(null))
     // Fetch 30-day outcome feedback for recommendation history timeline (P62)
-    api.getOutcomeFeedback(30).then((d) => setHistoryData(d as OutcomeFeedback)).catch(() => setHistoryData(null))
+    healthAssistantApi.getOutcomeFeedback(30).then((d) => setHistoryData(d as OutcomeFeedback)).catch(() => setHistoryData(null))
   }, [])
 
   // ── Decision items from backend (single source of truth) ─────────────────
@@ -260,11 +261,10 @@ export default function ActionsPage() {
     if (!newTitle.trim()) return
     setAddingAction(true)
     try {
-      await api.createAction({
+      await actionsApi.createAction({
         title: newTitle.trim(),
         priority: newPriority,
         due_date: newDueDate || null,
-        source_type: 'manual',
         status: 'todo',
       })
       setNewTitle('')
@@ -272,7 +272,7 @@ export default function ActionsPage() {
       setNewDueDate(defaultDueDate('medium'))
       setShowAddForm(false)
       // Refresh actions via context
-      await api.getActions()
+      await actionsApi.getActions()
       trackEvent('create_action', { page: '/platform/actions', metadata: { priority: newPriority } })
     } finally {
       setAddingAction(false)

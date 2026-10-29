@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle, TrendingUp, Activity, FlaskConical, Repeat, Info } from 'lucide-react';
-import type { SymptomPattern } from '../../../lib/api';
+import type { SymptomPattern } from '../../../lib/health-assistant-client';
 
 // ---------------------------------------------------------------------------
 // Types

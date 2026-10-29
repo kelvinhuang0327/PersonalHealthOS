@@ -8,7 +8,7 @@ export type HealthAction = {
   action_type: 'monitor' | 'habit' | 'follow_up' | 'lifestyle';
   priority: 'low' | 'medium' | 'high';
   status: 'todo' | 'in_progress' | 'done' | 'snoozed' | 'not_useful' | 'not_applicable';
-  due_date?: string;
+  due_date?: string | null;
   frequency?: 'daily' | 'weekly' | 'monthly';
   streak?: number;
   streak_count?: number;  // backend field name alias

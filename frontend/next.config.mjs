@@ -5,8 +5,8 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   async redirects() {
     return [
-      // Redirect legacy /dashboard to the modern App Router platform dashboard
-      { source: '/dashboard', destination: '/platform/dashboard', permanent: false },
+      // Redirect legacy /dashboard to the retained health insights overview
+      { source: '/dashboard', destination: '/platform/insights', permanent: false },
     ]
   },
   allowedDevOrigins: [

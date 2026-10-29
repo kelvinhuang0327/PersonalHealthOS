@@ -2,7 +2,7 @@
 
 import { FlaskConical, ChevronDown, ChevronUp, AlertTriangle, RotateCcw, Lightbulb, Clock } from 'lucide-react';
 import { useState } from 'react';
-import type { LabAbnormality } from '../../../lib/api';
+import type { LabAbnormality } from '../../../lib/document-client';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -225,9 +225,20 @@ export default function LabInsightCard({ abnormalities, loading = false }: LabIn
       )}
 
       {/* Abnormality cards */}
-      {abnormalities.map((abn) => (
-        <AbnormalityCard key={abn.rule_id} abn={abn} />
-      ))}
+      {abnormalities.map((abn) => {
+        const evidenceKey = abn.evidenceSources
+          .map((source) => source.id ?? `${source.type}:${source.summary ?? ''}`)
+          .join('|')
+        const key = [
+          abn.labItemName,
+          abn.abnormalityType,
+          String(abn.currentValue ?? ''),
+          abn.referenceRange ?? '',
+          evidenceKey,
+        ].join(':')
+
+        return <AbnormalityCard key={key} abn={abn} />
+      })}
 
       {/* Medical disclaimer */}
       {abnormalities.length > 0 && (

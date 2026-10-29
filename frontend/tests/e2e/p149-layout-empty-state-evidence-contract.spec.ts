@@ -392,7 +392,7 @@ test.describe('P149 — Layout Stability & Empty-State Evidence Contract', () =>
     }
   })
 
-  test('5) Dashboard evidence-related empty or partial data state does not erase confirmed report state incorrectly', async ({ page }) => {
+  test('5) Partial dashboard API data leaves the confirmed report visible and Insights healthy', async ({ page }) => {
     await setAuthStorage(page)
     // Stub dashboard as empty or partial (recent_labs: [])
     // but documents list has the confirmed report
@@ -407,9 +407,15 @@ test.describe('P149 — Layout Stability & Empty-State Evidence Contract', () =>
     await expect(page.getByText('2026_synthetic_lab_report.pdf')).toBeVisible()
     await expect(page.getByText('已確認')).toBeVisible()
 
-    // Navigate to Dashboard and verify narrative / dashboard functions correctly
+    // Partial dashboard data must not erase the confirmed-report progress contract.
     await page.goto('/platform/dashboard')
-    await expect(page.locator('body')).toBeVisible()
+    await expect(page.getByRole('heading', { name: '儀表板' })).toBeVisible()
+    await expect(page.locator('[data-testid="first-run-journey-card"]')).toBeVisible()
+    await expect(page.locator('[data-testid="first-run-step-documents-status"]')).toContainText('已完成')
+
+    // Keep the candidate's retained Insights route smoke as well.
+    await page.goto('/platform/insights')
+    await expect(page.getByRole('heading', { name: '深度分析' })).toBeVisible()
     const bodyText = await page.locator('body').innerText()
     expect(bodyText).not.toContain('Something went wrong')
   })

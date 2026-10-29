@@ -268,3 +268,82 @@ test.describe('P123 — Minimal First-Run Journey Contract', () => {
     await expect(note).toContainText('暫不判斷異常')
   })
 })
+
+
+test.describe('P123 — Retained Actions Entry and Safety Contract', () => {
+  test('retained insights entry opens the evidence-backed actions flow', async ({ page }) => {
+    await setAuthStorage(page)
+    await stubRoutes(page, {
+      documents: [{ id: 'd1', parse_status: 'confirmed' }],
+      symptoms: [{ id: 's1', symptom: '疲勞', occurred_at: new Date().toISOString() }],
+      dailySummary: DAILY_SUMMARY_BASIC,
+      recommendations: {
+        person_id: 'person-self',
+        recommendations: [
+          {
+            title: '今日建議先記錄血壓',
+            why_now: '資料已可提供初步追蹤建議',
+            priority: 'medium',
+            next_action: '前往行動頁開始追蹤',
+            source_type: 'recommendation',
+            expected_health_impact: '建立可持續的每日追蹤節奏',
+            evidence_sources: [],
+            is_tracking: false,
+          },
+        ],
+        total: 1,
+        missing_data: [],
+      },
+    })
+    await page.goto('/platform/insights')
+    await expect(page.getByRole('heading', { name: '深度分析' })).toBeVisible()
+
+    await page.locator('a[href="/platform/actions"]').click()
+    await expect(page).toHaveURL(/\/platform\/actions/)
+    await expect(page.locator('[data-testid="actions-page"]')).toBeVisible()
+    await expect(page.getByText('今日建議先記錄血壓')).toBeVisible()
+    await expect(page.getByText('Something went wrong')).not.toBeVisible()
+  })
+
+  test('actions page does not render prohibited medical claims', async ({ page }) => {
+    await setAuthStorage(page)
+    await stubRoutes(page, { documents: [], symptoms: [], dailySummary: DAILY_SUMMARY_EMPTY })
+    await page.goto('/platform/actions')
+
+    const bodyText = (await page.locator('[data-testid="actions-page"]').innerText()).toLowerCase()
+    for (const phrase of PROHIBITED_PHRASES) {
+      expect(bodyText).not.toContain(phrase.toLowerCase())
+    }
+  })
+
+  test('suppressed recommendation keeps cautious wording in the actions surface', async ({ page }) => {
+    await setAuthStorage(page)
+    await stubRoutes(page, {
+      documents: [{ id: 'd1', parse_status: 'confirmed' }],
+      symptoms: [{ id: 's1', symptom: '疲勞', occurred_at: new Date().toISOString() }],
+      dailySummary: {
+        ...DAILY_SUMMARY_BASIC,
+        topRisk: '檢驗資料含 suppressed_unit_scale_mismatch，暫不判斷異常',
+      },
+      recommendations: {
+        person_id: 'person-self',
+        recommendations: [
+          {
+            title: '先追蹤資料一致性',
+            why_now: '避免對單一抑制資料做過度推論',
+            next_action: '持續記錄並安排後續檢查',
+            source_type: 'lab_abnormality',
+            evidence_summary: 'suppressed_unit_scale_mismatch（暫不判斷異常）',
+          },
+        ],
+        total: 1,
+        missing_data: [],
+      },
+    })
+    await page.goto('/platform/actions')
+
+    const evidenceSummary = page.getByText('suppressed_unit_scale_mismatch（暫不判斷異常）')
+    await expect(evidenceSummary).toBeVisible()
+    await expect(evidenceSummary).not.toContainText('正常')
+  })
+})

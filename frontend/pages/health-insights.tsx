@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { FlowBanner } from '../app/components/platform/flow-banner';
 import { StateCard } from '../app/components/platform/state-card';
 import { Layout } from '../components/Layout';
-import { api } from '../lib/api';
+import { insightsApi as api } from '../lib/insights-client';
 
 export default function HealthInsightsPage() {
   const [items, setItems] = useState<any[]>([]);

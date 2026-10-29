@@ -12,7 +12,7 @@ import {
 } from 'recharts'
 import { TrendingDown, TrendingUp, Minus } from 'lucide-react'
 import { Card } from '../ui/card'
-import { api } from '../../../lib/api'
+import { healthScoreApi as api } from '../../../lib/health-score-client'
 
 interface HistoryPoint {
   date?: string

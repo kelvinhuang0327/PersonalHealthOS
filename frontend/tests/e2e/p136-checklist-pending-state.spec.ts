@@ -92,19 +92,20 @@ async function stubRoutes(page: import('@playwright/test').Page, documents: obje
   })
 }
 
-test.describe('P136 — Checklist Pending State Contract', () => {
+test.describe('P136 — Documents Pending Confirmation Contract', () => {
   for (const parseStatus of ['parsed', 'completed']) {
-    test(`unconfirmed ${parseStatus} document sets checklist state to 待確認 and journey in-progress`, async ({ page }) => {
+    test(`unconfirmed ${parseStatus} document shows its pending review state in Documents`, async ({ page }) => {
       await setAuthStorage(page)
       await stubRoutes(page, [{ id: 'doc-1', parse_status: parseStatus }])
-      await page.goto('/platform/dashboard')
+      await page.goto('/platform/documents')
 
-      // Expect documents checklist status is "待確認" in amber
+      await expect(page.locator('[data-testid="documents-page"]')).toBeVisible()
+      await expect(page.getByText('待確認 — 解析結果未審閱')).toBeVisible()
+
+      await page.goto('/platform/dashboard')
       const docStatus = page.locator('[data-testid="first-run-step-documents-status"]')
       await expect(docStatus).toBeVisible()
       await expect(docStatus).toContainText('待確認')
-
-      // Journey must be in progress
       await expect(page.locator('[data-testid="first-run-journey-in-progress"]')).toBeVisible()
       await expect(page.locator('[data-testid="first-run-journey-empty"]')).not.toBeVisible()
     })

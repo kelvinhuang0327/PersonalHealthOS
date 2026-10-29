@@ -280,15 +280,19 @@ test.describe('P156 — Report Signal and Actions UI Flow Contract', () => {
     await page.goto('/platform/dashboard')
     await page.waitForSelector('[data-testid="first-run-journey-card"]', { timeout: 10_000 })
 
-    // Verify report-derived signals/alerts on dashboard (use exact check to avoid strict mode violation)
+    // Keep the original report-derived signal and narrative observations.
     await expect(page.getByText('AST 偏高', { exact: true }).first()).toBeVisible()
     await expect(page.getByText('膽固醇偏高', { exact: true }).first()).toBeVisible()
-
-    // Verify non-empty risk state / narrative elements
     await expect(page.getByText('根據您已確認的報告，我們發現了 2 項異常。').first()).toBeVisible()
     await expect(page.getByText('AST 及膽固醇偏高，建議關注肝臟與代謝指標。').first()).toBeVisible()
 
-    // Safety audit
+    // Verify the existing uncertainty note and disclaimer for the supplied fixture.
+    const suppressionNote = page.getByTestId('first-run-suppression-not-judged-note')
+    await expect(suppressionNote).toBeVisible()
+    await expect(suppressionNote).toContainText('目前證據不足')
+    await expect(suppressionNote).toContainText('避免直接下臨床結論')
+    await expect(page.getByText('Not a medical diagnosis.', { exact: true })).toBeVisible()
+
     const bodyText = await page.locator('body').innerText()
     expect(bodyText).not.toContain('Something went wrong')
   })
@@ -385,8 +389,6 @@ test.describe('P156 — Report Signal and Actions UI Flow Contract', () => {
     for (const phrase of PROHIBITED_PHRASES) {
       expect(actionsText.toLowerCase()).not.toContain(phrase.toLowerCase())
     }
-
-    // Check that missing/unknown evidence is not described as normal/healthy
     expect(actionsText).not.toContain('資料缺少正常')
     expect(actionsText).not.toContain('數值正常')
     expect(dashboardText).not.toContain('資料缺少正常')

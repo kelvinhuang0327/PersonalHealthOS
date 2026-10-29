@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Bell, CheckCircle2, X } from 'lucide-react'
-import { api } from '../../../lib/api'
+import { riskAlertsApi as api } from '../../../lib/risk-alerts-client'
 
 type Alert = {
   id: string

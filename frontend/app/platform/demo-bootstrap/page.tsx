@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
-import { api } from '../../../lib/api'
+import { personsApi as api } from '../../../lib/persons-client'
 import { resetDemoClientData, seedDemoClientData } from '../../../lib/demo-bootstrap'
 
-type PersonLite = { id: string; display_name: string; relationship: string; is_default?: boolean }
+type PersonLite = { id: string; display_name: string; relationship?: string; is_default?: boolean }
 
 export default function DemoBootstrapPage() {
   const [persons, setPersons] = useState<PersonLite[]>([])

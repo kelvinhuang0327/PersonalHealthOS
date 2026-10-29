@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Loader2, Pencil, X } from 'lucide-react'
 import { Button } from '../ui/button'
-import { api } from '../../../lib/api'
+import { documentsApi as api } from '../../../lib/document-client'
 
 
 interface ParsedItem {

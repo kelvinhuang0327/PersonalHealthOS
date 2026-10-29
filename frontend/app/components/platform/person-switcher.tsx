@@ -38,6 +38,8 @@ export function PersonSwitcher() {
         <div className="absolute right-0 top-full z-40 mt-2 w-64 rounded-2xl border bg-white p-2 shadow-xl">
           {persons.map((person) => {
             const selected = person.id === personId
+            const relationship = person.relationship ?? person.relationship_type
+            const relationshipLabel = relationship ? RELATIONSHIP_LABEL[relationship] || relationship : '家人'
             return (
               <button
                 key={person.id}
@@ -52,7 +54,7 @@ export function PersonSwitcher() {
                 className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left ${selected ? 'bg-sky-50 text-sky-700' : 'hover:bg-slate-50'}`}
               >
                 <span className="text-sm font-medium">{person.display_name}</span>
-                <span className="text-xs text-slate-400">{RELATIONSHIP_LABEL[person.relationship] || person.relationship || '家人'}</span>
+                <span className="text-xs text-slate-400">{relationshipLabel}</span>
               </button>
             )
           })}
