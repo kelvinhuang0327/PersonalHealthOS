@@ -3,6 +3,6 @@ import { useRouter } from 'next/router';
 
 export default function Redirect() {
   const router = useRouter();
-  useEffect(() => { router.replace('/platform/dashboard'); }, [router]);
+  useEffect(() => { router.replace('/platform/insights'); }, [router]);
   return null;
 }

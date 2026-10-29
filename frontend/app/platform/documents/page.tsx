@@ -9,7 +9,7 @@ import { ErrorBoundary } from '../../components/ui/error-boundary'
 import { Skeleton } from '../../components/ui/skeleton'
 import { ParsedItemsDrawer } from '../../components/platform/parsed-items-drawer'
 import { LabComparisonTable } from '../../components/platform/lab-comparison-table'
-import { api, uploadDocument } from '../../../lib/api'
+import { documentsApi as api, uploadDocument } from '../../../lib/document-client'
 import { trackEvent } from '../../../lib/analytics'
 
 interface Doc {

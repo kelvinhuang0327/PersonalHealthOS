@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
-import { api } from '../lib/api';
+import { externalMetricsApi as api } from '../lib/external-metrics-client';
 
 export default function ExternalMetricsPage() {
   const [history, setHistory] = useState<any[]>([]);

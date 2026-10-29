@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
-import { api } from '../lib/api';
+import { metricsApi as api } from '../lib/metrics-client';
 
 export default function RecordsPage() {
   const [records, setRecords] = useState<any[]>([]);

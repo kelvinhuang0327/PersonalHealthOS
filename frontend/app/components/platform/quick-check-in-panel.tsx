@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Loader2, Sparkles, XCircle } from 'lucide-react'
 
 import { appendQuickCheckIn, getTodayQuickCheckInCount } from '../../../lib/quick-checkin'
-import { api } from '../../../lib/api'
+import { symptomsApi as api } from '../../../lib/symptoms-client'
 import { useActions } from '../../providers/action-context'
 import { usePerson } from '../../providers/person-context'
 import { FlowBanner } from './flow-banner'

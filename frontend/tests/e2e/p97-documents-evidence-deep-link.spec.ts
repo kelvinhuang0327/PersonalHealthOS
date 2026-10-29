@@ -1,13 +1,10 @@
 /**
  * P97 — Documents Evidence Deep Link Contract
  *
- * Verifies the source-specific deep-link path from evidence badges to the
- * documents page drawer:
- *
- *   1. /platform/documents?document_id=<id> auto-opens the matching drawer
- *   2. Unknown document_id -> page renders normally, no crash
- *   3. Actions page evidence link includes ?document_id= when ref has document_id
- *   4. Daily Assistant topRisk evidence link includes ?document_id= when ref has document_id
+ * Verifies retained Actions evidence links and Documents drawer behavior:
+ *   1. A matching document_id opens its drawer.
+ *   2. An unknown document_id does not crash the page.
+ *   3. Actions evidence links include document_id when the source provides it.
  *
  * Strategy: fully mocked (no live backend).
  */
@@ -54,30 +51,28 @@ const DAILY_SUMMARY_WITH_DOC_REF = {
     document_id: DOC_TARGET_ID,
     summary: 'Lab report (2026-01-15): HbA1c 7.2% (H)',
   },
-  todayActionRef: {
-    source_type: 'lab_report_item',
-    source_id: 'lab-item-uuid-p97',
-    document_id: DOC_TARGET_ID,
-    summary: 'Lab report (2026-01-15): HbA1c 7.2% (H)',
-  },
 }
 
+const LAB_ITEM_ID = 'lab-item-uuid-p97'
+
 const LAB_REC_WITH_DOC_ID = {
-  title: 'Blood sugar abnormality needs follow-up',
-  why_now: 'Lab report shows fasting glucose = 6.8 mmol/L (H)',
+  title: '血糖異常需追蹤',
+  why_now: '健檢報告顯示空腹血糖需要追蹤',
   priority: 'high',
   source_type: 'lab_report_item',
-  source_id: 'lab-item-uuid-p97',
+  source_id: LAB_ITEM_ID,
   document_id: DOC_TARGET_ID,
-  evidence_summary: 'Lab report (2026-01-15): fasting glucose = 6.8 mmol/L, flag H',
+  evidence_summary: 'P97 mock lab evidence with document_id',
   data_insufficiency_reason: null,
-  next_action: 'Discuss blood sugar anomaly with doctor and schedule follow-up',
-  expected_health_impact: 'Early follow-up helps track health trends',
-  evidence_sources: [{ type: 'lab_report_item', id: 'lab-item-uuid-p97', summary: 'fasting glucose 6.8 mmol/L' }],
+  next_action: '安排追蹤',
+  expected_health_impact: '掌握健康趨勢',
+  evidence_sources: [{ type: 'lab_report_item', id: LAB_ITEM_ID, summary: 'P97 mock lab evidence' }],
   is_tracking: false,
   evidence_level: 'A',
   trust: null,
 }
+
+
 
 const BASE_DASHBOARD = {
   health_score: { overall_score: 75, components: {} },
@@ -103,7 +98,16 @@ const OUTCOME_EMPTY = {
   },
 }
 
-async function stubDocsRoutes(page: import('@playwright/test').Page, documents: object[] = [DOC_WITH_ID, DOC_OTHER]) {
+async function stubDocsRoutes(
+  page: import('@playwright/test').Page,
+  documents: object[] = [DOC_WITH_ID, DOC_OTHER],
+  dailySummary: object = {
+    topRisk: '',
+    biggestChange: '',
+    todayAction: '',
+    generated_at: new Date().toISOString(),
+  },
+) {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'p97-mock-token')
     localStorage.setItem('person_id', 'person-p97')
@@ -117,7 +121,7 @@ async function stubDocsRoutes(page: import('@playwright/test').Page, documents: 
     if (path.endsWith('/profile/me')) return route.fulfill({ json: { id: 'person-p97', display_name: 'P97 User', name: 'P97 User', age: 42, gender: 'male', onboarding_completed: true } })
     if ((path.endsWith('/documents') || path.includes('/documents?')) && method === 'GET') return route.fulfill({ json: documents })
     if (path.includes('/documents/') && path.includes('/parsed-items')) return route.fulfill({ json: [] })
-    if (path.includes('/health-assistant/daily-summary')) return route.fulfill({ json: { topRisk: '', biggestChange: '', todayAction: '', generated_at: new Date().toISOString() } })
+    if (path.includes('/health-assistant/daily-summary')) return route.fulfill({ json: dailySummary })
     if (path.includes('/health-assistant/recommendations')) return route.fulfill({ json: { person_id: 'person-p97', recommendations: [], total: 0 } })
     if (path.includes('/health-assistant/notifications/intelligent')) return route.fulfill({ json: { person_id: 'person-p97', items: [], suppressed: [], total_candidates: 0 } })
     if (path.includes('/orchestrator/dashboard-summary')) return route.fulfill({ json: null })
@@ -169,38 +173,7 @@ async function stubActionsRoutes(page: import('@playwright/test').Page, recommen
   })
 }
 
-async function stubDashboardRoutes(page: import('@playwright/test').Page, dailySummary: object) {
-  await page.addInitScript(() => {
-    localStorage.setItem('token', 'p97-mock-token')
-    localStorage.setItem('person_id', 'person-p97')
-    localStorage.setItem('onboarding_completed', '1')
-  })
-  await page.route('**/api/v1/**', (route) => {
-    const url = new URL(route.request().url())
-    const path = url.pathname
-    const method = route.request().method()
-    if (path.includes('/health-assistant/daily-summary')) return route.fulfill({ json: dailySummary })
-    if (path.endsWith('/persons')) return route.fulfill({ json: PERSONS })
-    if (path.endsWith('/profile/me')) return route.fulfill({ json: { id: 'person-p97', display_name: 'P97 User', name: 'P97 User', age: 42, gender: 'male', onboarding_completed: true } })
-    if (path.includes('/health-assistant/outcome-feedback')) return route.fulfill({ json: OUTCOME_EMPTY })
-    if (path.includes('/health-assistant/recommendations')) return route.fulfill({ json: { person_id: 'person-p97', recommendations: [], total: 0, missing_data: [] } })
-    if (path.includes('/health-assistant/notifications/intelligent')) return route.fulfill({ json: { person_id: 'person-p97', generated_at: new Date().toISOString(), items: [], suppressed: [], total_candidates: 0 } })
-    if (path.includes('/orchestrator/dashboard-summary')) return route.fulfill({ json: null })
-    if (path.includes('/health-assistant/family-relationships')) return route.fulfill({ json: { person_id: 'person-p97', relationships: [], total: 0 } })
-    if (path.includes('/health-assistant/family-health-context')) return route.fulfill({ json: { person_id: 'person-p97', context: null } })
-    if (path.includes('/health-assistant/family-recommendations')) return route.fulfill({ json: { person_id: 'person-p97', recommendations: [], total: 0 } })
-    if (path.includes('/health-assistant/narrative-memory/cross-period')) return route.fulfill({ json: { person_id: 'person-p97', reasoning: null } })
-    if (path.endsWith('/dashboard')) return route.fulfill({ json: BASE_DASHBOARD })
-    if (path.includes('/actions/prioritized')) return route.fulfill({ json: [] })
-    if ((path.endsWith('/actions') || path.includes('/actions?')) && method === 'GET') return route.fulfill({ json: [] })
-    if (path.endsWith('/insights')) return route.fulfill({ json: [] })
-    if (path.endsWith('/risk-alerts')) return route.fulfill({ json: [] })
-    if (path.includes('/risk-alerts/unread-count')) return route.fulfill({ json: { count: 0 } })
-    if (path.endsWith('/timeline')) return route.fulfill({ json: { items: [] } })
-    if (method === 'GET') return route.fulfill({ json: { items: [] } })
-    return route.fulfill({ json: {} })
-  })
-}
+
 
 test('documents page auto-opens drawer when document_id param matches a document', async ({ page }) => {
   await stubDocsRoutes(page)
@@ -232,14 +205,21 @@ test('Actions page lab evidence link includes ?document_id= when source has docu
   expect(href).toContain(`document_id=${DOC_TARGET_ID}`)
 })
 
-test('Daily Assistant topRisk lab evidence link includes ?document_id= when ref has document_id', async ({ page }) => {
-  await stubDashboardRoutes(page, DAILY_SUMMARY_WITH_DOC_REF)
+test('Daily Assistant topRisk evidence link opens the matching Documents drawer', async ({ page }) => {
+  await stubDocsRoutes(page, [DOC_WITH_ID, DOC_OTHER], DAILY_SUMMARY_WITH_DOC_REF)
   await page.goto('/platform/dashboard')
-  await expect(page.locator('[data-testid="daily-assistant-entry"]').first()).toBeVisible({ timeout: 12000 })
-  await expect(page.locator('[data-testid="daily-assistant-loading"]').first()).not.toBeVisible()
-  const refLink = page.locator('[data-testid="p94-top-risk-ref-link"]').first()
+
+  const refLink = page.getByTestId('p94-top-risk-ref-link')
+  await expect(refLink).toHaveCount(1)
   await expect(refLink).toBeVisible({ timeout: 8000 })
-  const href = await refLink.getAttribute('href')
-  expect(href).toContain('/platform/documents')
-  expect(href).toContain(`document_id=${DOC_TARGET_ID}`)
+  await expect(refLink).toHaveAttribute('href', `/platform/documents?document_id=${DOC_TARGET_ID}`)
+
+  await refLink.click()
+  await expect(page).toHaveURL(new RegExp(`/platform/documents\\?document_id=${DOC_TARGET_ID}$`))
+  await page.waitForSelector('[data-testid="documents-page"]', { timeout: 10000 })
+  await page.waitForSelector('[data-testid="documents-loading"]', { state: 'detached', timeout: 8000 })
+
+  const drawer = page.getByRole('dialog')
+  await expect(drawer).toBeVisible({ timeout: 5000 })
+  await expect(drawer.getByText(DOC_WITH_ID.original_filename, { exact: true })).toBeVisible()
 })

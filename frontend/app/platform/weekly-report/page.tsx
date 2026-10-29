@@ -5,7 +5,8 @@ import { CompletionRateChart } from '../../components/platform/completion-rate-c
 import { WeeklyReportCard } from '../../components/platform/weekly-report-card'
 import { Card } from '../../components/ui/card'
 import { useActions } from '../../providers/action-context'
-import { api } from '../../../lib/api'
+import { dashboardApi } from '../../../lib/dashboard-client'
+import { insightsApi } from '../../../lib/insights-client'
 import { trackEvent } from '../../../lib/analytics'
 
 export default function WeeklyReportPage() {
@@ -15,8 +16,8 @@ export default function WeeklyReportPage() {
 
   useEffect(() => {
     trackEvent('view_weekly_report', { page: '/platform/weekly-report' })
-    api.getDashboard().then(setDashboard).catch(() => setDashboard(null))
-    api.listInsights().then(setInsights).catch(() => setInsights([]))
+    dashboardApi.getDashboard().then(setDashboard).catch(() => setDashboard(null))
+    insightsApi.listInsights().then(setInsights).catch(() => setInsights([]))
   }, [])
 
   const completionRate = useMemo(() => {

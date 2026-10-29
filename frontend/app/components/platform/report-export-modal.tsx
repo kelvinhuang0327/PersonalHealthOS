@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Loader2, X } from 'lucide-react'
 import { Button } from '../ui/button'
-import { api } from '../../../lib/api'
+import { reportsApi as api } from '../../../lib/reports-client'
 import { usePerson } from '../../providers/person-context'
 
 const ALL_SECTIONS = [

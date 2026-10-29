@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '../../components/ui/button'
 import { Card } from '../../components/ui/card'
-import { api } from '../../../lib/api'
+import { symptomsApi } from '../../../lib/symptoms-client'
+import { metricsApi } from '../../../lib/metrics-client'
+import { healthAssistantApi } from '../../../lib/health-assistant-client'
+import { actionsApi } from '../../../lib/actions-client'
 import { trackEvent } from '../../../lib/analytics'
 
 const QUICK_SYMPTOMS = ['頭痛', '疲勞', '失眠', '胸悶', '呼吸困難', '消化不良', '關節疼痛', '背痛', '頭暈', '心悸', '水腫']
@@ -70,15 +73,15 @@ export default function SymptomsPage() {
   const [error, setError] = useState<string | null>(null)
 
   const refresh = () => {
-    api.listSymptoms().then(setLogs).catch(() => setLogs([]))
-    api.listMetrics().then((rows: any) => {
+    symptomsApi.listSymptoms().then(setLogs).catch(() => setLogs([]))
+    metricsApi.listMetrics().then((rows: any) => {
       const arr = Array.isArray(rows) ? rows : (rows && Array.isArray(rows.items) ? rows.items : [])
       setMetrics(arr)
     }).catch(() => setMetrics([]))
-    api.getEvidenceBundle().then(setEvidenceBundle).catch(() => setEvidenceBundle(null))
-    api.getDailySummary().then(setDailySummary).catch(() => setDailySummary(null))
-    api.getRecommendations().then(setAssistantContext).catch(() => setAssistantContext(null))
-    api.getActions(undefined, 2).then((rows: any) => {
+    healthAssistantApi.getEvidenceBundle().then(setEvidenceBundle).catch(() => setEvidenceBundle(null))
+    healthAssistantApi.getDailySummary().then(setDailySummary).catch(() => setDailySummary(null))
+    healthAssistantApi.getRecommendations().then(setAssistantContext).catch(() => setAssistantContext(null))
+    actionsApi.getActions(undefined, 2).then((rows: any) => {
       setNearTermActions(Array.isArray(rows) ? rows : [])
     }).catch(() => setNearTermActions([]))
   }
@@ -114,7 +117,7 @@ export default function SymptomsPage() {
       setError('不能選擇未來的時間')
       return
     }
-    await api.createSymptom({
+    await symptomsApi.createSymptom({
       symptom_names: symptomNames,
       severity,
       duration_category: durationCategory,

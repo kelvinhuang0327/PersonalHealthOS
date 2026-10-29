@@ -155,6 +155,8 @@ async function stubRoutes(
   } = opts
 
   let dashboardResolve: (() => void) | null = null
+  let resolveDashboardPending: (() => void) | null = null
+  const dashboardPending = new Promise<void>((resolve) => { resolveDashboardPending = resolve })
 
   await page.addInitScript(() => {
     localStorage.setItem('token', 'p82-mock-token')
@@ -223,7 +225,10 @@ async function stubRoutes(
     }
     if (path.endsWith('/dashboard')) {
       if (freezeDashboard && dashboardResolve === null) {
-        await new Promise<void>((resolve) => { dashboardResolve = resolve })
+        await new Promise<void>((resolve) => {
+          dashboardResolve = resolve
+          resolveDashboardPending?.()
+        })
       }
       return route.fulfill({ json: BASE_DASHBOARD })
     }
@@ -243,6 +248,7 @@ async function stubRoutes(
   })
 
   return {
+    dashboardPending,
     releaseDashboard: () => {
       if (dashboardResolve) { dashboardResolve(); dashboardResolve = null }
     },
@@ -278,16 +284,22 @@ test.describe('P82 — Actions Page Contract', () => {
    * actions-page must not be visible until dashboard resolves.
    */
   test('contract: loading state — actions-loading visible while dashboard pending', async ({ page }) => {
-    const { releaseDashboard } = await stubRoutes(page, { freezeDashboard: true })
+    const { dashboardPending, releaseDashboard } = await stubRoutes(page, { freezeDashboard: true })
     const nav = page.goto('/platform/actions')
 
     await page.waitForSelector('[data-testid="actions-loading"]', { timeout: 10_000 })
     await expect(page.locator('[data-testid="actions-loading"]')).toBeVisible()
     await expect(page.locator('[data-testid="actions-page"]')).not.toBeVisible()
 
+    await dashboardPending
+    await expect(page.locator('[data-testid="actions-loading"]')).toBeVisible()
+    await expect(page.locator('[data-testid="actions-page"]')).not.toBeVisible()
+
     releaseDashboard()
     await nav
     await page.waitForSelector('[data-testid="actions-page"]', { timeout: 10_000 })
+    await expect(page).toHaveURL(/\/platform\/actions$/)
+    await expect(page.locator('[data-testid="actions-page"]')).toBeVisible()
     await expect(page.locator('[data-testid="actions-loading"]')).not.toBeVisible()
   })
 

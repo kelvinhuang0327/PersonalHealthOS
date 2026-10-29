@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Activity, CheckCircle2, ChevronRight, X } from 'lucide-react'
-import { api } from '../../../lib/api'
+import { metricsApi as api } from '../../../lib/metrics-client'
+import { profileApi } from '../../../lib/profile-client'
 import { Card } from '../ui/card'
 
 type Step = 1 | 2 | 3
@@ -213,7 +214,7 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const handleProfileNext = async (data: { name: string; age: string; biological_sex: string }) => {
     setProfileData(data)
     try {
-      await api.updateProfile({ display_name: data.name, age: Number(data.age), biological_sex: data.biological_sex })
+      await profileApi.updateProfile({ display_name: data.name, age: Number(data.age), biological_sex: data.biological_sex })
     } catch {
       // Non-blocking
     }

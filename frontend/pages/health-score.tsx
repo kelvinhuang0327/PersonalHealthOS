@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 
 import { Layout } from '../components/Layout';
-import { api } from '../lib/api';
+import { healthScoreApi as api } from '../lib/health-score-client';
 
 export default function HealthScorePage() {
   const [days, setDays] = useState(30);

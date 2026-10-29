@@ -15,7 +15,6 @@ import { trackEvent } from '../../lib/analytics'
 
 // Primary nav: 4 most important items + orchestration
 const PRIMARY_LINKS = [
-  ['儀表板', '/platform/dashboard'],
   ['行動', '/platform/actions'],
   ['洞察', '/platform/insights'],
   ['報告', '/platform/documents'],
@@ -78,7 +77,7 @@ export default function PlatformLayout({ children }: PlatformLayoutProps) {
         <ApiErrorToastProvider>
           {showOnboarding && <OnboardingWizard onComplete={() => setShowOnboarding(false)} />}
           <div className="mx-auto max-w-7xl px-4 pb-24 pt-6 sm:pb-6">
-          <header className="glass-panel mb-6 rounded-2xl p-4 shadow-sm">
+          <header className="glass-panel relative z-20 mb-6 rounded-2xl p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
               <div className="flex items-center gap-2">
                 <div className="rounded-xl bg-gradient-to-br from-sky-100 to-indigo-100 p-2 text-sky-700">

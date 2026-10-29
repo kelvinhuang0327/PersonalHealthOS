@@ -5,7 +5,7 @@ export default function HomePage() {
   const router = useRouter();
   useEffect(() => {
     const token = localStorage.getItem('token');
-    router.replace(token ? '/platform/dashboard' : '/platform/login');
+    router.replace(token ? '/platform/insights' : '/platform/login');
   }, [router]);
   return null;
 }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Plus, X } from 'lucide-react'
 import { Button } from '../ui/button'
-import { api } from '../../../lib/api'
+import { metricsApi as api } from '../../../lib/metrics-client'
 
 type Draft = {
   systolic_bp: string

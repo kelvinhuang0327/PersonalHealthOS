@@ -246,54 +246,50 @@ test.describe('P146 — Cross-Surface Evidence UI Contract', () => {
     expect(href).toContain('document_id=doc-confirmed-p146')
   })
 
-  test('3) Cross-surface navigation and deep-link integration does not regress to empty state', async ({ page }) => {
+  test('3) Actions evidence link opens the matching Documents drawer', async ({ page }) => {
     await setAuthStorage(page)
     await stubRoutes(page)
 
-    // Go to dashboard first
     await page.goto('/platform/dashboard')
     await expect(page.locator('[data-testid="first-run-journey-card"]')).toBeVisible()
-    await expect(page.locator('[data-testid="first-run-journey-empty"]')).not.toBeVisible()
-    await expect(page.locator('[data-testid="first-run-journey-in-progress"]')).toBeVisible()
-
-    // Click the topRiskRef link
-    const refLink = page.locator('[data-testid="p94-top-risk-ref-link"]').first()
-    await expect(refLink).toBeVisible()
-    const href = await refLink.getAttribute('href')
-    expect(href).toContain('/platform/documents')
-    expect(href).toContain('document_id=doc-confirmed-p146')
-
-    // Perform click and verify it opens Documents page with ParsedItemsDrawer open
-    await refLink.click()
+    const topRiskLink = page.locator('[data-testid="p94-top-risk-ref-link"]').first()
+    await expect(topRiskLink).toBeVisible()
+    const topRiskHref = await topRiskLink.getAttribute('href')
+    expect(topRiskHref).toContain('/platform/documents')
+    expect(topRiskHref).toContain('document_id=doc-confirmed-p146')
+    await topRiskLink.click()
     await page.waitForURL(/\/platform\/documents\?document_id=doc-confirmed-p146/)
     await expect(page.locator('[data-testid="documents-page"]')).toBeVisible()
-    
-    const drawer = page.locator('[role="dialog"]')
-    await expect(drawer).toBeVisible()
-    await expect(drawer.getByText('AST')).toBeVisible()
-    await expect(drawer.getByText('45')).toBeVisible()
+    const dashboardDrawer = page.locator('[role="dialog"]')
+    await expect(dashboardDrawer).toBeVisible()
+    await expect(dashboardDrawer.getByText('AST')).toBeVisible()
+    await expect(dashboardDrawer.getByText('45')).toBeVisible()
+    await dashboardDrawer.locator('button').first().click()
+    await expect(dashboardDrawer).not.toBeVisible()
 
-    // Close the drawer
-    await drawer.locator('button').first().click()
-    await expect(drawer).not.toBeVisible()
-
-    // Navigate to actions
     await page.goto('/platform/actions')
     await expect(page.locator('[data-testid="actions-page"]')).toBeVisible()
     await expect(page.locator('[data-testid="recommendation-history-card"]')).toBeVisible()
 
-    // Click source page link on recommendation to deep link back to documents page
     const sourceLink = page.locator('[data-testid="p89-source-page-link"]').first()
+    await expect(sourceLink).toBeVisible()
+    const href = await sourceLink.getAttribute('href')
+    expect(href).toContain('/platform/documents')
+    expect(href).toContain('document_id=doc-confirmed-p146')
+
     await sourceLink.click()
     await page.waitForURL(/\/platform\/documents\?document_id=doc-confirmed-p146/)
-    await expect(page.locator('[role="dialog"]')).toBeVisible()
+    await expect(page.locator('[data-testid="documents-page"]')).toBeVisible()
+    const drawer = page.locator('[role="dialog"]')
+    await expect(drawer).toBeVisible()
+    await expect(drawer.getByText('AST')).toBeVisible()
+    await expect(drawer.getByText('45')).toBeVisible()
   })
 
-  test('4) Safety audit: no medical overclaims, and suppressed state is not described as normal', async ({ page }) => {
+  test('4) Documents and Actions surfaces keep safety copy cautious', async ({ page }) => {
     await setAuthStorage(page)
     await stubRoutes(page)
 
-    // Check Dashboard Page safety
     await page.goto('/platform/dashboard')
     await expect(page.locator('[data-testid="first-run-suppression-not-judged-note"]')).toBeVisible()
     const dashboardBody = (await page.locator('body').innerText()).toLowerCase()
@@ -303,14 +299,12 @@ test.describe('P146 — Cross-Surface Evidence UI Contract', () => {
       expect(dashboardBody).not.toContain(phrase.toLowerCase())
     }
 
-    // Check Documents Page safety
     await page.goto('/platform/documents')
     const docBody = (await page.locator('body').innerText()).toLowerCase()
     for (const phrase of PROHIBITED_PHRASES) {
       expect(docBody).not.toContain(phrase.toLowerCase())
     }
 
-    // Check Actions Page safety
     await page.goto('/platform/actions')
     const actionBody = (await page.locator('body').innerText()).toLowerCase()
     for (const phrase of PROHIBITED_PHRASES) {

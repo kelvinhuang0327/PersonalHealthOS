@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/router';
-import { api } from '../lib/api';
+import { authApi as api } from '../lib/auth-client';
 
 export default function RegisterPage() {
   const router = useRouter();

@@ -11,7 +11,7 @@
 import { Bell, BellOff, Clock, EyeOff } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { api, type IntelligentNotifications, type NotificationCandidate } from '../../../lib/api'
+import { healthAssistantApi as api, type IntelligentNotifications, type NotificationCandidate } from '../../../lib/health-assistant-client'
 
 // ---------------------------------------------------------------------------
 // Priority badge helpers

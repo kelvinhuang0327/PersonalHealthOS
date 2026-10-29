@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertCircle, CheckCircle2, Clock, Minus, XCircle } from 'lucide-react'
-import type { OutcomeFeedback, OutcomeFeedbackItem } from '../../../lib/api'
+import type { OutcomeFeedback, OutcomeFeedbackItem } from '../../../lib/health-assistant-client'
 import { Card } from '../ui/card'
 
 // ── Config ───────────────────────────────────────────────────────────────────
