@@ -1,7 +1,7 @@
 'use client';
 
 import { Activity, AlertTriangle, CheckCircle, Clock, Info, TrendingUp, Zap } from 'lucide-react';
-import type { DeviceSignal, EscalationDecision } from '../../../lib/api';
+import type { DeviceSignal, EscalationDecision } from '../../../lib/health-assistant-client';
 
 // ---------------------------------------------------------------------------
 // Severity helpers

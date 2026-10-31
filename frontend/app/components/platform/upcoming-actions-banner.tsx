@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
 import { HealthAction } from '../../../lib/actions'
-import { api } from '../../../lib/api'
+import { actionsApi as api } from '../../../lib/actions-client'
 
 const SESSION_KEY = 'upcoming_actions_banner_dismissed'
 

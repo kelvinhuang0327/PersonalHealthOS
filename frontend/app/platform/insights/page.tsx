@@ -10,7 +10,8 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { Badge } from '../../components/ui/badge'
 import { Card } from '../../components/ui/card'
 import { usePerson } from '../../providers/person-context'
-import { api } from '../../../lib/api'
+import { insightsApi } from '../../../lib/insights-client'
+import { dashboardApi } from '../../../lib/dashboard-client'
 import { trackEvent } from '../../../lib/analytics'
 
 const CATEGORY_TABS = [
@@ -56,8 +57,8 @@ function InsightsContent() {
   useEffect(() => {
     trackEvent('view_insights', { page: '/platform/insights', metadata: { category: initialCategory } })
     void Promise.all([
-      api.listInsights().catch(() => []),
-      api.dashboardTrends(30).catch(() => ({ trends: {} })),
+      insightsApi.listInsights().catch(() => []),
+      dashboardApi.dashboardTrends(30).catch(() => ({ trends: {} })),
     ])
       .then(([insights, trendData]) => {
         setItems((insights as any[]) || [])
@@ -102,8 +103,8 @@ function InsightsContent() {
               {currentPerson && currentPerson.relationship !== 'self' ? <p className="mt-1 text-xs text-sky-700">目前查看：{currentPerson.display_name}</p> : null}
               <p className="text-sm text-slate-500">當你看到提醒時，這裡是用來理解為什麼與接下來怎麼做的地方。</p>
             </div>
-            <Link href="/platform/dashboard" className="text-sm font-medium text-sky-700 hover:underline">
-              回到儀表板
+            <Link href="/platform/weekly-report" className="text-sm font-medium text-sky-700 hover:underline">
+              查看每週報告
             </Link>
           </div>
         </Card>

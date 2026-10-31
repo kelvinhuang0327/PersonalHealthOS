@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Activity, AlertCircle, CheckCircle2, ChevronRight, Minus, XCircle } from 'lucide-react'
 import { Card } from '../ui/card'
 import { Skeleton } from '../ui/skeleton'
-import { api, type OutcomeFeedback, type OutcomeFeedbackItem } from '../../../lib/api'
+import { healthAssistantApi as api, type OutcomeFeedback, type OutcomeFeedbackItem } from '../../../lib/health-assistant-client'
 
 // ---------------------------------------------------------------------------
 // Config

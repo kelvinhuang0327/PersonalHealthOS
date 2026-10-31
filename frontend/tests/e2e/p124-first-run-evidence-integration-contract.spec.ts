@@ -171,8 +171,8 @@ async function stubRoutes(page: import('@playwright/test').Page, opts: StubOptio
   })
 }
 
-test.describe('P124 — First-Run Journey Evidence Integration Contract', () => {
-  test('1) first-run completed state shows evidence-aware recommendation surface, not route links only', async ({ page }) => {
+test.describe('P124 — First-Run and Actions Evidence Integration Contract', () => {
+  test('first-run completion links to the evidence-backed recommendation surface', async ({ page }) => {
     await setAuthStorage(page)
     await stubRoutes(page, {
       documents: [{ id: 'd1', parse_status: 'confirmed' }],
@@ -190,80 +190,37 @@ test.describe('P124 — First-Run Journey Evidence Integration Contract', () => 
 
     await page.goto('/platform/dashboard')
     await expect(page.locator('[data-testid="first-run-journey-completed"]')).toBeVisible()
-    await expect(page.locator('[data-testid="first-run-link-actions"]')).toHaveAttribute('href', '/platform/actions')
+    for (const [testId, href] of [
+      ['first-run-link-documents', '/platform/documents'],
+      ['first-run-link-symptoms', '/platform/symptoms'],
+      ['first-run-link-dashboard', '/platform/dashboard'],
+      ['first-run-link-actions', '/platform/actions'],
+    ]) {
+      const link = page.locator(`[data-testid="${testId}"]`)
+      await expect(link).toBeVisible()
+      await expect(link).toHaveAttribute('href', href)
+    }
     await expect(page.locator('[data-testid="daily-toprec-evidence-badge"]')).toBeVisible()
     await expect(page.locator('[data-testid="p91-daily-source-page-link"]')).toBeVisible()
-  })
 
-  test('2) lab_report_item recommendation shows evidence_summary with documents source link', async ({ page }) => {
-    await setAuthStorage(page)
-    await stubRoutes(page, {
-      documents: [{ id: 'd1', parse_status: 'confirmed' }],
-      symptoms: [{ id: 's1', symptom: '疲勞', occurred_at: new Date().toISOString() }],
-      dailySummary: DAILY_SUMMARY_WITH_REFS,
-      recommendations: {
-        person_id: 'person-self',
-        recommendations: [
-          makeRec({ source_type: 'lab_report_item', source_id: 'lab-1', document_id: 'doc-1', evidence_summary: '健檢報告：LDL 偏高' }),
-        ],
-        total: 1,
-        missing_data: [],
-      },
-    })
-
-    await page.goto('/platform/actions')
-    const evidenceBadge = page.locator('text=健檢報告：LDL 偏高').first()
-    await expect(evidenceBadge).toBeVisible()
-    const sourceLink = page.locator('[data-testid="p89-source-page-link"]').first()
-    await expect(sourceLink).toBeVisible()
-    await expect(sourceLink).toHaveAttribute('href', /\/platform\/documents\?document_id=doc-1/)
-  })
-
-  test('3) symptom recommendation shows evidence_summary with symptoms source link', async ({ page }) => {
-    await setAuthStorage(page)
-    await stubRoutes(page, {
-      documents: [{ id: 'd1', parse_status: 'confirmed' }],
-      symptoms: [{ id: 's1', symptom: '頭痛', occurred_at: new Date().toISOString() }],
-      dailySummary: DAILY_SUMMARY_WITH_REFS,
-      recommendations: {
-        person_id: 'person-self',
-        recommendations: [
-          makeRec({ source_type: 'symptom', source_id: 'sym-1', evidence_summary: '症狀記錄：近 7 天頭痛增加' }),
-        ],
-        total: 1,
-        missing_data: [],
-      },
-    })
-
-    await page.goto('/platform/actions')
-    await expect(page.getByText('症狀記錄：近 7 天頭痛增加')).toBeVisible()
-    const sourceLink = page.locator('[data-testid="p89-source-page-link"]').first()
-    await expect(sourceLink).toBeVisible()
-    await expect(sourceLink).toHaveAttribute('href', '/platform/symptoms')
-  })
-
-  test('4) recommendation without evidence does not crash and does not render evidence badge', async ({ page }) => {
-    await setAuthStorage(page)
-    await stubRoutes(page, {
-      documents: [{ id: 'd1', parse_status: 'confirmed' }],
-      symptoms: [{ id: 's1', symptom: '頭痛', occurred_at: new Date().toISOString() }],
-      dailySummary: DAILY_SUMMARY_WITH_REFS,
-      recommendations: {
-        person_id: 'person-self',
-        recommendations: [
-          makeRec({ source_type: 'recommendation', source_id: 'rec-no-evidence', evidence_summary: undefined }),
-        ],
-        total: 1,
-        missing_data: [],
-      },
-    })
+    await page.locator('[data-testid="first-run-link-documents"]').click()
+    await expect(page).toHaveURL(/\/platform\/documents/)
+    await expect(page.locator('[data-testid="documents-page"]')).toBeVisible()
+    await expect(page.getByText('載入失敗，請重新整理')).not.toBeVisible()
 
     await page.goto('/platform/dashboard')
+    await page.locator('[data-testid="first-run-link-symptoms"]').click()
+    await expect(page).toHaveURL(/\/platform\/symptoms/)
     await expect(page.getByText('載入失敗，請重新整理')).not.toBeVisible()
-    await expect(page.locator('[data-testid="daily-toprec-evidence-badge"]')).toHaveCount(0)
+
+    await page.goto('/platform/dashboard')
+    await page.locator('[data-testid="first-run-link-actions"]').click()
+    await expect(page).toHaveURL(/\/platform\/actions/)
+    await expect(page.locator('[data-testid="actions-page"]')).toBeVisible()
+    await expect(page.getByText('載入失敗，請重新整理')).not.toBeVisible()
   })
 
-  test('5) suppressed not-judged evidence does not claim normal and keeps cautious wording', async ({ page }) => {
+  test('suppressed first-run evidence remains cautious and outcome stays unknown', async ({ page }) => {
     await setAuthStorage(page)
     await stubRoutes(page, {
       documents: [{ id: 'd1', parse_status: 'confirmed' }],
@@ -294,30 +251,7 @@ test.describe('P124 — First-Run Journey Evidence Integration Contract', () => 
     await expect(note).not.toContainText('正常')
   })
 
-  test('6) overclaim guard: prohibited medical claim phrases are absent', async ({ page }) => {
-    await setAuthStorage(page)
-    await stubRoutes(page, {
-      documents: [{ id: 'd1', parse_status: 'confirmed' }],
-      symptoms: [{ id: 's1', symptom: '疲勞', occurred_at: new Date().toISOString() }],
-      dailySummary: DAILY_SUMMARY_WITH_REFS,
-      recommendations: {
-        person_id: 'person-self',
-        recommendations: [
-          makeRec({ source_type: 'symptom', source_id: 'sym-1', evidence_summary: '症狀記錄：近 7 天頭痛增加' }),
-        ],
-        total: 1,
-        missing_data: [],
-      },
-    })
-
-    await page.goto('/platform/dashboard')
-    const bodyText = (await page.locator('body').innerText()).toLowerCase()
-    for (const phrase of PROHIBITED_PHRASES) {
-      expect(bodyText).not.toContain(phrase.toLowerCase())
-    }
-  })
-
-  test('7) documents/symptoms/dashboard/actions route links remain healthy without ErrorBoundary', async ({ page }) => {
+  test('1) lab_report_item recommendation shows evidence_summary with documents source link', async ({ page }) => {
     await setAuthStorage(page)
     await stubRoutes(page, {
       documents: [{ id: 'd1', parse_status: 'confirmed' }],
@@ -333,24 +267,122 @@ test.describe('P124 — First-Run Journey Evidence Integration Contract', () => 
       },
     })
 
-    await page.goto('/platform/dashboard')
-    await expect(page.locator('[data-testid="first-run-link-documents"]')).toBeVisible()
-    await expect(page.locator('[data-testid="first-run-link-symptoms"]')).toBeVisible()
-    await expect(page.locator('[data-testid="first-run-link-dashboard"]')).toBeVisible()
-    await expect(page.locator('[data-testid="first-run-link-actions"]')).toBeVisible()
+    await page.goto('/platform/actions')
+    const evidenceBadge = page.locator('text=健檢報告：LDL 偏高').first()
+    await expect(evidenceBadge).toBeVisible()
+    const sourceLink = page.locator('[data-testid="p89-source-page-link"]').first()
+    await expect(sourceLink).toBeVisible()
+    await expect(sourceLink).toHaveAttribute('href', /\/platform\/documents\?document_id=doc-1/)
+  })
 
-    await page.click('[data-testid="first-run-link-documents"]')
-    await expect(page).toHaveURL(/\/platform\/documents/)
+  test('2) symptom recommendation shows evidence_summary with symptoms source link', async ({ page }) => {
+    await setAuthStorage(page)
+    await stubRoutes(page, {
+      documents: [{ id: 'd1', parse_status: 'confirmed' }],
+      symptoms: [{ id: 's1', symptom: '頭痛', occurred_at: new Date().toISOString() }],
+      dailySummary: DAILY_SUMMARY_WITH_REFS,
+      recommendations: {
+        person_id: 'person-self',
+        recommendations: [
+          makeRec({ source_type: 'symptom', source_id: 'sym-1', evidence_summary: '症狀記錄：近 7 天頭痛增加' }),
+        ],
+        total: 1,
+        missing_data: [],
+      },
+    })
+
+    await page.goto('/platform/actions')
+    await expect(page.getByText('症狀記錄：近 7 天頭痛增加')).toBeVisible()
+    const sourceLink = page.locator('[data-testid="p89-source-page-link"]').first()
+    await expect(sourceLink).toBeVisible()
+    await expect(sourceLink).toHaveAttribute('href', '/platform/symptoms')
+  })
+
+  test('3) recommendation without evidence does not render an Actions evidence link', async ({ page }) => {
+    await setAuthStorage(page)
+    await stubRoutes(page, {
+      documents: [{ id: 'd1', parse_status: 'confirmed' }],
+      symptoms: [{ id: 's1', symptom: '頭痛', occurred_at: new Date().toISOString() }],
+      dailySummary: DAILY_SUMMARY_WITH_REFS,
+      recommendations: {
+        person_id: 'person-self',
+        recommendations: [
+          makeRec({ source_type: 'recommendation', source_id: 'rec-no-evidence', evidence_summary: undefined }),
+        ],
+        total: 1,
+        missing_data: [],
+      },
+    })
+
+    await page.goto('/platform/actions')
+    await expect(page.locator('[data-testid="actions-page"]')).toBeVisible()
+    await expect(page.locator('[data-testid="p89-source-page-link"]')).toHaveCount(0)
     await expect(page.getByText('載入失敗，請重新整理')).not.toBeVisible()
 
     await page.goto('/platform/dashboard')
-    await page.click('[data-testid="first-run-link-symptoms"]')
+    await expect(page.locator('[data-testid="daily-toprec-evidence-badge"]')).toHaveCount(0)
+    await expect(page.getByText('載入失敗，請重新整理')).not.toBeVisible()
+  })
+
+  test('4) overclaim guard: prohibited medical claim phrases are absent', async ({ page }) => {
+    await setAuthStorage(page)
+    await stubRoutes(page, {
+      documents: [{ id: 'd1', parse_status: 'confirmed' }],
+      symptoms: [{ id: 's1', symptom: '疲勞', occurred_at: new Date().toISOString() }],
+      dailySummary: DAILY_SUMMARY_WITH_REFS,
+      recommendations: {
+        person_id: 'person-self',
+        recommendations: [
+          makeRec({ source_type: 'symptom', source_id: 'sym-1', evidence_summary: '症狀記錄：近 7 天頭痛增加' }),
+        ],
+        total: 1,
+        missing_data: [],
+      },
+    })
+
+    await page.goto('/platform/actions')
+    const bodyText = (await page.locator('[data-testid="actions-page"]').innerText()).toLowerCase()
+    for (const phrase of PROHIBITED_PHRASES) {
+      expect(bodyText).not.toContain(phrase.toLowerCase())
+    }
+  })
+
+  test('5) retained navigation keeps documents, symptoms, and actions healthy', async ({ page }) => {
+    await setAuthStorage(page)
+    await stubRoutes(page, {
+      documents: [{ id: 'd1', parse_status: 'confirmed' }],
+      symptoms: [{ id: 's1', symptom: '疲勞', occurred_at: new Date().toISOString() }],
+      dailySummary: DAILY_SUMMARY_WITH_REFS,
+      recommendations: {
+        person_id: 'person-self',
+        recommendations: [
+          makeRec({ source_type: 'lab_report_item', source_id: 'lab-1', document_id: 'doc-1', evidence_summary: '健檢報告：LDL 偏高' }),
+        ],
+        total: 1,
+        missing_data: [],
+      },
+    })
+
+    await page.goto('/platform/insights')
+    await expect(page.getByRole('heading', { name: '深度分析' })).toBeVisible()
+
+    await page.locator('a[href="/platform/documents"]').click()
+    await expect(page).toHaveURL(/\/platform\/documents/)
+    await expect(page.locator('[data-testid="documents-page"]')).toBeVisible()
+    await expect(page.getByText('載入失敗，請重新整理')).not.toBeVisible()
+
+    await page.getByRole('button', { name: '更多' }).click()
+    await page.locator('a[href="/platform/symptoms"]').click()
     await expect(page).toHaveURL(/\/platform\/symptoms/)
     await expect(page.getByText('載入失敗，請重新整理')).not.toBeVisible()
 
-    await page.goto('/platform/dashboard')
-    await page.click('[data-testid="first-run-link-actions"]')
+    await page.locator('header').getByRole('link', { name: '行動', exact: true }).click()
     await expect(page).toHaveURL(/\/platform\/actions/)
+    await expect(page.locator('[data-testid="actions-page"]')).toBeVisible()
     await expect(page.getByText('載入失敗，請重新整理')).not.toBeVisible()
+
+    await page.locator('a[href="/platform/insights"]').click()
+    await expect(page).toHaveURL(/\/platform\/insights/)
+    await expect(page.getByRole('heading', { name: '深度分析' })).toBeVisible()
   })
 })

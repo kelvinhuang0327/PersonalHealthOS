@@ -3,7 +3,8 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { Button } from '../../../components/ui/button'
 import { Card } from '../../../components/ui/card'
-import { api, getLatestMetricByPerson } from '../../../../lib/api'
+import { personsApi as api } from '../../../../lib/persons-client'
+import { getLatestMetricByPerson } from '../../../../lib/metrics-client'
 import { usePerson } from '../../../providers/person-context'
 
 type Person = {

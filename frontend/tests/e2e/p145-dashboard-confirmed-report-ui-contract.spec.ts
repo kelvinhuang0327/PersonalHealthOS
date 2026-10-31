@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test'
 
+const PROHIBITED_PHRASES = [
+  '診斷',
+  '治癒',
+  '保證改善',
+  '取代醫師',
+  '正常代表沒問題',
+  'guarantee',
+  'cure',
+]
+
 const PERSONS = [
   { id: 'person-self', display_name: 'Self', relationship: 'self', is_default: true },
 ]
@@ -75,15 +85,6 @@ const OUTCOME_WITH_UNKNOWN_DATA = {
   },
 }
 
-const PROHIBITED_PHRASES = [
-  '診斷',
-  '治癒',
-  '保證改善',
-  '取代醫師',
-  '正常代表沒問題',
-  'guarantee',
-  'cure',
-]
 
 type StubOptions = {
   documents?: object[]
@@ -156,8 +157,8 @@ async function stubRoutes(page: import('@playwright/test').Page, opts: StubOptio
   })
 }
 
-test.describe('P145 — Dashboard Confirmed Report UI Contract', () => {
-  test('1) first-run card is not in empty state and shows confirmed report progress', async ({ page }) => {
+test.describe('P145 — Confirmed Report and Dashboard UI Contract', () => {
+  test('first-run progress reflects a confirmed report without regressing to pending', async ({ page }) => {
     await setAuthStorage(page)
     await stubRoutes(page, {
       documents: [{ id: 'd1', parse_status: 'confirmed' }],
@@ -165,22 +166,17 @@ test.describe('P145 — Dashboard Confirmed Report UI Contract', () => {
     })
     await page.goto('/platform/dashboard')
 
-    // 1. First-run journey card is visible and does not show empty state
     await expect(page.locator('[data-testid="first-run-journey-card"]')).toBeVisible()
     await expect(page.locator('[data-testid="first-run-journey-empty"]')).not.toBeVisible()
     await expect(page.locator('[data-testid="first-run-journey-in-progress"]')).toBeVisible()
-
-    // 2. Report-related progress is visible and shows completed status
     const docStatus = page.locator('[data-testid="first-run-step-documents-status"]')
     await expect(docStatus).toBeVisible()
     await expect(docStatus).toContainText('已完成')
-
-    // 3. No progress regression copy appears for documents
     await expect(docStatus).not.toContainText('尚未開始')
     await expect(docStatus).not.toContainText('待確認')
   })
 
-  test('2) suppressed/not-judged state is not mislabeled as normal', async ({ page }) => {
+  test('suppressed evidence and unknown outcomes are never labeled normal', async ({ page }) => {
     await setAuthStorage(page)
     await stubRoutes(page, {
       documents: [{ id: 'd1', parse_status: 'confirmed' }],
@@ -188,19 +184,16 @@ test.describe('P145 — Dashboard Confirmed Report UI Contract', () => {
     })
     await page.goto('/platform/dashboard')
 
-    // 1. Suppression warning box is visible
     const note = page.locator('[data-testid="first-run-suppression-not-judged-note"]')
     await expect(note).toBeVisible()
     await expect(note).toContainText('暫不判斷異常')
     await expect(note).not.toContainText('正常')
-
-    // 2. Outcome unknown state is visible and not mislabeled as normal
     const outcomeUnknown = page.locator('[data-testid="daily-summary-outcome-unknown"]')
     await expect(outcomeUnknown).toBeVisible()
     await expect(outcomeUnknown).toContainText('目前尚無足夠後續資料判斷效果')
   })
 
-  test('3) safety audit: no medical overclaims or diagnostic language appears', async ({ page }) => {
+  test('dashboard safety copy contains no prohibited medical claims', async ({ page }) => {
     await setAuthStorage(page)
     await stubRoutes(page, {
       documents: [{ id: 'd1', parse_status: 'confirmed' }],
@@ -212,5 +205,27 @@ test.describe('P145 — Dashboard Confirmed Report UI Contract', () => {
     for (const phrase of PROHIBITED_PHRASES) {
       expect(bodyText).not.toContain(phrase.toLowerCase())
     }
+  })
+
+  test('confirmed report remains visible on the Documents page', async ({ page }) => {
+    await setAuthStorage(page)
+    await stubRoutes(page, {
+      documents: [{
+        id: 'd1',
+        original_filename: 'confirmed-report.pdf',
+        parse_status: 'confirmed',
+        uploaded_at: new Date().toISOString(),
+        category: 'health_check',
+        confirmed_data: { extracted_items: 3, abnormal_items: 1 },
+      }],
+      symptoms: [],
+    })
+    await page.goto('/platform/documents')
+
+    await expect(page.locator('[data-testid="documents-page"]')).toBeVisible()
+    await expect(page.getByText('confirmed-report.pdf')).toBeVisible()
+    await expect(page.getByText('已確認')).toBeVisible()
+    await expect(page.locator('[data-testid="documents-confirmed-summary"]')).toContainText('3 項指標')
+    await expect(page.locator('[data-testid="documents-confirmed-summary"]')).toContainText('1 項異常')
   })
 })

@@ -32,7 +32,7 @@ export default function LoginPage() {
         return
       }
       localStorage.setItem('token', data.access_token)
-      router.push('/platform/dashboard')
+      router.push('/platform/insights')
     } catch {
       setError('無法連線後端，請確認服務是否啟動')
     } finally {

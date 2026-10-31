@@ -3,7 +3,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { buildActionFromSource, HealthAction } from '../../lib/actions'
 import type { UnifiedDecisionItem } from '../../lib/decision-support'
-import { api } from '../../lib/api'
+import { actionsApi as api } from '../../lib/actions-client'
 import { usePerson } from './person-context'
 import { trackEvent } from '../../lib/analytics'
 

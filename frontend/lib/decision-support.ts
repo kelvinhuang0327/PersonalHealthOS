@@ -1,5 +1,5 @@
 import type { HealthAction } from './actions'
-import type { RecommendationTrust } from './api'
+import type { RecommendationTrust } from './health-assistant-client'
 import { getTopDecisions, type ClinicalWeightLevel, type DecisionCandidate, type DecisionFactorInputs, type ScoredDecisionItem } from './decision-scoring'
 import { isResurfacedToday, isSnoozeActive, type NotificationSnoozeRecord } from './notification-snooze'
 

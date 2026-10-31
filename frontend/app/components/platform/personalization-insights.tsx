@@ -17,7 +17,7 @@
 import { Brain, ChevronRight, Clock, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-import { api, type EngagementAnalytics, type PersonalizationProfile } from '../../../lib/api'
+import { healthAssistantApi as api, type EngagementAnalytics, type PersonalizationProfile } from '../../../lib/health-assistant-client'
 
 // ---------------------------------------------------------------------------
 // Label maps (source_type → human-readable)
@@ -79,7 +79,11 @@ function TrendBadge({ trend }: { trend: EngagementAnalytics['engagementTrend'] }
 // Engagement bar
 // ---------------------------------------------------------------------------
 
-function EngagementBar({ score }: { score: number }) {
+function EngagementBar({ score }: { score: number | null }) {
+  if (score === null) {
+    return <p className="text-xs text-slate-500">互動分數尚無資料</p>
+  }
+
   const pct = Math.round(score * 100)
   let color = 'bg-blue-400'
   let label = '互動中'

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test('platform dashboard loads with explainability', async ({ page }) => {
+test('retained platform routes and notifications lifecycle work', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'e2e-token')
     localStorage.setItem('person_id', 'person-self')
@@ -164,8 +164,11 @@ test('platform dashboard loads with explainability', async ({ page }) => {
   await page.goto('/platform/dashboard')
   await expect(page.getByRole('heading', { name: '儀表板' })).toBeVisible()
   await expect(page.getByText('Based on ACC/AHA guideline with confidence 0.82')).toBeVisible()
-
+  await expect(page.getByRole('button', { name: '加入追蹤' }).first()).toBeVisible()
   await page.getByRole('button', { name: '加入追蹤' }).first().click()
+
+  await page.goto('/platform/insights')
+  await expect(page.getByRole('heading', { name: '深度分析' })).toBeVisible()
 
   await page.goto('/platform/actions')
   await expect(page.getByRole('heading', { name: /執行中心|行動中心/ }).first()).toBeVisible()
@@ -177,7 +180,6 @@ test('platform dashboard loads with explainability', async ({ page }) => {
   await page.goto('/platform/weekly-report')
   await expect(page.getByRole('heading', { name: '每週健康報告' }).first()).toBeVisible()
 
-  await page.goto('/platform/dashboard')
   await page.goto('/platform/notifications')
   await expect(page).toHaveURL(/\/platform\/notifications$/)
   await expect(page.getByText('健康待處理中心', { exact: true }).first()).toBeVisible()

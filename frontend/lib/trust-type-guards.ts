@@ -10,9 +10,7 @@
  *        TypeScript compile step enforces structural correctness at build time.
  */
 
-import type { RecommendationTrust } from './api'
-import type { DailyHealthSummary } from './api'
-import type { OutcomeFeedback } from './api'
+import type { RecommendationTrust, DailyHealthSummary, OutcomeFeedback } from './health-assistant-client'
 
 // ── RecommendationTrust ───────────────────────────────────────────────────────
 
@@ -59,7 +57,7 @@ export function isDailyHealthSummary(value: unknown): value is DailyHealthSummar
 export function isOutcomeFeedback(value: unknown): value is OutcomeFeedback {
   if (typeof value !== 'object' || value === null) return false
   const v = value as Record<string, unknown>
-  // OutcomeFeedback shape: { summary: { total_count, improved_count, ... }, items?: [] }
+  // OutcomeFeedback shape: { summary: { total_count, improved_count, ... }, outcomes: [] }
   if (typeof v.summary !== 'object' || v.summary === null) return false
   const s = v.summary as Record<string, unknown>
   return (

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
-import { api } from '../lib/api';
+import { analyticsApi as api } from '../lib/analytics-client';
 
 export default function HealthAnalysisPage() {
   const [data, setData] = useState<any>(null);

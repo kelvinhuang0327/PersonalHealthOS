@@ -296,27 +296,34 @@ test.describe('P147 — Evidence Edge-Case UI Contract', () => {
     }
   })
 
-  test('4) Cross-surface navigation does not regress to empty state or ErrorBoundary', async ({ page }) => {
+  test('4) Retained Insights, Documents, and Actions navigation remains healthy', async ({ page }) => {
     await setAuthStorage(page)
     await stubRoutes(page)
 
-    // Go to Dashboard
-    await page.goto('/platform/dashboard')
-    await expect(page.locator('[data-testid="first-run-journey-card"]')).toBeVisible()
+    await page.goto('/platform/insights')
+    await expect(page.getByRole('heading', { name: '深度分析' })).toBeVisible()
 
-    // Click navigation to Documents
-    await page.click('a[href="/platform/documents"]')
+    await page.locator('a[href="/platform/documents"]').click()
     await expect(page.locator('[data-testid="documents-page"]')).toBeVisible()
 
-    // Click navigation to Actions
-    await page.click('a[href="/platform/actions"]')
+    await page.locator('a[href="/platform/actions"]').click()
     await expect(page.locator('[data-testid="actions-page"]')).toBeVisible()
 
-    // Navigate back to Dashboard
-    await page.click('a[href="/platform/dashboard"]')
+    await page.goto('/platform/dashboard')
     await expect(page.locator('[data-testid="first-run-journey-card"]')).toBeVisible()
+    expect(await page.locator('body').innerText()).not.toContain('Something went wrong')
 
-    // Verify no error boundary text is shown anywhere
+    const insightsNavigationLink = page.getByRole('navigation').getByRole('link', { name: '洞察', exact: true })
+    const insightsActionCta = page.getByRole('link', { name: '從洞察建立行動', exact: true })
+    await expect(insightsNavigationLink).toHaveCount(1)
+    await expect(insightsNavigationLink).toHaveAttribute('href', '/platform/insights')
+    await expect(insightsActionCta).toHaveCount(1)
+    await expect(insightsActionCta).toHaveAttribute('href', '/platform/insights')
+
+    await insightsActionCta.click()
+    await expect(page).toHaveURL(/\/platform\/insights$/)
+    await expect(page.getByRole('heading', { name: '深度分析' })).toBeVisible()
+
     const bodyText = await page.locator('body').innerText()
     expect(bodyText).not.toContain('Something went wrong')
   })

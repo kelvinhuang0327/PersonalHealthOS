@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { api, type FamilyContextItem, type FamilyHealthContext, type FamilyRecommendation, type FamilyRelationshipRecord } from '../../../lib/api'
+import { healthAssistantApi as api, type FamilyContextItem, type FamilyHealthContext, type FamilyRecommendation, type FamilyRelationshipRecord } from '../../../lib/health-assistant-client'
 import {
   Users,
   AlertTriangle,
@@ -203,7 +203,9 @@ export default function FamilyHealthCard() {
           <h2 className="text-base font-semibold text-slate-800">家庭健康總覽</h2>
         </div>
         <div className="flex items-center gap-2">
-          {context && <ConfidenceBadge value={context.confidence} />}
+          {!loading && !error && hasFamily && context && (
+            <ConfidenceBadge value={context.confidence} />
+          )}
           <button
             onClick={load}
             disabled={loading}

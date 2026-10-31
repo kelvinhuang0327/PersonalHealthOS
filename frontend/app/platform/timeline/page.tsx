@@ -5,7 +5,7 @@ import { CalendarDays, Filter, Search } from 'lucide-react'
 import { StateCard } from '../../components/platform/state-card'
 import { ExplainabilityPanel } from '../../components/platform/explainability-panel'
 import { Card } from '../../components/ui/card'
-import { api } from '../../../lib/api'
+import { timelineApi as api } from '../../../lib/timeline-client'
 import { trackEvent } from '../../../lib/analytics'
 
 export default function TimelinePage() {

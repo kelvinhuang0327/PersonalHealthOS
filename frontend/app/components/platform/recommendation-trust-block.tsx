@@ -16,7 +16,7 @@
 
 import { useState } from 'react'
 import { CheckCircle2, ChevronDown } from 'lucide-react'
-import type { RecommendationTrust } from '../../../lib/api'
+import type { RecommendationTrust } from '../../../lib/health-assistant-client'
 
 // ── Style maps ────────────────────────────────────────────────────────────────
 

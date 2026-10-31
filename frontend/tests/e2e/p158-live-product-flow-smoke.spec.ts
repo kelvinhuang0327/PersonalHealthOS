@@ -188,7 +188,26 @@ test.describe('P158 — Live Product Flow Smoke Harness', () => {
     }
   });
 
-  test('Dashboard and Actions integration flow validation', async ({ page }) => {
+  test('Dashboard confirmed-report risk, narrative, and safety flow validation', async ({ page }) => {
+    await page.addInitScript((creds) => {
+      localStorage.setItem('token', creds.token);
+      localStorage.setItem('person_id', creds.person_id);
+      localStorage.setItem('onboarding_completed', '1');
+    }, credentials);
+
+    await page.goto('/platform/dashboard');
+    await page.waitForSelector('[data-testid="first-run-journey-card"]', { timeout: 20000 });
+
+    await expect(page.getByText('AST 偏高', { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('總膽固醇偏高', { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('你的健康正在發生什麼').first()).toBeVisible({ timeout: 10000 });
+
+    const dashboardBody = await page.locator('body').innerText();
+    expect(dashboardBody).not.toContain('Something went wrong');
+    assertNoProhibitedPhrases(dashboardBody);
+  });
+
+  test('Insights and Actions integration flow validation', async ({ page }) => {
     // 1. Visit root page and inject credentials to localStorage using addInitScript
     await page.addInitScript((creds) => {
       localStorage.setItem('token', creds.token);
@@ -196,29 +215,19 @@ test.describe('P158 — Live Product Flow Smoke Harness', () => {
       localStorage.setItem('onboarding_completed', '1');
     }, credentials);
 
-    // Navigate to dashboard
-    await page.goto('/platform/dashboard');
-    await page.waitForSelector('[data-testid="first-run-journey-card"]', { timeout: 20000 });
+    // Open the retained insights entry and verify it renders safely.
+    await page.goto('/platform/insights');
+    await expect(page.getByRole('heading', { name: '深度分析' })).toBeVisible({ timeout: 20000 });
 
-    // Assert that active risk signals from the confirmed document are displayed
-    await expect(page.getByText('AST 偏高', { exact: true }).first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('總膽固醇偏高', { exact: true }).first()).toBeVisible({ timeout: 10000 });
-
-    // Assert that the narrative card is successfully rendered
-    await expect(page.getByText('你的健康正在發生什麼').first()).toBeVisible({ timeout: 10000 });
-
-    // Ensure no ErrorBoundary crash is present on the page
-    const dashboardBody = await page.locator('body').innerText();
-    expect(dashboardBody).not.toContain('Something went wrong');
-
-    // Run medical claim audit on Dashboard
-    assertNoProhibitedPhrases(dashboardBody);
+    const insightsBody = await page.locator('body').innerText();
+    expect(insightsBody).not.toContain('Something went wrong');
+    assertNoProhibitedPhrases(insightsBody);
 
     // Save screenshot if artifact or evidence path is configured
     const evidenceDir = process.env.P158_EVIDENCE_DIR;
     if (evidenceDir) {
       fs.mkdirSync(path.join(evidenceDir, 'screenshots'), { recursive: true });
-      await page.screenshot({ path: path.join(evidenceDir, 'screenshots/dashboard.png') });
+      await page.screenshot({ path: path.join(evidenceDir, 'screenshots/insights.png') });
     }
 
     // 2. Navigate to Actions page

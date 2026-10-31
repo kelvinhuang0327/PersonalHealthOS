@@ -9,7 +9,8 @@ import { Card } from '../../components/ui/card'
 import { StateCard } from '../../components/platform/state-card'
 import { useActions } from '../../providers/action-context'
 import { usePerson } from '../../providers/person-context'
-import { api } from '../../../lib/api'
+import { dashboardApi } from '../../../lib/dashboard-client'
+import { insightsApi } from '../../../lib/insights-client'
 import { trackEvent } from '../../../lib/analytics'
 import { getRankedNotifications, type NotificationItem } from '../../../lib/decision-support'
 import {
@@ -35,7 +36,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     trackEvent('view_notifications_center', { page: '/platform/notifications' })
     setLoading(true)
-    Promise.all([api.getDashboard().catch(() => null), api.listInsights().catch(() => [])])
+    Promise.all([dashboardApi.getDashboard().catch(() => null), insightsApi.listInsights().catch(() => [])])
       .then(([dashboard, insightItems]) => {
         setDashboardData(dashboard)
         setInsights(Array.isArray(insightItems) ? insightItems : [])
